@@ -1,0 +1,65 @@
+name: Build Manifold for iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Manifold static library for iOS arm64
+        run: |
+          mkdir manifold-ios-build && cd manifold-ios-build
+
+          # Fetch Manifold source
+          git clone --depth 1 --branch v3.0.0 https://github.com/elalish/manifold.git
+
+          mkdir build && cd build
+
+          cmake ../manifold \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=../install \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DMANIFOLD_TEST=OFF \
+            -DMANIFOLD_CBIND=OFF \
+            -DMANIFOLD_PYBIND=OFF \
+            -DMANIFOLD_EXPORT=OFF \
+            -DMANIFOLD_DEBUG=OFF \
+            -DMANIFOLD_PAR=OFF \
+            -DMANIFOLD_CROSS_SECTION=OFF
+
+          cmake --build . --config Release -j$(sysctl -n hw.ncpu)
+          cmake --install . --config Release
+
+      - name: Package artifacts
+        run: |
+          mkdir -p manifold-ios/lib
+          mkdir -p manifold-ios/include
+
+          # Copy static library
+          cp manifold-ios-build/install/lib/libmanifold.a manifold-ios/lib/
+
+          # Copy headers
+          cp -r manifold-ios-build/install/include/manifold manifold-ios/include/
+
+          # Show what we built
+          echo "=== Static library ==="
+          ls -lh manifold-ios/lib/
+          file manifold-ios/lib/libmanifold.a
+          lipo -info manifold-ios/lib/libmanifold.a
+
+          echo "=== Headers ==="
+          find manifold-ios/include -type f
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifold-ios-arm64
+          path: manifold-ios/
+          retention-days: 90

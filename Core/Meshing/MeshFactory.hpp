@@ -1,0 +1,24 @@
+#pragma once
+#include "../Domain/Takeoff.hpp"
+#include "../Domain/Condition.hpp"
+#include "../Geometry/mesh_data.hpp"
+#include <vector>
+#include <utility>
+
+namespace ost_meshing
+{
+
+    struct MeshResult
+    {
+        ost_geometry::CppMeshData mesh;
+        float color_r = 0, color_g = 0, color_b = 0;
+        bool valid = false;
+    };
+
+    MeshResult create_mesh_for_takeoff(
+        const ost_domain::Takeoff &takeoff,
+        const ost_domain::Condition &condition,
+        double scale_ratio = 1.0,
+        const std::vector<std::vector<std::pair<double, double>>> &holes = {});
+
+}

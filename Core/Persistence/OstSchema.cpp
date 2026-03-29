@@ -1,0 +1,1046 @@
+#include "OstSchema.hpp"
+
+namespace ost_schema
+{
+
+    const std::vector<const char *> TABLE_DDL = {
+
+        "CREATE TABLE IF NOT EXISTS AccessLevels ("
+        "UID INTEGER PRIMARY KEY, "
+        "Description TEXT, "
+        "Privileges INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS AffectDPCTypGroupViews ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidTypGroupViewUID INTEGER, "
+        "BidUID INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidALines ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidTakeoffFromUID INTEGER, "
+        "BidTakeoffToUID INTEGER, "
+        "Position BLOB, "
+        "Color INTEGER, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidAnnoInk ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "Color INTEGER, "
+        "Position BLOB, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidAnnotationClouds ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Color INTEGER, "
+        "Position BLOB, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidAnnotationOvals ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Color INTEGER, "
+        "Position BLOB, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidAnnotationPolygons ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Color INTEGER, "
+        "Position BLOB, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidAnnotationRects ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Color INTEGER, "
+        "Position BLOB, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidAreaTranslations ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "MasterAreaUID INTEGER, "
+        "TranslateAreaUID INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidAreas ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "ParentUID INTEGER, "
+        "Name TEXT, "
+        "Sequence INTEGER, "
+        "WasSent INTEGER, "
+        "GUID TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidArrows ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidTakeoffFromUID INTEGER, "
+        "BidTakeoffToUID INTEGER, "
+        "Position BLOB, "
+        "Color INTEGER, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidCallOuts ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Name BLOB, "
+        "FontName TEXT, "
+        "FontColor INTEGER, "
+        "FontSize INTEGER, "
+        "FontBold INTEGER, "
+        "FontItalic INTEGER, "
+        "FontUnderline INTEGER, "
+        "TextAlign INTEGER, "
+        "Position TEXT, "
+        "Color INTEGER, "
+        "Width INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidComments ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "ParentCommentUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Color INTEGER, "
+        "UserName TEXT, "
+        "Comment BLOB, "
+        "Position TEXT, "
+        "CommentModified TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidConditionFolders ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "ParentUID INTEGER, "
+        "Name TEXT, "
+        "Description BLOB, "
+        "ExpandState INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidConditionUser ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "UserUID INTEGER, "
+        "ConditionUID INTEGER, "
+        "GUID TEXT, "
+        "VALUE TEXT, "
+        "Sequence INTEGER, "
+        "StyleUID INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidConditions ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidConditionFolderUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "CdnTypeUID INTEGER, "
+        "GUID TEXT, "
+        "IsTemplate INTEGER, "
+        "ExternalID INTEGER, "
+        "RefNo INTEGER, "
+        "Name TEXT, "
+        "Notes BLOB, "
+        "Type INTEGER, "
+        "Shape INTEGER, "
+        "Pattern INTEGER, "
+        "ColorLine INTEGER, "
+        "ColorFill INTEGER, "
+        "Width REAL, "
+        "Height REAL, "
+        "Spacing REAL, "
+        "Thickness REAL, "
+        "Rise REAL, "
+        "Run REAL, "
+        "Depth REAL, "
+        "UOM1 INTEGER, "
+        "UOM2 INTEGER, "
+        "UOM3 INTEGER, "
+        "RoundUp REAL, "
+        "Backout INTEGER, "
+        "DropRun INTEGER, "
+        "DropValue REAL, "
+        "Grid INTEGER, "
+        "GridSize1 REAL, "
+        "GridSize2 REAL, "
+        "Gap REAL, "
+        "Connect INTEGER, "
+        "ConnectTolerance REAL, "
+        "Trim INTEGER, "
+        "Curve INTEGER, "
+        "SnapToGrid INTEGER, "
+        "SnapToLinear INTEGER, "
+        "SnapToLinearTolerance REAL, "
+        "ManualLength INTEGER, "
+        "MatAmount REAL, "
+        "LabAmount REAL, "
+        "SubAmount REAL, "
+        "DirectQuantity1 REAL, "
+        "DirectQuantity2 REAL, "
+        "DirectQuantity3 REAL, "
+        "FontName TEXT, "
+        "FontSize INTEGER, "
+        "FontBold INTEGER, "
+        "FontItalic INTEGER, "
+        "DisplayDimension INTEGER, "
+        "RoundQuantity INTEGER, "
+        "Quantity1 INTEGER, "
+        "Quantity2 INTEGER, "
+        "Quantity3 INTEGER, "
+        "ExcelCell1 TEXT, "
+        "ExcelCell2 TEXT, "
+        "ExcelCell3 TEXT, "
+        "IsCurvedSegment INTEGER, "
+        "OpenExternalID INTEGER, "
+        "DisplayGridWhileDrawing INTEGER, "
+        "TypGroupUID INTEGER, "
+        "ShowTakeoff INTEGER, "
+        "BFperLF REAL, "
+        "DisplaySize INTEGER, "
+        "DisplayName INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidDPCSubscribers ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidEmployeeUID INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidDimensions ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidTakeoffFromUID INTEGER, "
+        "BidTakeoffToUID INTEGER, "
+        "Position BLOB, "
+        "FontName TEXT, "
+        "FontColor INTEGER, "
+        "FontSize INTEGER, "
+        "FontBold INTEGER, "
+        "FontItalic INTEGER, "
+        "FontUnderline INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidEmployees ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "EmployeeUID INTEGER, "
+        "PayClassUID INTEGER, "
+        "DateAdded TEXT, "
+        "IsActive INTEGER, "
+        "Notes TEXT, "
+        "GUID TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidHighlights ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Color INTEGER, "
+        "Position BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS BidHotLinks ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidPageViewUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Color INTEGER, "
+        "Position BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS BidLaborActivity ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidConditionUID INTEGER, "
+        "BidLaborCostCodeUID INTEGER, "
+        "Quantity REAL, "
+        "Hours REAL, "
+        "Sequence INTEGER, "
+        "IsActive INTEGER, "
+        "UsesConditionQuantity INTEGER, "
+        "RuleType TEXT, "
+        "RuleValue INTEGER, "
+        "UseQtyIndex INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidLaborCostCodeTotals ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidAreaUID INTEGER, "
+        "BidLaborCostCodeUID INTEGER, "
+        "Date TEXT, "
+        "InstalledQty REAL, "
+        "CompletedHrs REAL)",
+
+        "CREATE TABLE IF NOT EXISTS BidLaborCostCodes ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "Type INTEGER, "
+        "CostCodeUID INTEGER, "
+        "UOM INTEGER, "
+        "IsActive INTEGER, "
+        "GUID TEXT, "
+        "Notes BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS BidLayers ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "IsTemplate INTEGER, "
+        "Name TEXT, "
+        "Show INTEGER, "
+        "IsLocked INTEGER, "
+        "Sequence INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidLegends ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "Position BLOB, "
+        "Rotation REAL, "
+        "FontName TEXT, "
+        "FontColor INTEGER, "
+        "FontSize INTEGER, "
+        "FontBold INTEGER, "
+        "FontItalic INTEGER, "
+        "FontUnderline INTEGER, "
+        "IsShowTotals INTEGER, "
+        "MoveToCorner INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidMarkedPages ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "MarkTakeoffComplete INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidNamedViews ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "Name TEXT, "
+        "Position BLOB, "
+        "Color INTEGER, "
+        "Origin INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidNotes ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "DateCreated TEXT, "
+        "Notes BLOB, "
+        "GUID TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidPageFolders ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "ParentUID INTEGER, "
+        "Name TEXT, "
+        "Description BLOB, "
+        "WasSent INTEGER, "
+        "GUID TEXT, "
+        "ExpandState INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidPageSettings ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidPageUID INTEGER, "
+        "BidAreaUID INTEGER, "
+        "BidTypAreaUID INTEGER, "
+        "BidAreaSelected INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidPages ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageFolderUID INTEGER, "
+        "Name TEXT, "
+        "ImagePath TEXT, "
+        "OverlayImagePath TEXT, "
+        "RasterDrawMethod INTEGER, "
+        "Show INTEGER, "
+        "ScaleStyle INTEGER, "
+        "IsCustomScale INTEGER, "
+        "ScaleFactor1 REAL, "
+        "ScaleFactor2 REAL, "
+        "Scale REAL, "
+        "Width REAL, "
+        "Height REAL, "
+        "ZoomFac REAL, "
+        "CurrentX REAL, "
+        "CurrentY REAL, "
+        "FlipX INTEGER, "
+        "FlipY INTEGER, "
+        "Rotation REAL, "
+        "DeskewRotation REAL, "
+        "OverlayOffsetX REAL, "
+        "OverlayOffsetY REAL, "
+        "OverlayRotation REAL, "
+        "MultiPageCount INTEGER, "
+        "Index1 INTEGER, "
+        "Sequence REAL, "
+        "Invert INTEGER, "
+        "Bitonal INTEGER, "
+        "DigitizerNX1 INTEGER, "
+        "DigitizerNY1 INTEGER, "
+        "DigitizerNX2 INTEGER, "
+        "DigitizerNY2 INTEGER, "
+        "DigitizerWidth REAL, "
+        "DigitizerHeight REAL, "
+        "DigitizerResX INTEGER, "
+        "DigitizerResY INTEGER, "
+        "WasSent INTEGER, "
+        "MasterPageUID INTEGER, "
+        "TypicalPageRepeats INTEGER, "
+        "GUID TEXT, "
+        "OverlayRect TEXT, "
+        "OverlayResized TEXT, "
+        "DeskewRotationOverlay REAL, "
+        "ZoomFlag INTEGER, "
+        "SheetNo TEXT, "
+        "OCRState INTEGER, "
+        "OCRUID INTEGER, "
+        "ALState INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidPercents ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidTimeCardStateUID INTEGER, "
+        "BidLaborCostCodeUID INTEGER, "
+        "BidLaborActivityUID INTEGER, "
+        "BidTakeoffUID INTEGER, "
+        "Percent REAL, "
+        "BidPageUID INTEGER, "
+        "GUID TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidPlanRooms ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "ProjectID TEXT, "
+        "DocumentsURL TEXT, "
+        "Documents BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS BidProjects ("
+        "UID INTEGER PRIMARY KEY, "
+        "Name TEXT, "
+        "Description BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS BidSettings ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageSelectedUID INTEGER, "
+        "STSGUID TEXT, "
+        "STSServerName TEXT, "
+        "STSClientName TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidTakeoffTotals ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidZoneUID INTEGER, "
+        "BidAreaUID INTEGER, "
+        "BidTypAreaUID INTEGER, "
+        "BidConditionUID INTEGER, "
+        "Quantity1 REAL, "
+        "Quantity2 REAL, "
+        "Quantity3 REAL, "
+        "SumQuantity1 REAL, "
+        "SumQuantity2 REAL, "
+        "SumQuantity3 REAL)",
+
+        "CREATE TABLE IF NOT EXISTS BidTakeoffs ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidConditionUID INTEGER, "
+        "BidZoneUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidAreaUID INTEGER, "
+        "BidTypAreaUID INTEGER, "
+        "ParentUID INTEGER, "
+        "No INTEGER, "
+        "Quantity REAL, "
+        "Count REAL, "
+        "Rotation REAL, "
+        "Position TEXT, "
+        "GridOffsetX REAL, "
+        "GridOffsetY REAL, "
+        "GridRotation REAL, "
+        "IsNegativeQuantity INTEGER, "
+        "FontName TEXT, "
+        "FontColor INTEGER, "
+        "FontSize INTEGER, "
+        "FontBold INTEGER, "
+        "FontItalic INTEGER, "
+        "FontUnderline INTEGER, "
+        "TypGroupTakeoffUID INTEGER, "
+        "TypPageTakeoffUID INTEGER, "
+        "TakeoffModified INTEGER, "
+        "TypGroupUID INTEGER, "
+        "TypGroupMarkerUID INTEGER, "
+        "FlipX INTEGER, "
+        "FlipY INTEGER, "
+        "GUID TEXT, "
+        "NameFontName TEXT, "
+        "NameFontColor INTEGER, "
+        "NameFontSize INTEGER, "
+        "NameFontBold INTEGER, "
+        "NameFontItalic INTEGER, "
+        "NameFontUnderline INTEGER, "
+        "Curve INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidTimeCardStates ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "Date TEXT, "
+        "State INTEGER, "
+        "Type INTEGER, "
+        "Percent REAL, "
+        "ProjectedOver REAL, "
+        "IsValid INTEGER, "
+        "GUID TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidTimeCards ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidTimeCardStateUID INTEGER, "
+        "BidEmployeeUID INTEGER, "
+        "BidAreaUID INTEGER, "
+        "BidTypicalAreaUID INTEGER, "
+        "BidLaborCostCodeUID INTEGER, "
+        "Hours1 REAL, "
+        "Hours2 REAL, "
+        "Hours3 REAL, "
+        "Hours4 REAL, "
+        "GUID TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidTexts ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "Name BLOB, "
+        "FontName TEXT, "
+        "FontColor INTEGER, "
+        "FontSize INTEGER, "
+        "FontBold INTEGER, "
+        "FontItalic INTEGER, "
+        "FontUnderline INTEGER, "
+        "TextAlign INTEGER, "
+        "Position TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidTransactionsHistory ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "TransactionID INTEGER, "
+        "SendDate TEXT, "
+        "ReceiveDate TEXT, "
+        "LoginNameFrom TEXT, "
+        "LoginNameTo TEXT, "
+        "Description TEXT, "
+        "EarnedHrs INTEGER, "
+        "UsedHrs INTEGER, "
+        "Type TEXT, "
+        "File TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS BidTypAreas ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "Name TEXT, "
+        "Sequence INTEGER, "
+        "WasSent INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidTypAreaCounts ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidAreaUID INTEGER, "
+        "BidTypAreaUID INTEGER, "
+        "Count INTEGER, "
+        "WasSent INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS BidTypGroupViews ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidConditionUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "Position BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS BidTypicalGroupTotals ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "BidZoneUID INTEGER, "
+        "BidAreaUID INTEGER, "
+        "BidTypGroupUID INTEGER, "
+        "BidConditionUID INTEGER, "
+        "Quantity1 REAL, "
+        "Quantity2 REAL, "
+        "Quantity3 REAL)",
+
+        "CREATE TABLE IF NOT EXISTS BidZones ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidUID INTEGER, "
+        "BidLayerUID INTEGER, "
+        "ExternalID INTEGER, "
+        "Name TEXT, "
+        "Notes BLOB, "
+        "Pattern INTEGER, "
+        "ColorLine INTEGER, "
+        "ColorFill INTEGER, "
+        "Spacing REAL, "
+        "IsNegativeValues INTEGER, "
+        "Sequence INTEGER, "
+        "GUID TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS Bids ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidProjectUID INTEGER, "
+        "ParentBidUID INTEGER, "
+        "OrigBidProjectUID INTEGER, "
+        "OrigParentBidUID INTEGER, "
+        "JobStatusUID INTEGER, "
+        "EstimatorUID INTEGER, "
+        "PrManagerUID INTEGER, "
+        "JobSiteManagerUID INTEGER, "
+        "SourceBidUID TEXT, "
+        "ExternalID INTEGER, "
+        "QuickBidDB TEXT, "
+        "BidNo INTEGER, "
+        "BidType INTEGER, "
+        "JobID TEXT, "
+        "JobName TEXT, "
+        "ImageFolder TEXT, "
+        "Notes BLOB, "
+        "IsAccepted INTEGER, "
+        "RecalcNeeded INTEGER, "
+        "CreateDateTime TEXT, "
+        "ModDateTime TEXT, "
+        "PriceUsing INTEGER, "
+        "PriceUsingDatabase TEXT, "
+        "PriceUsingWorksheet TEXT, "
+        "TakeoffIncrements REAL, "
+        "HoursPerDay INTEGER, "
+        "MeasureBase INTEGER, "
+        "WeekStartDay INTEGER, "
+        "QuantitiesInLegend INTEGER, "
+        "JobSendRec INTEGER, "
+        "ScaleStyle INTEGER, "
+        "IsCustomScale INTEGER, "
+        "ScaleFactor1 REAL, "
+        "ScaleFactor2 REAL, "
+        "PageScale REAL, "
+        "PageWidth REAL, "
+        "PageHeight REAL, "
+        "LastReceiveDateTime TEXT, "
+        "LastSendDateTime TEXT, "
+        "DeliverEntireBid INTEGER, "
+        "EstimatedDays REAL, "
+        "Percent REAL, "
+        "ProjectOver REAL, "
+        "DPCMode INTEGER, "
+        "IsDPCUpdated INTEGER, "
+        "IgnoreBidAreas INTEGER, "
+        "SendImageFiles INTEGER, "
+        "HasSTSClash INTEGER, "
+        "SRPending INTEGER, "
+        "IsUnlocked INTEGER, "
+        "FullBidSent INTEGER, "
+        "TypicalType INTEGER, "
+        "GUID TEXT, "
+        "BidDate TEXT, "
+        "CopyFromBidNO INTEGER, "
+        "CopyTimeStamp TEXT, "
+        "CoverSheetSelItemType INTEGER, "
+        "CoverSheetSelItemUID INTEGER, "
+        "LegendFlags INTEGER, "
+        "IsCalculatedForSlope INTEGER, "
+        "IsCalculatedForLaborCostCodeTotals INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS Boost ("
+        "UID INTEGER PRIMARY KEY, "
+        "TransactionID TEXT, "
+        "BidUID INTEGER, "
+        "BidPageUID INTEGER, "
+        "State INTEGER, "
+        "UploadURL BLOB, "
+        "CallbackURL BLOB, "
+        "ImagePath TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS CdnTypes ("
+        "UID INTEGER PRIMARY KEY, "
+        "Name TEXT, "
+        "ExpandState INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS ConditionSetStyles ("
+        "UID INTEGER PRIMARY KEY, "
+        "ConditionSetUID INTEGER, "
+        "ConditionStyleUID INTEGER, "
+        "Sequence INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS ConditionSets ("
+        "UID INTEGER PRIMARY KEY, "
+        "EmployeeUID INTEGER, "
+        "Name TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS CostCodes ("
+        "UID INTEGER PRIMARY KEY, "
+        "Type INTEGER, "
+        "Name TEXT, "
+        "Description TEXT, "
+        "Sequence INTEGER, "
+        "RuleType TEXT, "
+        "RuleValue INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS DPCCalcFilter ("
+        "UID INTEGER PRIMARY KEY, "
+        "BidPageUID INTEGER, "
+        "BidUID INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS Employees ("
+        "UID INTEGER PRIMARY KEY, "
+        "PayClassUID INTEGER, "
+        "AccessLevelUID INTEGER, "
+        "EmployeeNo TEXT, "
+        "FirstName TEXT, "
+        "LastName TEXT, "
+        "EnableLogin INTEGER, "
+        "LoginName TEXT, "
+        "Password INTEGER, "
+        "Address1 TEXT, "
+        "Address2 TEXT, "
+        "City TEXT, "
+        "State TEXT, "
+        "Zip TEXT, "
+        "HomePhone TEXT, "
+        "MobilePhone TEXT, "
+        "EMail TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS JobStatuses ("
+        "UID INTEGER PRIMARY KEY, "
+        "Locked INTEGER, "
+        "Name TEXT, "
+        "Sequence INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS Locking ("
+        "UID INTEGER PRIMARY KEY, "
+        "Essence TEXT NOT NULL, "
+        "Owner TEXT NOT NULL, "
+        "Data BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS OCRProps ("
+        "UID INTEGER PRIMARY KEY, "
+        "NumberRegion TEXT, "
+        "NameRegion TEXT, "
+        "NameTemplate TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS PayClasses ("
+        "UID INTEGER PRIMARY KEY, "
+        "Name TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS STSTransactionHistory ("
+        "UID INTEGER PRIMARY KEY, "
+        "ObjectUID INTEGER, "
+        "BidUID INTEGER, "
+        "TableName TEXT, "
+        "ChangeType INTEGER, "
+        "ExtraInfo TEXT, "
+        "ExtraInfo2 TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS SchemaRegistry ("
+        "UID INTEGER PRIMARY KEY, "
+        "Version INTEGER, "
+        "Product INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS Settings ("
+        "UID INTEGER PRIMARY KEY, "
+        "Name TEXT, "
+        "Created TEXT, "
+        "NextBidNo INTEGER, "
+        "LoginRequired INTEGER, "
+        "MeasureBase INTEGER, "
+        "PriceUsing INTEGER, "
+        "QuantitiesInLegend INTEGER, "
+        "HoursPerDay INTEGER, "
+        "StartWeekOn INTEGER, "
+        "GridCountMethod INTEGER, "
+        "TakeoffIncrements REAL, "
+        "ScaleStyle INTEGER, "
+        "IsCustomScale INTEGER, "
+        "ScaleFactor1 REAL, "
+        "ScaleFactor2 REAL, "
+        "PageScale REAL, "
+        "PageWidth REAL, "
+        "PageHeight REAL, "
+        "LabelHours1 TEXT, "
+        "LabelHours2 TEXT, "
+        "LabelHours3 TEXT, "
+        "LabelHours4 TEXT, "
+        "IgnoreBidAreas INTEGER, "
+        "SendImageFiles INTEGER, "
+        "STSClientID TEXT, "
+        "STSClientPassword INTEGER, "
+        "BackupNo INTEGER, "
+        "BackupPeriod INTEGER, "
+        "CompressPeriod INTEGER, "
+        "LegendFlags INTEGER, "
+        "StyleLibrarySelItemType INTEGER, "
+        "StyleLibrarySelItemUID INTEGER, "
+        "SLUExpandState INTEGER)",
+
+        "CREATE TABLE IF NOT EXISTS Transactions ("
+        "UID INTEGER PRIMARY KEY, "
+        "ID TEXT NOT NULL, "
+        "ParentID TEXT NOT NULL, "
+        "State INTEGER, "
+        "Type INTEGER, "
+        "Owner TEXT NOT NULL, "
+        "Data BLOB)",
+
+        "CREATE TABLE IF NOT EXISTS UserMasterConditions ("
+        "UID INTEGER PRIMARY KEY, "
+        "Name TEXT)",
+
+        "CREATE TABLE IF NOT EXISTS _AppMeta ("
+        "key TEXT PRIMARY KEY, "
+        "value TEXT)",
+    };
+
+    const std::vector<std::pair<const char *, const char *>> FK_INDEXES = {
+        {"AffectDPCTypGroupViews", "BidUID"},
+        {"BidALines", "BidPageUID"},
+        {"BidALines", "BidTakeoffFromUID"},
+        {"BidALines", "BidTakeoffToUID"},
+        {"BidALines", "BidUID"},
+        {"BidAnnoInk", "BidPageUID"},
+        {"BidAnnoInk", "BidUID"},
+        {"BidAnnotationClouds", "BidLayerUID"},
+        {"BidAnnotationClouds", "BidPageUID"},
+        {"BidAnnotationClouds", "BidUID"},
+        {"BidAnnotationOvals", "BidLayerUID"},
+        {"BidAnnotationOvals", "BidPageUID"},
+        {"BidAnnotationOvals", "BidUID"},
+        {"BidAnnotationPolygons", "BidLayerUID"},
+        {"BidAnnotationPolygons", "BidPageUID"},
+        {"BidAnnotationPolygons", "BidUID"},
+        {"BidAnnotationRects", "BidLayerUID"},
+        {"BidAnnotationRects", "BidPageUID"},
+        {"BidAnnotationRects", "BidUID"},
+        {"BidAreaTranslations", "BidPageUID"},
+        {"BidAreas", "BidUID"},
+        {"BidAreas", "GUID"},
+        {"BidAreas", "ParentUID"},
+        {"BidArrows", "BidPageUID"},
+        {"BidArrows", "BidTakeoffFromUID"},
+        {"BidArrows", "BidTakeoffToUID"},
+        {"BidArrows", "BidUID"},
+        {"BidCallOuts", "BidLayerUID"},
+        {"BidCallOuts", "BidPageUID"},
+        {"BidCallOuts", "BidUID"},
+        {"BidComments", "BidLayerUID"},
+        {"BidComments", "BidPageUID"},
+        {"BidComments", "BidUID"},
+        {"BidComments", "ParentCommentUID"},
+        {"BidConditionFolders", "BidUID"},
+        {"BidConditionFolders", "ParentUID"},
+        {"BidConditions", "BidConditionFolderUID"},
+        {"BidConditions", "BidLayerUID"},
+        {"BidConditions", "BidUID"},
+        {"BidConditions", "CdnTypeUID"},
+        {"BidDPCSubscribers", "BidEmployeeUID"},
+        {"BidDPCSubscribers", "BidUID"},
+        {"BidDimensions", "BidPageUID"},
+        {"BidDimensions", "BidTakeoffFromUID"},
+        {"BidDimensions", "BidTakeoffToUID"},
+        {"BidDimensions", "BidUID"},
+        {"BidEmployees", "BidUID"},
+        {"BidEmployees", "EmployeeUID"},
+        {"BidEmployees", "GUID"},
+        {"BidEmployees", "PayClassUID"},
+        {"BidHighlights", "BidLayerUID"},
+        {"BidHighlights", "BidPageUID"},
+        {"BidHighlights", "BidUID"},
+        {"BidHotLinks", "BidLayerUID"},
+        {"BidHotLinks", "BidPageUID"},
+        {"BidHotLinks", "BidPageViewUID"},
+        {"BidHotLinks", "BidUID"},
+        {"BidLaborActivity", "BidConditionUID"},
+        {"BidLaborActivity", "BidLaborCostCodeUID"},
+        {"BidLaborActivity", "BidUID"},
+        {"BidLaborCostCodeTotals", "BidPageUID"},
+        {"BidLaborCostCodeTotals", "BidUID"},
+        {"BidLaborCostCodes", "BidUID"},
+        {"BidLaborCostCodes", "CostCodeUID"},
+        {"BidLaborCostCodes", "GUID"},
+        {"BidLayers", "BidUID"},
+        {"BidLayers", "IsTemplate"},
+        {"BidLegends", "BidPageUID"},
+        {"BidLegends", "BidUID"},
+        {"BidNamedViews", "BidPageUID"},
+        {"BidNamedViews", "BidUID"},
+        {"BidNotes", "BidUID"},
+        {"BidNotes", "GUID"},
+        {"BidPageFolders", "BidUID"},
+        {"BidPageFolders", "GUID"},
+        {"BidPageFolders", "ParentUID"},
+        {"BidPageSettings", "BidAreaUID"},
+        {"BidPageSettings", "BidPageUID"},
+        {"BidPageSettings", "BidTypAreaUID"},
+        {"BidPages", "BidPageFolderUID"},
+        {"BidPages", "BidUID"},
+        {"BidPages", "GUID"},
+        {"BidPercents", "BidLaborActivityUID"},
+        {"BidPercents", "BidLaborCostCodeUID"},
+        {"BidPercents", "BidPageUID"},
+        {"BidPercents", "BidTakeoffUID"},
+        {"BidPercents", "BidTimeCardStateUID"},
+        {"BidPercents", "GUID"},
+        {"BidPlanRooms", "BidUID"},
+        {"BidProjects", "Name"},
+        {"BidSettings", "BidPageSelectedUID"},
+        {"BidTakeoffTotals", "BidPageUID"},
+        {"BidTakeoffTotals", "BidUID"},
+        {"BidTakeoffs", "BidAreaUID"},
+        {"BidTakeoffs", "BidConditionUID"},
+        {"BidTakeoffs", "BidPageUID"},
+        {"BidTakeoffs", "BidTypAreaUID"},
+        {"BidTakeoffs", "BidUID"},
+        {"BidTakeoffs", "BidZoneUID"},
+        {"BidTakeoffs", "GUID"},
+        {"BidTakeoffs", "No"},
+        {"BidTakeoffs", "ParentUID"},
+        {"BidTexts", "BidLayerUID"},
+        {"BidTexts", "BidPageUID"},
+        {"BidTexts", "BidUID"},
+        {"BidTimeCardStates", "BidUID"},
+        {"BidTimeCardStates", "GUID"},
+        {"BidTimeCards", "BidAreaUID"},
+        {"BidTimeCards", "BidEmployeeUID"},
+        {"BidTimeCards", "BidLaborCostCodeUID"},
+        {"BidTimeCards", "BidTimeCardStateUID"},
+        {"BidTimeCards", "BidTypicalAreaUID"},
+        {"BidTimeCards", "GUID"},
+        {"BidTransactionsHistory", "BidUID"},
+        {"BidTypAreaCounts", "BidAreaUID"},
+        {"BidTypAreaCounts", "BidTypAreaUID"},
+        {"BidTypAreas", "BidUID"},
+        {"BidTypGroupViews", "BidPageUID"},
+        {"BidTypGroupViews", "BidUID"},
+        {"BidTypicalGroupTotals", "BidPageUID"},
+        {"BidTypicalGroupTotals", "BidUID"},
+        {"BidZones", "BidLayerUID"},
+        {"BidZones", "BidUID"},
+        {"Bids", "BidProjectUID"},
+        {"Bids", "BidType"},
+        {"Bids", "ParentBidUID"},
+        {"CdnTypes", "Name"},
+        {"ConditionSetStyles", "ConditionSetUID"},
+        {"ConditionSetStyles", "ConditionStyleUID"},
+        {"ConditionSets", "EmployeeUID"},
+        {"DPCCalcFilter", "BidUID"},
+        {"Employees", "AccessLevelUID"},
+        {"Employees", "LoginName"},
+        {"Employees", "PayClassUID"},
+        {"STSTransactionHistory", "ChangeType"},
+        {"STSTransactionHistory", "ObjectUID"},
+        {"UserMasterConditions", "Name"},
+    };
+
+    const std::vector<const char *> UNIQUE_INDEX_DDL = {
+        "CREATE UNIQUE INDEX IF NOT EXISTS [UI_Locking2] ON [Locking] ([Essence])",
+        "CREATE UNIQUE INDEX IF NOT EXISTS [UI_Locking] ON [Locking] ([Essence], [Owner])",
+    };
+
+    const std::vector<int> SCHEMA_VERSIONS = {
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+    };
+
+    const std::vector<DefaultLayerSeed> DEFAULT_LAYERS = {
+        {"Default", -1, -1, 2},
+        {"Annotation", -1, -1, 1},
+        {"Image", -1, -1, 0},
+        {"Comments", -1, -1, 3},
+    };
+
+    const std::vector<const char *> BID_SECTIONS = {
+        "BidPlanRooms",
+        "BidAreas",
+        "BidTypAreas",
+        "BidConditionFolders",
+        "BidPageFolders",
+        "BidSettings",
+        "BidLayers",
+        "BidTypAreaCounts",
+        "BidConditions",
+        "UserMasterConditions",
+        "BidConditionUser",
+        "BidZones",
+        "BidTypGroupViews",
+        "OCRProps",
+    };
+
+    const std::vector<const char *> PAGE_SECTIONS = {
+        "BidTakeoffs",
+        "BidHighlights",
+        "BidTexts",
+        "BidDimensions",
+        "BidArrows",
+        "BidALines",
+        "BidCallOuts",
+        "BidAnnotationRects",
+        "BidAnnotationOvals",
+        "BidAnnotationPolygons",
+        "BidAnnotationClouds",
+        "BidAnnoInk",
+        "BidLegends",
+        "BidPageSettings",
+        "BidAreaTranslations",
+        "BidMarkedPages",
+        "BidComments",
+    };
+
+    const std::vector<const char *> BID_TAIL_SECTIONS = {
+        "BidNamedViews",
+        "BidHotLinks",
+    };
+
+    const std::vector<const char *> GLOBAL_SECTIONS = {
+        "Employees",
+        "AccessLevels",
+        "CdnTypes",
+        "JobStatuses",
+    };
+
+    std::string singular(const std::string &table_name)
+    {
+        if (!table_name.empty() && table_name.back() == 's')
+            return table_name.substr(0, table_name.size() - 1);
+        return table_name;
+    }
+
+}

@@ -1,0 +1,112 @@
+name: Build bgfx iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          path: project
+
+      - name: Checkout bgfx
+        uses: actions/checkout@v4
+        with:
+          repository: bkaradzic/bgfx
+          path: bgfx
+
+      - name: Checkout bx
+        uses: actions/checkout@v4
+        with:
+          repository: bkaradzic/bx
+          path: bx
+
+      - name: Checkout bimg
+        uses: actions/checkout@v4
+        with:
+          repository: bkaradzic/bimg
+          path: bimg
+
+      - name: Build bgfx libraries for iOS arm64
+        run: |
+          export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
+          make -C bgfx ios-arm64-release
+
+      - name: Build shaderc (host tool)
+        run: make -C bgfx tools
+
+      - name: Compile shaders
+        run: |
+          SHADERC=bgfx/.build/osx-x64/bin/shadercRelease
+          if [ ! -f "$SHADERC" ]; then
+            SHADERC=bgfx/.build/osx-arm64/bin/shadercRelease
+          fi
+          echo "Using shaderc: $SHADERC"
+
+          SRC=project/Rendering/Shaders/src
+          GEN=project/Rendering/Shaders/generated
+          INCLUDE=bgfx/src
+          mkdir -p "$GEN"
+
+          compile() {
+            local name=$1 type=$2
+            echo "  $name ($type)"
+            "$SHADERC" -f "$SRC/${name}.sc" -o "$GEN/${name}.bin" \
+              --type "$type" --platform ios -p metal \
+              -i "$INCLUDE" -i "$SRC" --varyingdef "$SRC/varying.def.sc"
+          }
+
+          compile vs_mesh vertex
+          compile vs_fullscreen vertex
+          compile fs_mesh fragment
+          compile fs_oit_accum fragment
+          compile fs_oit_revealage fragment
+          compile fs_oit_composite fragment
+          compile fs_meshid fragment
+          compile fs_selection_post fragment
+
+          echo "Converting to C headers..."
+          for bin in "$GEN"/*.bin; do
+            name=$(basename "$bin" .bin)
+            varname="${name}_bin"
+            echo "  $name -> ${name}.h"
+            xxd -i < "$bin" | sed "s/unsigned char/static const uint8_t ${varname}[]={/; s/unsigned int.*//; s/};/};/" > "$GEN/${name}.h"
+            # Rewrite properly
+            python3 -c "
+          import sys, os
+          data = open('$bin','rb').read()
+          name = '${varname}'
+          out = 'static const uint8_t %s[] = {\\n' % name
+          for i, b in enumerate(data):
+              if i % 16 == 0: out += '    '
+              out += '0x%02x,' % b
+              if i % 16 == 15: out += '\\n'
+          out += '\\n};\\nstatic const uint32_t %s_size = sizeof(%s);\\n' % (name, name)
+          open('$GEN/${name}.h','w').write(out)
+          "
+          done
+
+      - name: Upload libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: bgfx-ios-arm64
+          path: bgfx/.build/ios-arm64/bin/
+
+      - name: Upload compiled shaders
+        uses: actions/upload-artifact@v4
+        with:
+          name: bgfx-shaders
+          path: project/Rendering/Shaders/generated/*.h
+
+      - name: Upload headers
+        uses: actions/upload-artifact@v4
+        with:
+          name: bgfx-headers
+          path: |
+            bgfx/include/
+            bx/include/
+            bimg/include/

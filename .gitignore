@@ -1,0 +1,47 @@
+# Build artifacts
+*.o
+*.d
+.build/
+
+# bgfx build intermediates (libraries are kept)
+Libs/bgfx/bgfx/.build/projects/
+Libs/bgfx/bgfx/3rdparty/
+Libs/bgfx/bgfx/bindings/
+Libs/bgfx/bgfx/docs/
+Libs/bgfx/bgfx/examples/
+Libs/bgfx/bgfx/scripts/
+Libs/bgfx/bgfx/src/
+Libs/bgfx/bgfx/tools/
+Libs/bgfx/bgfx/Makefile
+Libs/bgfx/bgfx/makefile
+Libs/bgfx/bgfx/README.md
+Libs/bgfx/bgfx/LICENSE
+Libs/bgfx/bx/3rdparty/
+Libs/bgfx/bx/docs/
+Libs/bgfx/bx/scripts/
+Libs/bgfx/bx/src/
+Libs/bgfx/bx/tests/
+Libs/bgfx/bx/tools/
+Libs/bgfx/bx/Makefile
+Libs/bgfx/bx/makefile
+Libs/bgfx/bx/README.md
+Libs/bgfx/bx/LICENSE
+Libs/bgfx/bimg/3rdparty/
+Libs/bgfx/bimg/docs/
+Libs/bgfx/bimg/scripts/
+Libs/bgfx/bimg/src/
+Libs/bgfx/bimg/Makefile
+Libs/bgfx/bimg/makefile
+Libs/bgfx/bimg/README.md
+Libs/bgfx/bimg/LICENSE
+
+# Compiled shader binaries (generated headers are kept)
+Rendering/Shaders/generated/*.bin
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.claude/settings.local.json
