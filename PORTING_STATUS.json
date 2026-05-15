@@ -1,0 +1,377 @@
+{
+  "last_updated": "2026-05-15",
+  "phase": "Dashboard coverage expansion",
+  "overall_status": "source_confirmed_mvp_path_with_runtime_and_desktop_parity_gaps",
+  "status_vocabulary": [
+    "Ported",
+    "Partial",
+    "Missing",
+    "Replaced",
+    "Obsolete",
+    "Needs verification"
+  ],
+  "verification_scope": {
+    "ios_repo": "C:\\Users\\fjimeno\\Documents\\Programming\\iOS\\OSTVisualizer",
+    "desktop_repo": "C:\\Users\\fjimeno\\Documents\\Programming\\Python\\OSTVisualizerLicense",
+    "verified_from": [
+      "tracking markdown files",
+      "iOS source files",
+      "desktop/source reference files",
+      "project configuration",
+      "GitHub dependency workflows",
+      "config and entitlement files",
+      "vendored library paths",
+      "repository-wide searches"
+    ],
+    "build_run_performed": false,
+    "device_run_performed": false,
+    "notes": "This pass validates static/source claims only. Runtime behavior, build reproducibility, device performance, and fixture parity remain manual validation items."
+  },
+  "summary": {
+    "renderer": "Ported",
+    "renderer_backend": "bgfx_metal",
+    "import_workflow": "Partial",
+    "sqlite_persistence": "Ported",
+    "domain_model": "Partial",
+    "meshing": "Partial",
+    "boolean_ops": "Ported",
+    "quantity_calculations": "Partial",
+    "pdf_viewing": "Partial",
+    "exports": "Partial",
+    "ui": "Replaced",
+    "primary_remaining_work": [
+      "clean build and device validation",
+      "desktop-vs-iOS fixture parity",
+      "OST/OSP export round-trip implementation",
+      "PDF annotation export implementation",
+      "PDF page/overlay fidelity",
+      "count shape, metric UOM, attachment quantity, and advanced editing parity"
+    ],
+    "additional_risks": [
+      "no iOS app test target or fixture harness found",
+      "dependency workflows build artifacts only, not the full app",
+      "signing/entitlement configuration needs validation",
+      "export failure/progress UX needs device validation"
+    ]
+  },
+  "active_blockers": [
+    {
+      "id": "B-004",
+      "name": "PDF annotation export",
+      "status": "Missing",
+      "current_state": "No QPDF integration, PDFKit writer, CoreGraphics writer, or replacement PDF annotation export path was found in the iOS repo.",
+      "impact": "Blocks PDF annotation export only.",
+      "desktop_evidence": [
+        "cpp_extensions/src/pdf/pdf_writer.cpp",
+        "cpp_extensions/src/pdf/bluebeam_annotation.cpp",
+        "ost_visualizer/presentation/visualization/exporters/pdf_exporter.py",
+        "cpp_extensions/CMakeLists.txt QPDF references"
+      ],
+      "ios_evidence": [
+        "No qpdf/QPDF/pdf_writer implementation found by repository search",
+        "Core/Export contains OBJ, DXF, and Three.js writers only",
+        "Services/ExportService.mm exposes OBJ, DXF, and Three.js export paths only"
+      ]
+    },
+    {
+      "id": "B-009",
+      "name": "OST/OSP export round trip",
+      "status": "Missing",
+      "current_state": "Desktop has OST/OSP exporters; iOS imports OST/OSP but does not write OST/OSP packages.",
+      "impact": "Blocks desktop-compatible project/package round trip.",
+      "desktop_evidence": [
+        "ost_visualizer/presentation/visualization/exporters/ost_exporter.py",
+        "ost_visualizer/presentation/visualization/exporters/osp_exporter.py"
+      ],
+      "ios_evidence": [
+        "Core/Export",
+        "Services/ExportService.mm"
+      ]
+    }
+  ],
+  "resolved_or_replaced_blockers": [
+    {
+      "id": "B-001",
+      "name": "GLM availability",
+      "status": "Replaced",
+      "current_state": "No active iOS GLM dependency was found; current meshing/curved length code uses portable C++ math.",
+      "needs_verification": "Curved/sloped geometry parity against desktop fixtures."
+    },
+    {
+      "id": "B-002",
+      "name": "Manifold / boolean operations",
+      "status": "Ported",
+      "current_state": "Manifold headers/static library are present, Project.plist links -lmanifold, boolean_ops.cpp includes Manifold, and render/export paths call boolean_difference_batch.",
+      "needs_verification": "Clean build/link and dense boolean stress testing."
+    },
+    {
+      "id": "B-003",
+      "name": "PDFium / PDF viewing",
+      "status": "Partial",
+      "current_state": "Basic PDF viewing uses CoreGraphics/CGPDF instead of PDFium.",
+      "limitation": "PDFCanvasView draws page 1 only; multi-page mapping is not implemented/proven."
+    },
+    {
+      "id": "B-005",
+      "name": "MDB / Access database access",
+      "status": "Replaced",
+      "current_state": "Direct OST XML and OSP CAB import backed by SQLite replaces MDB/pyodbc on iOS.",
+      "needs_verification": "Fixture parity and preservation of non-loaded imported tables."
+    },
+    {
+      "id": "B-006",
+      "name": "PySide6 / Qt UI replacement",
+      "status": "Replaced",
+      "current_state": "UIKit controllers and views replace desktop PySide6/Qt for current iOS scope."
+    },
+    {
+      "id": "B-007",
+      "name": "File import and non-project export workflow",
+      "status": "Partial",
+      "current_state": "OST/OSP import and OBJ/DXF/Three.js sharing are source-wired.",
+      "limitation": "OST/OSP project export and PDF annotation export remain missing."
+    },
+    {
+      "id": "B-008",
+      "name": "Renderer backend limitations",
+      "status": "Replaced",
+      "current_state": "Renderer source initializes bgfx Metal and project config links bgfx plus Metal/MetalKit.",
+      "needs_verification": "Clean build/link and device GPU testing."
+    }
+  ],
+  "source_confirmed_systems": [
+    {
+      "name": "UIKit app shell",
+      "status": "Replaced",
+      "ios_paths": [
+        "Main.m",
+        "AppDelegate.m",
+        "SceneDelegate.mm",
+        "Controllers",
+        "PlanView"
+      ]
+    },
+    {
+      "name": "OST XML import path",
+      "status": "Ported",
+      "desktop_paths": [
+        "ost_visualizer/infrastructure/mdb/importers/ost_importer.py"
+      ],
+      "ios_paths": [
+        "SceneDelegate.mm",
+        "Services/ImportService.mm",
+        "Core/Import/OstXmlParser.cpp"
+      ],
+      "needs_verification": "Representative OST fixture comparison."
+    },
+    {
+      "name": "OSP import path",
+      "status": "Partial",
+      "desktop_paths": [
+        "ost_visualizer/infrastructure/mdb/importers/osp_importer.py"
+      ],
+      "ios_paths": [
+        "SceneDelegate.mm",
+        "Services/ImportService.mm",
+        "Core/Import/CabExtractor.cpp"
+      ],
+      "needs_verification": "Real OSP package variants, PDF extraction, path rewriting, overlays."
+    },
+    {
+      "name": "SQLite table coverage",
+      "status": "Ported",
+      "desktop_paths": [
+        "ost_visualizer/infrastructure/mdb/database_creator.py"
+      ],
+      "ios_paths": [
+        "Core/Persistence/OstSchema.cpp",
+        "Core/Persistence/ProjectStore.cpp"
+      ],
+      "evidence": "Static comparison found all 64 desktop table names in iOS plus _AppMeta.",
+      "needs_verification": "Column semantics, schema-version behavior, fixture row parity, edit preservation."
+    },
+    {
+      "name": "Manifold boolean operations",
+      "status": "Ported",
+      "desktop_paths": [
+        "cpp_extensions/src/boolean"
+      ],
+      "ios_paths": [
+        "Core/Geometry/boolean_ops.cpp",
+        "Libs/Manifold",
+        "Services/ProjectService.mm",
+        "Services/ExportService.mm"
+      ],
+      "needs_verification": "Clean link and stress testing."
+    },
+    {
+      "name": "bgfx/Metal renderer",
+      "status": "Ported",
+      "desktop_paths": [
+        "cpp_extensions/src/renderer",
+        "ost_visualizer/presentation/components/mesh_view.py"
+      ],
+      "ios_paths": [
+        "Rendering/Renderer.mm",
+        "Rendering/BgfxView.mm",
+        "Rendering/Shaders/generated",
+        "Config/Project.plist",
+        "Libs/bgfx"
+      ],
+      "notes": "Replaces desktop OpenGL/Qt renderer and older software-renderer notes.",
+      "needs_verification": "Clean build and device rendering/picking."
+    },
+    {
+      "name": "OBJ, DXF, and Three.js exports",
+      "status": "Ported",
+      "desktop_paths": [
+        "ost_visualizer/presentation/visualization/exporters/obj_exporter.py",
+        "ost_visualizer/presentation/visualization/exporters/dxf_exporter.py",
+        "ost_visualizer/presentation/visualization/renderers/threejs"
+      ],
+      "ios_paths": [
+        "Core/Export",
+        "Services/ExportService.mm",
+        "Controllers/ViewController/Components/ViewController+Export.mm"
+      ],
+      "needs_verification": "Device share flow and exported-file parity."
+    },
+    {
+      "name": "Project/edit persistence operations",
+      "status": "Partial",
+      "desktop_paths": [
+        "ost_visualizer/application/use_cases/project",
+        "ost_visualizer/infrastructure/mdb/components"
+      ],
+      "ios_paths": [
+        "Core/Persistence/ProjectStore/Components",
+        "Services/ImportService.mm"
+      ],
+      "notes": "Current-scope folder, layer visibility, takeoff, condition, and render-config writes are source-present.",
+      "needs_verification": "Desktop behavior parity and preservation of non-loaded tables after edits."
+    },
+    {
+      "name": "Import error handling",
+      "status": "Partial",
+      "ios_paths": [
+        "Services/ImportService.mm",
+        "Controllers/DatabaseViewController.mm",
+        "SceneDelegate.mm"
+      ],
+      "notes": "Import failures use NSError and alerts for picker/URL import paths.",
+      "needs_verification": "Progress, cancellation, and representative failure cases."
+    },
+    {
+      "name": "Dependency artifact workflows",
+      "status": "Needs verification",
+      "ios_paths": [
+        ".github/workflows/build-bgfx-ios.yml",
+        ".github/workflows/build-manifold-ios.yml"
+      ],
+      "notes": "Manual workflows build dependency artifacts; they are not app CI."
+    }
+  ],
+  "partial_or_missing_systems": [
+    {
+      "name": "Loaded project model",
+      "status": "Partial",
+      "ios_paths": [
+        "Core/Domain",
+        "Core/Data/ProjectData.hpp",
+        "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp"
+      ],
+      "gap": "Loads visualization/editing subset, not every desktop use-case field."
+    },
+    {
+      "name": "Mesh generation",
+      "status": "Partial",
+      "ios_paths": [
+        "Core/Meshing",
+        "Core/Geometry"
+      ],
+      "gap": "Advanced count-shape parity is incomplete for ellipse width/depth, rhombus, triangle, hexagon, and octagon."
+    },
+    {
+      "name": "Measurement and quantity calculations",
+      "status": "Partial",
+      "ios_paths": [
+        "Core/Domain/UomService.hpp",
+        "Controllers/ConditionsViewController.mm"
+      ],
+      "gap": "Metric UOM normalization and attachment footprint/perimeter aggregation are incomplete; rounding fields are modeled/persisted but source-confirmed application in totals was not found."
+    },
+    {
+      "name": "2D PDF/page rendering",
+      "status": "Partial",
+      "ios_paths": [
+        "PlanView/Components/PDFCanvasView.mm",
+        "PlanView/PlanView.mm",
+        "Core/Domain/Page.hpp"
+      ],
+      "gap": "CoreGraphics draws page 1 only; overlay fields are loaded but not composited; bitonal/invert/raster modes are missing."
+    },
+    {
+      "name": "Annotation render/edit",
+      "status": "Missing",
+      "gap": "Annotation tables exist in schema, but no iOS annotation domain/UI renderer was found."
+    },
+    {
+      "name": "Plan editing and snapping",
+      "status": "Partial",
+      "ios_paths": [
+        "PlanView",
+        "Controllers/ViewController/Components"
+      ],
+      "gap": "Desktop endpoint/midpoint/perpendicular snap index, backout mode, paste-backout, detached view sync, and broad menu actions are not ported."
+    },
+    {
+      "name": "Licensing/update systems",
+      "status": "Obsolete",
+      "gap": "No iOS equivalent found; outside current iOS MVP."
+    },
+    {
+      "name": "Automated app tests and fixtures",
+      "status": "Missing",
+      "gap": "Desktop has pytest coverage; no iOS app test target, fixture suite, app build script, or app CI workflow was found in the repo inventory."
+    },
+    {
+      "name": "Build/signing package configuration",
+      "status": "Needs verification",
+      "ios_paths": [
+        "Config/Project.plist",
+        "Config/Entitlements.plist"
+      ],
+      "gap": "Manual link/resource settings and nonstandard entitlements need clean-build, signing, and distribution validation."
+    },
+    {
+      "name": "Export UX/error handling",
+      "status": "Partial",
+      "ios_paths": [
+        "Services/ExportService.mm",
+        "Controllers/ViewController/Components/ViewController+Export.mm"
+      ],
+      "gap": "OBJ/DXF/Three.js share flow exists with empty-mesh handling; write failures, progress, and share-target behavior need device validation."
+    }
+  ],
+  "needs_manual_validation": [
+    "Clean build/link from a fresh checkout.",
+    "Manual bgfx and Manifold dependency artifact workflow validation.",
+    "Signing/entitlements validation for the current Config plists.",
+    "Device run for bgfx/Metal rendering, picking readback, camera controls, and sharing.",
+    "Representative OST/OSP fixture imports compared against desktop rows and loaded fields.",
+    "PDF page scaling, page selection, rotations, extracted paths, and overlay behavior.",
+    "Quantity parity for metric UOMs, attachments, rounding, holes, negatives, slope, grid, and curved lengths.",
+    "Large project memory/frame-time testing.",
+    "Manifold boolean stress testing.",
+    "OBJ/DXF/Three.js export share flow and file-write failure validation.",
+    "App-level CI/test target or repeatable fixture validation harness."
+  ],
+  "obsolete_historical": [
+    "Metal unavailable / software rasterizer production path",
+    "Desktop OpenGL renderer must be ported directly",
+    "PDFium required for basic PDF viewing",
+    "MDB/pyodbc required on iOS",
+    "PySide6 blocks UI",
+    "GLM blocks curved meshes"
+  ]
+}
