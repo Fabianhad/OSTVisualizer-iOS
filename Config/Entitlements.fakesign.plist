@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements embedded by the CI workflow (.github/workflows/build.yml) when it fake-signs the app
+  with ldid. This is the single place to edit them. No Apple account, certificate or provisioning
+  profile is involved, so only entitlements that a fake-signing installer honours are useful here.
+
+  The set is intentionally MINIMAL. Every key you add is baked into the IPA, and some installers
+  reject IPAs that carry entitlements they do not recognise.
+
+  Keys:
+    get-task-allowed (true)
+        Standard "debuggable app" entitlement. It allows a debugger or inspection tool to attach
+        to the running process (task port), as Xcode adds to development builds. It does not change
+        what the app does.
+
+  Deliberately NOT here:
+    com.apple.developer.kernel.increased-memory-limit
+    com.apple.developer.kernel.extended-virtual-addressing
+        Memory entitlements. They are applied by the user after installation with iRAM+, not by
+        this build. The workflow fails the build if either one shows up in the signed binary, so
+        iRAM+ stays the only place that grants them.
+    com.nyxian.pe.*
+        Nyxian runtime entitlements (Config/Entitlements.plist). They only mean something inside
+        Nyxian and are not part of this build.
+
+  The workflow converts this file with plutil before signing, so these comments are dropped.
+  After signing it prints the embedded entitlements (ldid -e) in the job log.
+-->
+<plist version="1.0">
+<dict>
+	<key>get-task-allowed</key>
+	<true/>
+</dict>
+</plist>
