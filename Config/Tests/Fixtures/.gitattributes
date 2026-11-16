@@ -1,0 +1,2 @@
+# Test fixtures are byte-exact oracles (some come from the Windows app): never normalize line endings.
+* -text
