@@ -2,6 +2,39 @@
 
 > Chronological record of porting decisions, changes, and progress.
 
+> **Reading note (2026-11-15):** entries dated before 2026-11-15 are historical and may be superseded. Several of them describe files, tables, Windows behaviour or "Ported" status that were later found to be wrong or have since changed (`PARITY_MAP.md` section I lists the stale claims). The current truth is `PORTING_STATUS.md`, `PORTING_MAP.md` and `PARITY_MAP.md`; remaining work is in `PORTING_PLAN.md`.
+
+---
+
+## 2026-11-15 - Build/Test Infrastructure, Parity Map, Documentation Rewrite
+
+### Phase 0: build and test infrastructure (new files, nothing committed)
+- `project.yml` (XcodeGen) reproduces the Nyxian build of `Config/Project.plist` with standard Xcode settings: arm64 device only, deployment target 14.8, bundle id `com.fabian.ostvisualizer`, product name `OST Visualizer`, the same `-I`, `-D`, `-ObjC` and library flags. The Xcode project is generated and not committed (`.gitignore` gained `*.xcodeproj/`, `DerivedData/`, `/build/`, `/deps/`).
+- `.github/workflows/build.yml` ("Build IPA", macos-15, Xcode 16.4): host unit tests, `libmanifold.a` arm64 check, plist lint, bgfx/bx/bimg built from pinned commits with an Actions cache, `xcodegen generate`, unsigned Release `xcodebuild`, bundle checks, fake-sign with `ldid`, entitlement verification, IPA upload. No Apple account, certificate or secret is used.
+- Fake-signing: `Config/Entitlements.fakesign.plist` holds only `get-task-allowed`. The job fails if any entitlement key matches `memory|jetsam|extended-virtual-addressing`, because memory entitlements are applied after install with iRAM+ (bundle id and executable name are kept stable for that). `Config/Info.plist` (copied document types and scene manifest) and `BUILD.md` complete the set. The Nyxian files `Config/Project.plist` and `Config/Entitlements.plist` were not changed.
+- Host test harness `Config/Tests/` (CMake, `Support/TestHarness.hpp`, `TestMain.cpp`, `BooleanOpsStub.cpp`, `Harness/test_harness_selftest.cpp`): builds all of `Core/` plus `Rendering/MeshLoader.cpp` (with `boolean_ops.cpp` stubbed unless `OST_TEST_BOOLEAN` is on) into one library and one test executable per area folder. Built and run with MSVC on Windows: the 10-test harness self-test passes. The AppleClang run is configured in CI and has not happened. There are no iOS behaviour tests yet and `Config/Tests/Fixtures` holds only `.gitkeep`.
+- Why the tests live under `Config/`: Nyxian compiles every `.c`, `.cpp`, `.m`, `.mm` and `.swift` file under the project folder except the top-level `Config/` and `Resources/` folders (Nyxian's public source, `NXPhaseEngine.m`; the installed version was not inspected). The harness has its own `main()` and a boolean-operations stub, so outside `Config/` an on-device Nyxian build would fail with duplicate symbols. The CI build is unaffected because `project.yml` lists the app folders explicitly.
+
+### Phase 3 (partial, stopped early): Core parity fixes on branch ios-parity-sync
+- Applied test-first in the host-testable Core (`Config/Tests/<Area>` ported from the Windows tests, Windows code as oracle): quantities (UomService.hpp), geometry/page transform, persistence error propagation (DBP-11), elevation/position parsing, meshing (curved walls, count shapes, area slope, 3D scale/rotation), import pipeline. 591 host tests pass under MSVC (iOS behaviour tests before: 0).
+- NOT finished: independent review had completed only for quantities, geometry and DBP-11; the parsers, meshing and import steps were not reviewed or finished (import was mid-step); export, remaining persistence, browser, conditions and settings steps were not started; none of the Objective-C wiring (`.mm`) or extraction was done, so most fixes are not yet reachable from the app. Nothing here was built or run on iOS.
+- The status docs (`PORTING_STATUS.*`, `PORTING_BLOCKERS.md`, `PORTING_MAP.md`, `PORTING_PLAN.md`) and `PARITY_MAP.md` still describe the pre-fix baseline (every item `open`); they were not updated for the fixes above.
+
+### Phase 1: parity map (`PARITY_MAP.md`)
+- Method: 12 area mappers and 12 independent verifiers compared iOS with the Windows app (`dceb47d`) at iOS `4a1302d`. The real iOS C++ sources were compiled on the host with MSVC (with the vendored sqlite3 and pugixml) and compared with the Windows Python modules and native extensions; Obj-C/UIKit code was compared by reading and re-implementing the arithmetic. No iOS source file was edited.
+- Result: 369 reported items merged into 216 divergences (153 merged as aliases, 1 refuted, 1 synthetic split MSH-19/MSH-19b): 171 `fix`, 44 `needs-decision`, 1 `cannot-reproduce`. By impact: 66 wrong numbers, 45 data safety, 86 behaviour, 19 UI. Of the 171 fix items, 83 are testable on the host as is, 76 need their logic moved from `.mm` into `Core/` first, 12 are UIKit/manual only.
+- Largest findings: meshes are divided by the page scale ratio (MSH-01) and page rotation/flip is never applied in 3D (MSH-02); attachments on areas count 0 (QTY-01); `round_quantity` is never applied (QTY-04); curved length is wrong (QTY-07 to QTY-09); DXF and Three.js axes are wrong (EXP-01, EXP-02); import can overwrite other projects' rows (IMP-06); SQL failures are swallowed (DBP-11).
+- Consequence for this log: earlier entries that say a module "matches desktop" or is "Ported" (for example the 2026-03-23 coordinate approach, area slope, hole grouping and Three.js entries) were not borne out by the comparison.
+
+### Phase 2: documentation rewrite
+- `PORTING_MAP.md` rewritten from the code: every iOS and Windows path verified to exist, one status per row, parity ids per row. `PORTING_PLAN.md` rewritten as the remaining work: Phase 3 fixes by impact and owner, the 44 decisions, features not implemented, validation that needs a Mac, CI or a device. This reading note was added to the log; older entries were not changed. `PORTING_STATUS.md`, `PORTING_STATUS.json` and `PORTING_BLOCKERS.md` were rewritten in the same pass (see those files).
+- Claims removed as wrong: `ProjectStore+RenderConfig.cpp` (never existed; render config is in `ProjectStore+Conditions.cpp`), the Windows paths `infrastructure/mdb/ost_schema.py`, `domain/ost_schema.py` and `presentation/visualization/exporters/ost_exporter.py`, "no CI or test target", and the "Ported" status of rows that diverge.
+
+### Not verified / still open
+- Nothing was built or run on iOS: no Xcode, macOS, device, XcodeGen or ldid was available. The CI workflow has never run; the Obj-C/Obj-C++ sources have not been compiled by Xcode in this work.
+- Phase 3 (the fixes) has not started. Machine-readable `divergences.json` with the test-plan expected values is still outside the repositories (Phase 1 scratchpad).
+- Comments in `Config/Tests/CMakeLists.txt` and `project.yml` still refer to a `Tests/` folder; the harness is at `Config/Tests/` (the CMake source root path itself is correct).
+
 ---
 
 ## 2026-05-15 - Dashboard Coverage Expansion

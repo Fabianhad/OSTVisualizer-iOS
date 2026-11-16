@@ -1,91 +1,933 @@
 {
-  "last_updated": "2026-05-15",
-  "phase": "Dashboard coverage expansion",
-  "overall_status": "source_confirmed_mvp_path_with_runtime_and_desktop_parity_gaps",
+  "last_updated": "2026-11-15",
+  "phase": "Phase 1 complete (parity map, 216 divergences, all open); Phase 0 build/CI/test files uncommitted; no iOS source changed yet",
+  "overall_status": "implemented_mvp_path_diverges_from_windows_never_built_or_run_on_ios",
   "status_vocabulary": [
-    "Ported",
-    "Partial",
-    "Missing",
+    "Implemented-matches-Windows",
+    "Implemented-diverges",
+    "Implemented-unverified",
     "Replaced",
-    "Obsolete",
-    "Needs verification"
+    "Not implemented",
+    "Obsolete"
   ],
+  "status_notes": "Replaces the earlier vocabulary (Ported, Partial, Missing, Replaced, Obsolete, Needs verification). Top-level keys source_confirmed_systems and partial_or_missing_systems were replaced by systems and not_implemented because Ported/Partial no longer apply.",
   "verification_scope": {
-    "ios_repo": "C:\\Users\\fjimeno\\Documents\\Programming\\iOS\\OSTVisualizer",
-    "desktop_repo": "C:\\Users\\fjimeno\\Documents\\Programming\\Python\\OSTVisualizerLicense",
+    "ios_repo": "OSTVisualizer (this repository)",
+    "ios_head": "4a1302d",
+    "ios_working_tree": "Uncommitted: .gitignore (modified); project.yml, .github/workflows/build.yml, BUILD.md, Config/Info.plist, Config/Entitlements.fakesign.plist, Config/Tests/, PARITY_MAP.md (untracked). No iOS source file differs from HEAD.",
+    "windows_repo": "OSTVisualizerLicense (read-only reference)",
+    "windows_head": "dceb47d",
     "verified_from": [
-      "tracking markdown files",
-      "iOS source files",
-      "desktop/source reference files",
-      "project configuration",
-      "GitHub dependency workflows",
-      "config and entitlement files",
-      "vendored library paths",
-      "repository-wide searches"
+      "iOS source files opened or searched on 2026-11-15",
+      "PARITY_MAP.md and divergences.json (Phase 1)",
+      "project.yml, build.yml, BUILD.md, Config/*",
+      "Config/Tests harness",
+      "Windows reference files (existence and diff only)"
     ],
     "build_run_performed": false,
     "device_run_performed": false,
-    "notes": "This pass validates static/source claims only. Runtime behavior, build reproducibility, device performance, and fixture parity remain manual validation items."
+    "ci_build_defined": true,
+    "ci_build_run": false,
+    "host_test_harness": true,
+    "host_harness_selftests": 10,
+    "ios_behavior_tests": 0,
+    "ios_behavior_tests_note": "Config/Tests contains only the harness self-tests (area Harness). No test exercises iOS behaviour; Config/Tests/Fixtures is empty and the repo has no .ost/.osp sample.",
+    "notes": "Source reading and host-side comparison only. Xcode, xcodebuild, XcodeGen, ldid and any Objective-C compile are unavailable on the authoring machine. Runtime behaviour, build reproducibility, device performance and fixture parity are unverified."
+  },
+  "evidence_levels": {
+    "host-run": "iOS Core C++ compiled with MSVC and compared with Windows Python/native modules in Phase 1 (throw-away harnesses outside the repo)",
+    "read": "both sides read and arithmetic re-implemented (Objective-C/UIKit)",
+    "device": "none"
   },
   "summary": {
-    "renderer": "Ported",
+    "overall": "Import, browse, view, edit and export exist in source but diverge from Windows in every area examined.",
+    "divergences": {
+      "total": 216,
+      "fix": 171,
+      "needs_decision": 44,
+      "cannot_reproduce": 1,
+      "by_impact": {
+        "wrong-numbers": 66,
+        "data-safety": 45,
+        "behavior": 86,
+        "ui-cosmetic": 19
+      },
+      "testable": {
+        "core-cpp": 108,
+        "needs-extraction-from-objc": 95,
+        "objc-only": 13
+      },
+      "source": "PARITY_MAP.md; divergences.json"
+    },
     "renderer_backend": "bgfx_metal",
-    "import_workflow": "Partial",
-    "sqlite_persistence": "Ported",
-    "domain_model": "Partial",
-    "meshing": "Partial",
-    "boolean_ops": "Ported",
-    "quantity_calculations": "Partial",
-    "pdf_viewing": "Partial",
-    "exports": "Partial",
-    "ui": "Replaced",
+    "not_implemented_headline": [
+      "OST/OSP export (B-009)",
+      "PDF annotation export (B-004)",
+      "annotations",
+      "metric measurement",
+      "quantity rounding",
+      "attachment aggregation",
+      "page-settings editing",
+      "most Windows editing tools"
+    ],
     "primary_remaining_work": [
-      "clean build and device validation",
-      "desktop-vs-iOS fixture parity",
-      "OST/OSP export round-trip implementation",
-      "PDF annotation export implementation",
-      "PDF page/overlay fidelity",
-      "count shape, metric UOM, attachment quantity, and advanced editing parity"
+      "first iOS build and device run (B-010)",
+      "iOS behaviour tests and fixtures (B-011)",
+      "data-safety divergences (B-012)",
+      "wrong-number divergences (66)",
+      "OST/OSP export (B-009)",
+      "PDF annotation export (B-004)"
     ],
     "additional_risks": [
-      "no iOS app test target or fixture harness found",
-      "dependency workflows build artifacts only, not the full app",
-      "signing/entitlement configuration needs validation",
-      "export failure/progress UX needs device validation"
+      "build.yml and project.yml never run",
+      "libmanifold.a and bgfx libraries target iOS 16.0 while minimum is 14.8",
+      "HTML export needs network for three.js (unpkg.com)",
+      "Nyxian entitlements and fake-sign entitlements unvalidated on a device"
+    ]
+  },
+  "parity": {
+    "source": "PARITY_MAP.md; divergences.json in the Phase 1 scratchpad",
+    "by_owner_area": {
+      "quantities": {
+        "fix": 15,
+        "needs_decision": 1,
+        "cannot_reproduce": 0,
+        "total": 16,
+        "ios_files": "Core/Domain/UomService.hpp, ConditionsViewController.mm, ViewController.mm",
+        "ids": [
+          "QTY-01", "QTY-04", "QTY-10", "QTY-06", "QTY-07", "QTY-08", "QTY-09", "QTY-11", "QTY-02",
+          "QTY-03", "QTY-05", "QTY-14", "QTY-15", "QTY-16", "QTY-17", "QTY-18"
+        ]
+      },
+      "geometry": {
+        "fix": 4,
+        "needs_decision": 0,
+        "cannot_reproduce": 0,
+        "total": 4,
+        "ios_files": "Core/Geometry/coord_transform.cpp, geom_utils.cpp, DragController.mm",
+        "ids": ["GEO-06", "RPV-02", "GEO-07", "GEO-09"]
+      },
+      "meshing": {
+        "fix": 17,
+        "needs_decision": 3,
+        "cannot_reproduce": 0,
+        "total": 20,
+        "ios_files": "Core/Meshing/*, Services/ProjectService.mm",
+        "ids": [
+          "MSH-01", "MSH-02", "MSH-14", "GEO-05", "MSH-05", "MSH-06", "MSH-07", "MSH-08", "MSH-09",
+          "MSH-10", "MSH-11", "MSH-13", "MSH-15", "MSH-20", "MSH-19", "EXP-13", "GEO-14", "EXP-17",
+          "GEO-15", "MSH-19b"
+        ]
+      },
+      "parsers-units": {
+        "fix": 11,
+        "needs_decision": 1,
+        "cannot_reproduce": 0,
+        "total": 12,
+        "ios_files": "ProjectStore.cpp (parse_position, extract_z_value), EditConditionHelpers.mm, Condition.hpp",
+        "ids": [
+          "ELV-01", "COL-01", "ELV-02", "ELV-03", "ELV-04", "ELV-05", "ELV-06", "FMT-01", "DBP-07",
+          "DBP-08", "POS-M01", "DLG-FINITE-01"
+        ]
+      },
+      "import-ost-osp": {
+        "fix": 16,
+        "needs_decision": 7,
+        "cannot_reproduce": 0,
+        "total": 23,
+        "ios_files": "Services/ImportService.mm, Core/Import/*, ProjectStore+Import.cpp",
+        "ids": [
+          "IMP-01", "IMP-02", "IMP-03", "IMP-04", "IMP-05", "IMP-06", "IMP-08", "IMP-07", "IMP-09",
+          "IMP-12", "IMP-13", "IMP-10", "IMP-11", "IMP-M02", "IMP-M01", "IMP-14", "IMP-16", "IMP-15",
+          "IMP-17", "IMP-18", "IMP-19", "IMP-20", "IMP-M03"
+        ]
+      },
+      "export-formats": {
+        "fix": 12,
+        "needs_decision": 7,
+        "cannot_reproduce": 1,
+        "total": 20,
+        "ios_files": "Services/ExportService.mm, Core/Export/*",
+        "ids": [
+          "EXP-02", "EXP-01", "EXP-03", "EXP-05", "EXP-06", "EXP-08", "EXP-09", "EXP-14", "EXP-11",
+          "EXP-12", "EXP-16", "EXP-21", "EXP-15", "EXP-18", "EXP-20", "EXP-22", "EXP-M02", "MSH-16",
+          "EXP-19", "EXP-24"
+        ]
+      },
+      "database-persistence": {
+        "fix": 15,
+        "needs_decision": 7,
+        "cannot_reproduce": 0,
+        "total": 22,
+        "ios_files": "Core/Persistence/*",
+        "ids": [
+          "DBP-04", "QTY-13", "DBP-03", "DBP-37", "DBP-11", "DBP-12", "DBP-14", "DBP-17", "DBP-18",
+          "DBP-20", "DBP-35", "DBP-M02", "DBP-31", "LP-20", "BRW-15", "BRW-17", "DBP-19", "QTY-19",
+          "BRW-16", "DBP-33", "DBP-34", "DBP-M05"
+        ]
+      },
+      "conditions": {
+        "fix": 25,
+        "needs_decision": 6,
+        "cannot_reproduce": 0,
+        "total": 31,
+        "ios_files": "ConditionsViewController.mm, EditConditionViewController*",
+        "ids": [
+          "QTY-12", "DLG-PREC-01", "COND-METRIC-01", "COND-DEL-01", "COND-UPD-02", "COND-UPD-01",
+          "COND-UPD-03", "COND-DUP-01", "COND-STYLE-01", "COND-REF-01", "COND-ELEV-01", "COL-PICK-01",
+          "COND-M05", "COND-FOLDER-01", "COND-LIST-01", "COND-PLACE-01", "COND-LAYER-01", "COND-NAV-01",
+          "COND-VAL-01", "COND-TRIM-01", "DLG-RISE-01", "COND-M07", "COND-EXTRA-01", "QTY-22", "UI-M01",
+          "COND-M08", "COND-STYLE-02", "QTY-23", "COND-SHAPE-01", "COND-CDNPICK-01", "UI-MSG-01"
+        ]
+      },
+      "layers-pages": {
+        "fix": 7,
+        "needs_decision": 2,
+        "cannot_reproduce": 0,
+        "total": 9,
+        "ios_files": "ViewController+PageSelector.mm, ViewController+Layers.mm, ProjectService.mm",
+        "ids": ["RPV-16", "LP-08", "LP-10", "LP-11", "LP-12", "LP-18", "LP-22", "LP-25", "LP-24"]
+      },
+      "rendering-planview": {
+        "fix": 26,
+        "needs_decision": 5,
+        "cannot_reproduce": 0,
+        "total": 31,
+        "ios_files": "PlanView/*, Rendering/Renderer.mm",
+        "ids": [
+          "RPV-03", "RPV-04", "RPV-08", "RPV-07", "RPV-06", "RPV-10", "RPV-M03", "COL-02", "COL-03",
+          "RPV-05", "COL-04", "RPV-09", "RPV-15", "RPV-M01", "GEO-M02", "LP-16", "LP-15", "RPV-13",
+          "RPV-17", "RPV-20", "RPV-25", "RPV-26", "RPV-31", "RPV-M04", "RPV-M07", "RPV-22", "GEO-18",
+          "RPV-27", "RPV-29", "RPV-32", "MSH-21"
+        ]
+      },
+      "project-browser": {
+        "fix": 9,
+        "needs_decision": 3,
+        "cannot_reproduce": 0,
+        "total": 12,
+        "ios_files": "DatabaseViewController.mm, ProjectStore+Folders.cpp",
+        "ids": [
+          "BRW-01", "BRW-02", "BRW-05", "BRW-09", "BRW-13", "BRW-10", "BRW-12", "BRW-19", "BRW-08",
+          "BRW-11", "BRW-M01", "BRW-21"
+        ]
+      },
+      "settings-undo-camera": {
+        "fix": 14,
+        "needs_decision": 2,
+        "cannot_reproduce": 0,
+        "total": 16,
+        "ios_files": "UndoRedoController.mm, CameraController.mm, RenderConfig.hpp",
+        "ids": [
+          "UND-02", "UND-03", "UND-06", "UND-08", "UND-01", "UND-07", "UND-09", "UND-11", "SET-01",
+          "SET-02", "SET-03", "CAM-01", "CAM-04", "CAM-03", "UND-10", "CAM-02"
+        ]
+      }
+    },
+    "data_safety_ids": [
+      "IMP-06", "DBP-11", "IMP-08", "DBP-12", "COND-DEL-01", "IMP-07", "IMP-09", "BRW-01", "BRW-02",
+      "DBP-14", "DBP-17", "DBP-18", "DBP-20", "GEO-09", "UND-02", "UND-03", "COND-UPD-02",
+      "COND-UPD-01", "COND-UPD-03", "COND-DUP-01", "RPV-15", "RPV-16", "RPV-M01", "IMP-12", "IMP-13",
+      "IMP-10", "IMP-11", "DBP-35", "DBP-M02", "DBP-08", "EXP-08", "EXP-09", "BRW-05", "COND-STYLE-01",
+      "COND-REF-01", "COND-ELEV-01", "UND-06", "UND-08", "COL-PICK-01", "COND-M05", "IMP-M02",
+      "GEO-M02", "POS-M01", "IMP-M01", "DBP-31"
+    ],
+    "wrong_numbers_ids": [
+      "MSH-01", "QTY-01", "QTY-04", "ELV-01", "QTY-10", "QTY-06", "GEO-06", "MSH-02", "QTY-07",
+      "QTY-08", "QTY-09", "EXP-02", "EXP-01", "EXP-03", "QTY-11", "QTY-02", "QTY-03", "MSH-14",
+      "DBP-04", "QTY-13", "RPV-02", "RPV-03", "COL-01", "DBP-03", "GEO-05", "RPV-04", "RPV-08",
+      "RPV-07", "RPV-06", "RPV-10", "RPV-M03", "MSH-05", "MSH-06", "MSH-07", "MSH-08", "MSH-09",
+      "MSH-10", "MSH-11", "MSH-13", "ELV-02", "ELV-03", "ELV-04", "ELV-05", "ELV-06", "FMT-01",
+      "QTY-05", "IMP-01", "IMP-02", "IMP-03", "IMP-04", "IMP-05", "DBP-07", "GEO-07", "QTY-14",
+      "EXP-05", "EXP-06", "COL-02", "COL-03", "QTY-12", "QTY-15", "DLG-PREC-01", "RPV-05", "COL-04",
+      "DBP-37", "COND-METRIC-01", "RPV-09"
+    ]
+  },
+  "systems": [
+    {
+      "id": "app_shell",
+      "name": "App shell and URL routing",
+      "status": "Replaced",
+      "ios_paths": ["Main.m", "AppDelegate.m", "SceneDelegate.mm", "Config/Info.plist"],
+      "matches_windows": "n/a (Windows is Python/Qt)",
+      "parity_ids": [],
+      "notes": "UIKit lifecycle. Root is DatabaseViewController in a UINavigationController. .ost/.osp URLs (cold start and openURLContexts) go to ImportService and a failure shows an alert. Info.plist declares both document types.",
+      "needs_verification": "read only; not launched on a device."
+    },
+    {
+      "id": "import_ost",
+      "name": "Import .ost",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Services/ImportService.mm (importOSTFile)",
+        "Core/Import/OstXmlParser.cpp",
+        "Core/Persistence/ProjectStore/Components/ProjectStore+Import.cpp"
+      ],
+      "matches_windows": "No. Bid-less XML is rejected like Windows, but malformed XML the parser tolerates is accepted (IMP-M01) and the write path differs.",
+      "parity_ids": [
+        "IMP-01", "IMP-02", "IMP-03", "IMP-04", "IMP-05", "IMP-06", "IMP-07", "IMP-08", "IMP-09",
+        "IMP-10", "IMP-11", "IMP-19", "IMP-20", "IMP-M01"
+      ],
+      "notes": "Parses with pugixml, creates the schema, refuses a Bids.UID that is already stored, inserts rows with INSERT OR REPLACE and keeps the file's UIDs (IMP-06). import_project commits and returns true whatever the SQL did (IMP-08). BidEmployees and PayClasses are not parsed (IMP-11).",
+      "needs_verification": "read only; no import was run and no .ost fixture exists in the repo."
+    },
+    {
+      "id": "import_osp",
+      "name": "Import .osp",
+      "status": "Implemented-diverges",
+      "ios_paths": ["Services/ImportService.mm (importOSPFile)", "Core/Import/CabExtractor.cpp"],
+      "matches_windows": "No.",
+      "parity_ids": ["IMP-12", "IMP-13", "IMP-14", "IMP-15", "IMP-16", "IMP-17", "IMP-18", "IMP-M02", "IMP-M03"],
+      "notes": "Own CAB reader (stored and MSZIP via zlib only). Picks the .ost member, extracts only .pdf members into Documents/OST/<bid name>/ by file basename and rewrites ImagePath/OverlayImagePath. No TIFF handling.",
+      "needs_verification": "read only; no import was run and no .osp fixture exists in the repo."
+    },
+    {
+      "id": "sqlite_schema",
+      "name": "SQLite schema and seed rows",
+      "status": "Implemented-matches-Windows",
+      "ios_paths": [
+        "Core/Persistence/OstSchema.cpp",
+        "Core/Persistence/ProjectStore/ProjectStore.cpp (create_schema)",
+        "Core/Persistence/OstDatabase.cpp"
+      ],
+      "matches_windows": "Yes for DDL and seed rows: the 64 Windows tables have identical column names in the same order (script comparison, re-run in the 2026-11-15 doc review); the seed rows match (26 SchemaRegistry versions, the four default layers). Indexes: iOS creates all 129 non-unique indexes and the 2 unique Locking indexes listed in reference_schema_metadata.py EXPLICIT_INDEXES plus 8 more foreign-key indexes that are not in that list (BidConditions.CdnTypeUID, BidEmployees.PayClassUID, BidLaborCostCodes.CostCodeUID, BidPageSettings.BidAreaUID, BidPageSettings.BidPageUID, BidPageSettings.BidTypAreaUID, BidSettings.BidPageSelectedUID, ConditionSets.EmployeeUID; Access may create them from relationships, not checked). iOS adds _AppMeta and _AppPreferences (66 tables).",
+      "parity_ids": ["DBP-33", "DBP-34", "IMP-05", "IMP-20"],
+      "notes": "Not replicated: DEFAULT/REFERENCES metadata (DBP-33), Access boolean values (DBP-34), typed columns (IMP-05, IMP-20).",
+      "needs_verification": "column sets compared by script in Phase 1; schema creation not run on iOS."
+    },
+    {
+      "id": "store_behaviour",
+      "name": "Store behaviour (load, write, delete, cascades)",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Core/Persistence/ProjectStore/ProjectStore.cpp",
+        "Core/Persistence/ProjectStore/Components/ProjectStore+{Import,Load,Folders,Takeoffs,Conditions}.cpp",
+        "Core/Persistence/ProjectStore/ProjectStore_Internal.hpp"
+      ],
+      "matches_windows": "No.",
+      "parity_ids": [
+        "DBP-11", "DBP-12", "DBP-14", "DBP-17", "DBP-18", "DBP-20", "DBP-31", "DBP-35", "DBP-M02",
+        "DBP-03", "DBP-04", "DBP-19", "DBP-37", "DBP-M05", "QTY-13", "QTY-19", "LP-20", "BRW-15",
+        "BRW-16", "BRW-17"
+      ],
+      "notes": "One database file, Documents/ost_projects.sqlite (ImportService.databaseURL). SQL errors are swallowed (for example set_layer_visibility and import_project return true after unchecked statements, DBP-11). Cascades are incomplete (DBP-12, DBP-14). Page-folder tree loses nested folders (DBP-20).",
+      "needs_verification": "compiled and run on the host with MSVC in Phase 1; not run on iOS."
+    },
+    {
+      "id": "project_browser",
+      "name": "Project browser",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Controllers/DatabaseViewController.mm",
+        "Core/Persistence/ProjectStore/Components/ProjectStore+Folders.cpp",
+        "Core/Persistence/ProjectStore/ProjectStore.cpp (delete_project, permanently_delete_project)"
+      ],
+      "matches_windows": "No. Hierarchy load matches; folder order (SQLite BINARY, Windows is locale-aware: BRW-M01, decision), bid order, delete, restore and the Deleted Bids identity do not.",
+      "parity_ids": [
+        "BRW-01", "BRW-02", "BRW-05", "BRW-08", "BRW-09", "BRW-10", "BRW-11", "BRW-12", "BRW-13",
+        "BRW-19", "BRW-21", "BRW-M01"
+      ],
+      "notes": "Folders (create, rename, delete), bids (move, remove from folder, trash, permanent delete from 'Deleted Bids', 'Restore as Unassigned'), document-picker import, Visualization Settings sheet. Swipe-delete runs at once with no confirmation (BRW-01).",
+      "needs_verification": "ProjectStore parts host-run in Phase 1; UIKit read only."
+    },
+    {
+      "id": "edit_persistence",
+      "name": "Project and edit persistence (what is written)",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Services/ImportService.mm",
+        "ProjectStore+Takeoffs.cpp",
+        "ProjectStore+Conditions.cpp",
+        "ProjectStore+Folders.cpp"
+      ],
+      "matches_windows": "Partly: set_layer_visibility, set_takeoff_negative and shift_condition_ref_nos match (set_takeoff_negative stores 1 where Windows stores the Access boolean -1: DBP-34, decision); the other writers do not.",
+      "parity_ids": [
+        "DBP-07", "DBP-14", "DBP-17", "DBP-18", "DBP-35", "COND-UPD-01", "COND-UPD-02", "COND-UPD-03",
+        "COND-DUP-01", "COND-DEL-01", "COND-M05"
+      ],
+      "notes": "Writes: takeoff position, insert, delete, negative flag; condition update, duplicate, delete, RefNo shift; layer Show flag; project folders and bid trash/restore/move; render config (_AppPreferences). No page write, layer insert/rename/delete, condition create or annotation write exists (searched).",
+      "needs_verification": "ProjectStore host-run in Phase 1; UIKit callers read only."
+    },
+    {
+      "id": "domain_model",
+      "name": "Domain model (loaded subset)",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Core/Domain/*",
+        "Core/Data/ProjectData.hpp",
+        "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp"
+      ],
+      "matches_windows": "Partly: quantity-relevant Condition/Takeoff fields match; several load rules differ.",
+      "parity_ids": [
+        "LP-20", "QTY-13", "QTY-19", "DBP-03", "DBP-04", "DBP-31", "DBP-37", "DBP-M05", "COND-FOLDER-01",
+        "COND-EXTRA-01"
+      ],
+      "notes": "Loads 9 of the 66 tables: Bids, BidProjects (name), BidPages, BidLayers, CdnTypes, BidConditionFolders, BidConditions, BidTakeoffs, BidPageFolders. All other tables are stored but not modelled (annotations, areas, cover-sheet data, named views, hot links, employees).",
+      "needs_verification": "read, plus host-run of the loader in Phase 1; not run on iOS."
+    },
+    {
+      "id": "text_parsing",
+      "name": "Elevation and position text parsing",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Core/Persistence/ProjectStore/ProjectStore.cpp (parse_position, extract_z_value)",
+        "Controllers/EditConditionViewController/Components/EditConditionHelpers.mm"
+      ],
+      "matches_windows": "No, except the elevation name split/join (parseElevation, reassembleElevation) which matches (reassembleElevation trims only ' ' where Windows strip() trims any whitespace; not recorded in PARITY_MAP).",
+      "parity_ids": [
+        "ELV-01", "ELV-02", "ELV-03", "ELV-04", "ELV-05", "ELV-06", "FMT-01", "DLG-FINITE-01", "DBP-07",
+        "DBP-08", "POS-M01"
+      ],
+      "notes": "extract_z_value is a hand-written parser, not the Windows grammar: 145 of 342 test-derived names gave a different z_value/is_top in Phase 1 (ELV-01..06).",
+      "needs_verification": "host-run in Phase 1; no committed test."
+    },
+    {
+      "id": "quantities",
+      "name": "Quantities",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Core/Domain/UomService.hpp",
+        "Controllers/ConditionsViewController.mm",
+        "Controllers/ViewController/ViewController.mm (_updateConditionQuantities)"
+      ],
+      "matches_windows": "Partly. Imperial divisors, raw formulas for count/linear/area, straight polylines, grid and negative sums matched Windows in 5000 random cases (polygon area is summed about the origin and loses precision far from it: QTY-14); aggregation, page scope, arcs, slope, metric and rounding do not.",
+      "parity_ids": [
+        "QTY-01", "QTY-02", "QTY-03", "QTY-04", "QTY-05", "QTY-06", "QTY-07", "QTY-08", "QTY-09",
+        "QTY-10", "QTY-11", "QTY-12", "QTY-14", "QTY-15", "QTY-16"
+      ],
+      "notes": "UOM codes 0-9 only (Windows has 11-16 metric). compute_page_quantities skips every takeoff with a parent_uid and passes 0.0 for attachment footprint/perimeter. round_quantity/round_up are modelled and persisted but never applied. Total: QTY-01..QTY-19, QTY-22, QTY-23.",
+      "needs_verification": "host-run in Phase 1; no committed test."
+    },
+    {
+      "id": "mesh_pipeline",
+      "name": "Mesh pipeline (scale, rotation/flip, ordering)",
+      "status": "Implemented-diverges",
+      "ios_paths": ["Services/ProjectService.mm (generateMeshesIntoRenderer)", "Core/Meshing/MeshFactory.cpp"],
+      "matches_windows": "No.",
+      "parity_ids": ["MSH-01", "MSH-02", "MSH-14", "MSH-20"],
+      "notes": "Every coordinate and dimension is multiplied by 1/(sf2/sf1) of its page (Windows meshes in raw OST units, MSH-01). Page rotation and flip are never applied to 3D meshes (MSH-02). Any takeoff with a parent is treated as a hole (MSH-14).",
+      "needs_verification": "Core host-run in Phase 1; Objective-C orchestration read only."
+    },
+    {
+      "id": "mesh_linear",
+      "name": "Linear wall meshes (straight, rise/run slope, drop stub)",
+      "status": "Implemented-matches-Windows",
+      "ios_paths": ["Core/Meshing/gen_linear.cpp", "Core/Meshing/mesh_helpers.hpp"],
+      "matches_windows": "Yes at generator level. Pipeline-level MSH-01/MSH-02 still change the result in the app.",
+      "parity_ids": [],
+      "notes": "Drop-stub union with the wall is a boolean step (MSH-19).",
+      "needs_verification": "host-run in Phase 1; no committed test."
+    },
+    {
+      "id": "mesh_curved",
+      "name": "Curved linear wall meshes",
+      "status": "Implemented-diverges",
+      "ios_paths": ["Core/Meshing/gen_curved.cpp"],
+      "matches_windows": "No (reimplementation, not a port of linear_geom.cpp).",
+      "parity_ids": ["MSH-05", "MSH-06", "MSH-07"],
+      "notes": "Segment count rounding, arc side above about 180 degrees and the straight-chord rule differ. The curved drop-stub geometry matches.",
+      "needs_verification": "host-run in Phase 1; no committed test."
+    },
+    {
+      "id": "mesh_area",
+      "name": "Area prism meshes (earcut, holes, slope)",
+      "status": "Implemented-diverges",
+      "ios_paths": ["Core/Meshing/gen_area.cpp", "Core/Geometry/earcut.hpp", "Core/Geometry/earcut_impl.cpp"],
+      "matches_windows": "No (earcut itself matches).",
+      "parity_ids": ["GEO-05", "GEO-14", "GEO-15", "MSH-14"],
+      "notes": "Slope direction (GEO-05), tessellation frame (GEO-14) and face winding (GEO-15, needs-decision) differ.",
+      "needs_verification": "host-run in Phase 1; no committed test."
+    },
+    {
+      "id": "mesh_count",
+      "name": "Count and attachment meshes",
+      "status": "Implemented-diverges",
+      "ios_paths": ["Core/Meshing/gen_count.cpp", "Core/Meshing/MeshFactory.cpp (create_count)"],
+      "matches_windows": "Square, rectangle (except a negative depth, MSH-13) and circle match; ellipse, triangle, rhombus, hexagon and octagon do not.",
+      "parity_ids": ["MSH-08", "MSH-09", "MSH-10", "MSH-11", "MSH-13"],
+      "notes": "Only two generators exist: a box (generate_count_mesh) and a 24-segment cylinder (generate_cylinder_mesh). Shape table below.",
+      "needs_verification": "host-run in Phase 1; no committed test."
+    },
+    {
+      "id": "booleans",
+      "name": "Boolean operations (Manifold)",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Core/Geometry/boolean_ops.cpp",
+        "Libs/Manifold/ (headers, lib/libmanifold.a)",
+        "Services/ProjectService.mm",
+        "Services/ExportService.mm",
+        "Core/Meshing/MeshFactory.cpp"
+      ],
+      "matches_windows": "Library code: yes (diff against Windows boolean_ops.cpp shows include lines and a stale TODO comment on line 1 only). Orchestration: no.",
+      "parity_ids": ["MSH-14", "MSH-15", "MSH-16", "MSH-19", "MSH-19b", "EXP-05"],
+      "notes": "3D view subtracts negatives per condition type; export subtracts all negatives from all positives. A positive removed completely by negatives stays visible (MSH-15).",
+      "needs_verification": "Manifold was not linked or run in this job (the host harness uses a throwing stub unless -DOST_TEST_BOOLEAN=ON); libmanifold.a not run on iOS."
+    },
+    {
+      "id": "renderer_3d",
+      "name": "3D renderer",
+      "status": "Replaced",
+      "ios_paths": [
+        "Rendering/Renderer.mm",
+        "Rendering/BgfxView.mm",
+        "Rendering/MeshLoader.cpp",
+        "Rendering/Shaders/generated/*.h (8 headers)",
+        "Rendering/MathUtils.hpp"
+      ],
+      "matches_windows": "Replaced technology (Windows: OpenGL/Qt). Mesh-ID picking and the selection highlight read as matching; lighting and shading differ.",
+      "parity_ids": ["RPV-29", "MSH-21", "COL-02", "COL-03"],
+      "notes": "bgfx on Metal (RendererType::Metal), CAMetalLayer view, opaque pass plus weighted-blended OIT (accum, revealage, composite), mesh-ID pick pass with readback, selection mask and post pass.",
+      "needs_verification": "read only; no GPU or device check of rendering, OIT, picking readback or frame time."
+    },
+    {
+      "id": "plan_view",
+      "name": "2D plan view and PDF background",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "PlanView/PlanView.mm",
+        "PlanView/Components/PDFCanvasView.mm",
+        "PlanView/Components/TakeoffOverlayView.mm",
+        "PlanView/Components/PlanView+Placement.mm",
+        "Core/Geometry/coord_transform.cpp"
+      ],
+      "matches_windows": "No.",
+      "parity_ids": [
+        "LP-15", "LP-16", "GEO-06", "RPV-02", "RPV-03", "RPV-17", "RPV-22", "RPV-25", "RPV-26", "RPV-27",
+        "RPV-31", "RPV-32", "RPV-M04", "GEO-18", "COL-01", "COL-04"
+      ],
+      "notes": "PDFCanvasView draws page 1 only (CGPDFDocumentGetPage(_pdfDoc, 1)) at the stored page size; page_index, rotation and flip are not applied to the PDF. Overlay image fields are loaded and rewritten on OSP import but never drawn. Pattern only changes fill alpha (no hatching). Curved linears are drawn as straight chords. Display Name / Display Dimension flags are editable and persisted but not drawn.",
+      "needs_verification": "read only; not run on a device."
+    },
+    {
+      "id": "ui_conditions",
+      "name": "Condition list and editor",
+      "status": "Implemented-diverges",
+      "ios_paths": ["Controllers/ConditionsViewController.mm", "Controllers/EditConditionViewController/*"],
+      "matches_windows": "No (owner area conditions; 31 ids).",
+      "parity_ids": [
+        "COND-DEL-01", "COND-UPD-01", "COND-UPD-02", "COND-STYLE-01", "COND-REF-01", "COND-ELEV-01",
+        "COND-METRIC-01", "COND-FOLDER-01", "COND-LIST-01", "COND-PLACE-01", "QTY-22", "QTY-23"
+      ],
+      "notes": "List with folder/type sections, quantities and long-press Duplicate/Delete; edit dialog with dimension, appearance, results (3 quantity slots), advanced options and Previous/Next. Condition create and condition-folder CRUD do not exist.",
+      "needs_verification": "read only; not run on a device."
+    },
+    {
+      "id": "ui_layers_pages",
+      "name": "Layers and page selection",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Controllers/ViewController/Components/ViewController+Layers.mm",
+        "Controllers/ViewController/Components/ViewController+PageSelector.mm",
+        "Services/ProjectService.mm"
+      ],
+      "matches_windows": "Layer Show flag, visibility rule and its persistence match; page order, folder selection and initial page do not (owner area layers-pages; 9 ids).",
+      "parity_ids": ["LP-08", "LP-10", "LP-11", "LP-12", "LP-18", "LP-22", "LP-24", "LP-25", "RPV-16"],
+      "notes": "Layers sheet toggles layers and Show All / Hide All; two page bars (3D multi-select, 2D single). Only the Show flag is ever written (no layer create/rename/delete).",
+      "needs_verification": "read only; not run on a device."
+    },
+    {
+      "id": "export",
+      "name": "OBJ, DXF and Three.js HTML export",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Services/ExportService.mm",
+        "Core/Export/{obj_writer,dxf_writer,threejs_writer}.cpp",
+        "Controllers/ViewController/Components/ViewController+Export.mm"
+      ],
+      "matches_windows": "Writers' file layout matches (OBJ text, DXF writer: diff vs Windows is include lines, LayeredMesh declared in mesh_data.hpp instead of dxf_writer.hpp, and a write_eof helper that Windows declares but never calls; both write the EOF group inside save). Exported content does not (axes, holes, naming, colours).",
+      "parity_ids": [
+        "EXP-01", "EXP-02", "EXP-03", "EXP-05", "EXP-06", "EXP-08", "EXP-09", "EXP-11", "EXP-12",
+        "EXP-13", "EXP-14", "EXP-15", "EXP-16", "EXP-19", "EXP-20", "EXP-21", "MSH-16"
+      ],
+      "notes": "Exports visible meshes of the selected 3D pages into NSTemporaryDirectory and shares them with UIActivityViewController. Failure and 'nothing to export' show the same alert (EXP-21). The HTML imports three@0.152.0 from unpkg.com, so viewing it needs network.",
+      "needs_verification": "writers host-run in Phase 1; share sheet, large exports and write failures not run."
+    },
+    {
+      "id": "undo_redo",
+      "name": "Undo and redo",
+      "status": "Implemented-diverges",
+      "ios_paths": ["Controllers/ViewController/Components/UndoRedoController.mm"],
+      "matches_windows": "No.",
+      "parity_ids": ["UND-01", "UND-02", "UND-03", "UND-06", "UND-07", "UND-08", "UND-09", "UND-10", "UND-11"],
+      "notes": "Three actions only (enum UndoAction { Move, Place, Delete }); history is unbounded (UND-01). Condition, layer and folder edits are not undoable (Windows has no undo for them either).",
+      "needs_verification": "read only; not run on a device."
+    },
+    {
+      "id": "camera",
+      "name": "3D camera",
+      "status": "Replaced",
+      "ios_paths": ["Controllers/ViewController/Components/CameraController.mm", "Rendering/Renderer.mm (fitCameraToMeshes)"],
+      "matches_windows": "Platform-adapted gestures (one-finger orbit, pan-mode toggle on the floating button, pinch zoom). Fit/Reset framing differs.",
+      "parity_ids": ["CAM-01", "CAM-02", "CAM-03", "CAM-04"],
+      "notes": "Windows keeps the 3D camera per bid; iOS refits (CAM-02).",
+      "needs_verification": "read only; not run on a device."
+    },
+    {
+      "id": "snapping",
+      "name": "Placement, drag and snapping",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "PlanView/Components/PlanView+Placement.mm",
+        "Controllers/ViewController/Components/DragController.mm",
+        "Core/Geometry/geom_utils.cpp",
+        "Core/Domain/Bid.hpp (snap_increments_ost)"
+      ],
+      "matches_windows": "Partly: Bid::snap_increments_ost (metric mm to inches) matches; snapping rules do not.",
+      "parity_ids": [
+        "RPV-04", "RPV-05", "RPV-06", "RPV-07", "RPV-08", "RPV-09", "RPV-10", "RPV-13", "RPV-15",
+        "RPV-20", "RPV-M01", "RPV-M03", "GEO-07", "GEO-09", "GEO-M02", "DBP-04"
+      ],
+      "notes": "Grid snap from Bid.takeoff_increments and angle snap of pi/8 = 22.5 degrees (Windows default 15, RPV-04). No endpoint, midpoint, PDF-line or right-angle snapping exists.",
+      "needs_verification": "read only; not run on a device."
+    },
+    {
+      "id": "render_settings",
+      "name": "Render settings (colour mode, grayscale)",
+      "status": "Implemented-diverges",
+      "ios_paths": [
+        "Core/Domain/RenderConfig.hpp",
+        "ProjectStore+Conditions.cpp (load_render_config, save_render_config)",
+        "Controllers/DatabaseViewController.mm (_settingsTapped)",
+        "ViewController.mm (_applyRenderConfig)"
+      ],
+      "matches_windows": "No.",
+      "parity_ids": ["SET-01", "SET-02", "SET-03", "COL-01", "COL-02", "COL-03", "COL-04"],
+      "notes": "Modes Solid / OST / Transparent plus grayscale, default Solid, one setting for 2D and 3D, stored in _AppPreferences. Windows has separate 2D and 3D modes (Original / Solid / Transparent).",
+      "needs_verification": "read only; not run on a device."
+    },
+    {
+      "id": "build_ci_tests",
+      "name": "Build, CI and tests (Phase 0)",
+      "status": "Implemented-unverified",
+      "ios_paths": [
+        "project.yml",
+        ".github/workflows/build.yml",
+        "BUILD.md",
+        "Config/Info.plist",
+        "Config/Entitlements.fakesign.plist",
+        "Config/Tests/",
+        "Config/Project.plist",
+        "Config/Entitlements.plist"
+      ],
+      "matches_windows": "n/a",
+      "parity_ids": [],
+      "notes": "See the Build, CI and tests section. All Phase 0 files are uncommitted.",
+      "needs_verification": "XcodeGen, xcodebuild, ldid and the workflow were never run."
+    }
+  ],
+  "count_shapes": [
+    {
+      "shape": "Square (0)",
+      "ios_mesh": "box, depth = width",
+      "matches_windows": true,
+      "parity_ids": []
+    },
+    {
+      "shape": "Rectangle (3)",
+      "ios_mesh": "box, width x depth (a non-positive depth falls back to width; Windows clamps a negative depth to 1.0)",
+      "matches_windows": true,
+      "parity_ids": ["MSH-13"]
+    },
+    {
+      "shape": "Circle (1)",
+      "ios_mesh": "24-segment cylinder, diameter = width",
+      "matches_windows": true,
+      "parity_ids": []
+    },
+    {
+      "shape": "Ellipse (13)",
+      "ios_mesh": "the same circular cylinder (depth ignored)",
+      "matches_windows": false,
+      "parity_ids": ["MSH-08"]
+    },
+    {
+      "shape": "Triangle (2)",
+      "ios_mesh": "box",
+      "matches_windows": false,
+      "parity_ids": ["MSH-09"]
+    },
+    {
+      "shape": "Rhombus (12)",
+      "ios_mesh": "box",
+      "matches_windows": false,
+      "parity_ids": ["MSH-10"]
+    },
+    {
+      "shape": "Hexagon (14)",
+      "ios_mesh": "box",
+      "matches_windows": false,
+      "parity_ids": ["MSH-11"]
+    },
+    {
+      "shape": "Octagon (15)",
+      "ios_mesh": "box",
+      "matches_windows": false,
+      "parity_ids": ["MSH-11"]
+    }
+  ],
+  "not_implemented": [
+    {
+      "name": "OST export (.ost)",
+      "group": "export",
+      "status": "Not implemented",
+      "search_result": "No writer: 0 hits for exportOST/ost_writer; ExportService exposes only exportOBJ, exportDXF, exportThreeJS.",
+      "reference": "B-009"
+    },
+    {
+      "name": "OSP export (.osp) and CAB writer",
+      "group": "export",
+      "status": "Not implemented",
+      "search_result": "No deflateInit, deflate() or compress() call (the words occur only in reader-side names such as decompress_folder and deflate_data in CabExtractor.cpp); CabExtractor.cpp is read-only (inflate).",
+      "reference": "B-009"
+    },
+    {
+      "name": "PDF export with takeoff and annotation markup, Bluebeam captions",
+      "group": "export",
+      "status": "Not implemented",
+      "search_result": "0 hits for PDFKit, UIGraphicsPDFRenderer, CGPDFContext, qpdf; the only PDF code is CGPDFDocument reading in PDFCanvasView.mm.",
+      "reference": "B-004"
+    },
+    {
+      "name": "FBX export, Summary CSV export",
+      "group": "export",
+      "status": "Not implemented",
+      "search_result": "0 hits for fbx, csv.",
+      "reference": "deferred"
+    },
+    {
+      "name": "Windows HTML viewer features (2D plan tab, visibility panels, section cut, hover tips, elevation callouts)",
+      "group": "export",
+      "status": "Not implemented",
+      "search_result": "iOS writes a minimal viewer from visible meshes (threejs_writer.cpp).",
+      "reference": "EXP-15, EXP-19, EXP-20"
+    },
+    {
+      "name": "Annotations (draw, render, persist), hot links, named views, takeoff labels on the plan",
+      "group": "annotation",
+      "status": "Not implemented",
+      "search_result": "No annotation domain or UI: no annotation read or write code; annotation rows are written only by the generic .ost import and deleted only on permanent bid delete (ProjectStore.cpp) and, for BidDimensions/BidALines/BidArrows rows linked from a takeoff (BidTakeoffFromUID), by delete_takeoff and delete_condition (ProjectStore+Takeoffs.cpp, ProjectStore+Conditions.cpp); display_name/display_dimension are edited and stored but not drawn.",
+      "reference": "PARITY_MAP H (annotation)"
+    },
+    {
+      "name": "Detached plan/3D windows",
+      "group": "annotation",
+      "status": "Not implemented",
+      "search_result": "UIWindow is created once, in SceneDelegate.mm; no secondary window or viewer-sync code.",
+      "reference": "PARITY_MAP H"
+    },
+    {
+      "name": "Page settings: set scale, rename/delete page, plan organizer, image adjust (rotate, flip, invert, bitonal), overlay drawing and show mode, page view state",
+      "group": "page-settings",
+      "status": "Not implemented",
+      "search_result": "No page write exists (0 UPDATE BidPages); overlay fields are loaded (ProjectStore+Load.cpp) but never drawn.",
+      "reference": "LP-16, PARITY_MAP H"
+    },
+    {
+      "name": "Multi-page PDF page index, TIFF page images",
+      "group": "page-settings",
+      "status": "Not implemented",
+      "search_result": "PDFCanvasView.mm always draws page 1; OSP import extracts only .pdf members; 0 hits for tif/tiff.",
+      "reference": "LP-16"
+    },
+    {
+      "name": "Layer create, rename, delete, reorder, default layers",
+      "group": "editing",
+      "status": "Not implemented",
+      "search_result": "The only BidLayers writes are the Show update, template seeding and the bid-delete cascade.",
+      "reference": "PARITY_MAP H"
+    },
+    {
+      "name": "Condition create, condition-folder CRUD, condition copy/cut/paste across bids, renumber, reassign takeoffs, assign to area",
+      "group": "editing",
+      "status": "Not implemented",
+      "search_result": "0 hits for reassign, renumber, insert_condition; iOS has edit, duplicate, delete and RefNo shift only; other items per PARITY_MAP H.",
+      "reference": "PARITY_MAP H"
+    },
+    {
+      "name": "Takeoff editing tools: backout mode, paste backout, cut/copy/paste/duplicate takeoffs, rotate/flip takeoffs, slope handle, set curved segment and control points, marquee select, snap to PDF lines/takeoffs/right angles, PDF text selection, zoom tool",
+      "group": "editing",
+      "status": "Not implemented",
+      "search_result": "0 hits for backout mode, paste, rotateTakeoff, marquee; the 3D long-press menu offers only Count as Negative Quantity; other tools per PARITY_MAP H.",
+      "reference": "RPV-22, PARITY_MAP H"
+    },
+    {
+      "name": "Metric measurement mode (UOM codes 11-16, mm display and parsing, metric defaults)",
+      "group": "business",
+      "status": "Not implemented",
+      "search_result": "UomService.hpp defines codes 0-9; Bid.measure_base is used only by snap_increments_ost.",
+      "reference": "QTY-05, QTY-06, COND-METRIC-01"
+    },
+    {
+      "name": "Quantity rounding and attachment aggregation",
+      "group": "business",
+      "status": "Not implemented",
+      "search_result": "round_quantity/round_up never read after load; attachment_footprint/perimeter hard-coded 0.0 (UomService.hpp:790).",
+      "reference": "QTY-04, QTY-02"
+    },
+    {
+      "name": "Bid business workflows: cover sheet, summary tab, bid comparison, employees/payroll/job-status/condition-type master data, bid areas, job-status lock, new bid, duplicate bid, copy/cut/paste bids",
+      "group": "business",
+      "status": "Not implemented",
+      "search_result": "No cover-sheet or Summary-tab code (the only hits are the project-browser struct BidSummary and the CoverSheetSel* column names in OstSchema.cpp); BidAreas appears only in the permanent-delete cascade.",
+      "reference": "PARITY_MAP H (business)"
+    },
+    {
+      "name": "AI takeoff (analysis, proposals, review, assumptions) and MCP helpers",
+      "group": "ai-takeoff",
+      "status": "Not implemented",
+      "search_result": "No ai_takeoff or propose_ code (the only MCP matches are memcpy calls).",
+      "reference": "PARITY_MAP H (ai-takeoff)"
+    },
+    {
+      "name": "SQL Server backend and multi-user collaboration",
+      "group": "collaboration",
+      "status": "Not implemented",
+      "search_result": "0 hits for sqlserver/odbc; storage is local SQLite only.",
+      "reference": "PARITY_MAP H (collaboration)"
+    },
+    {
+      "name": "3D features: tower crane, section cuts, feature-edge overlay toggle, saved per-bid camera, page image plane, separate 2D/3D display modes",
+      "group": "other",
+      "status": "Not implemented",
+      "search_result": "0 hits for crane, section cut, clip plane; one RenderConfig for both views; feature edges are used only for DXF export and the selection highlight.",
+      "reference": "PARITY_MAP H (other)"
+    },
+    {
+      "name": "Multi-database registry, pan sidebar (mini-map)",
+      "group": "other",
+      "status": "Not implemented",
+      "search_result": "One fixed database file, Documents/ost_projects.sqlite (ImportService.databaseURL); no pan sidebar code.",
+      "reference": "PARITY_MAP H (other)"
+    }
+  ],
+  "platform_only_not_for_ios": [
+    "Microsoft Access .mdb access, Compact/Repair (Replaced by SQLite plus direct .ost/.osp import)",
+    "Realtime sync with the OST desktop app and OST-active edit blocking",
+    "Licensing, update check, About dialog",
+    "Windows installer and registry file associations (iOS registers the UTTypes in Info.plist instead)",
+    "Desktop menu bar, toolbars, sidebars, status bar, keyboard shortcuts, toolbar customization, Options dialog, cursor preferences, theme following (Replaced by UIKit screens)",
+    "MCP stdio helpers and the local pipe bridge, SQL credentials in Windows Credential Manager"
+  ],
+  "build_ci_tests": {
+    "status": "Implemented-unverified",
+    "build_paths": [
+      {
+        "name": "Nyxian (on-device build, original path)",
+        "files": ["Config/Project.plist", "Config/Entitlements.plist"],
+        "state": "Unchanged by Phase 0. Not re-run in this job. Entitlements.plist carries com.nyxian.pe.* keys."
+      },
+      {
+        "name": "GitHub Actions IPA build (Phase 0)",
+        "files": [
+          "project.yml",
+          ".github/workflows/build.yml",
+          "BUILD.md",
+          "Config/Info.plist",
+          "Config/Entitlements.fakesign.plist"
+        ],
+        "state": "Defined, uncommitted, never run. XcodeGen spec has one app target (iphoneos, arm64, min iOS 14.8, gnu++17, links libmanifold plus four bgfx libraries and the system frameworks). The workflow (macos-15, Xcode 16.4) runs host unit tests, checks libmanifold.a is arm64, lints plists, restores or builds bgfx/bx/bimg from pinned SHAs, runs xcodegen and xcodebuild (Release, unsigned), checks the bundle, fake-signs with ldid using Config/Entitlements.fakesign.plist (only get-task-allowed; fails on any memory/jetsam entitlement), zips OST-Visualizer.ipa and uploads it (30 days). Triggers: every push and manual dispatch."
+      },
+      {
+        "name": "Dependency workflows (older)",
+        "files": [".github/workflows/build-bgfx-ios.yml", ".github/workflows/build-manifold-ios.yml"],
+        "state": "Manual (workflow_dispatch) builds of bgfx and Manifold artifacts only. Unchanged."
+      }
+    ],
+    "ci_build_defined": true,
+    "ci_build_run": false,
+    "host_test_harness": {
+      "path": "Config/Tests",
+      "description": "Config/Tests (CMake, C++17): builds Core/*.cpp, sqlite3.c, pugixml.cpp and Rendering/MeshLoader.cpp as ost_core, with a header-only harness (TestHarness.hpp, TestMain.cpp). Area folders Config/Tests/<Area>/test_*.cpp are picked up by CMake glob. Boolean ops are a throwing stub unless -DOST_TEST_BOOLEAN=ON; zlib is downloaded on Windows.",
+      "areas_present": ["Harness"],
+      "harness_selftests": 10,
+      "ios_behavior_tests": 0,
+      "fixtures": "Config/Tests/Fixtures is empty (.gitkeep). No .ost or .osp sample exists in the repo.",
+      "phase0_result": "Phase 0 build with MSVC on the authoring machine: 10 of 10 harness self-tests passed (session log, not committed). The macOS CI run of the same command was not done.",
+      "parity_measurements": "Phase 1 compared iOS Core C++ (MSVC host build) with the Windows Python/native modules using throw-away harnesses outside the repo; none are committed as tests. Testability of the 216 divergences: core-cpp 108, needs-extraction-from-objc 95, objc-only 13."
+    },
+    "dependencies": [
+      "Libs/Manifold/lib/libmanifold.a is tracked (833,584 bytes; built for iOS 16.0 per BUILD.md); arm64 is checked only by the CI step.",
+      "bgfx, bx, bimg headers are tracked under Libs/bgfx; the four bgfx static libraries are not tracked (.build/ is gitignored). Local copies dated 2026-03-29 exist in this working tree; CI rebuilds them from pinned SHAs.",
+      "Shaders are compiled offline; the app includes the 8 generated headers in Rendering/Shaders/generated. The .sc sources are not compiled by project.yml.",
+      "Resources/ is empty; the app ships no resources.",
+      "Minimum iOS is 14.8 but libmanifold.a and the bgfx libraries target 16.0 (linker warnings expected; iOS below 16 untested, BUILD.md).",
+      ".gitignore (modified, uncommitted) adds /build/, *.xcodeproj/, DerivedData/, /deps/. The Xcode project is generated, never committed."
     ]
   },
   "active_blockers": [
     {
       "id": "B-004",
       "name": "PDF annotation export",
-      "status": "Missing",
-      "current_state": "No QPDF integration, PDFKit writer, CoreGraphics writer, or replacement PDF annotation export path was found in the iOS repo.",
-      "impact": "Blocks PDF annotation export only.",
-      "desktop_evidence": [
+      "status": "Not implemented",
+      "current_state": "No PDF writer on iOS. Search found no PDFKit, UIGraphicsPDFRenderer, CGPDFContext, qpdf or pdf_writer; the only PDF code is CGPDFDocument reading in PlanView/Components/PDFCanvasView.mm. ExportService exposes OBJ, DXF and Three.js only. iOS also has no annotation model (annotation rows are written only by the generic .ost import and deleted only on permanent bid delete and together with the takeoff or condition that links them).",
+      "impact": "Blocks exporting takeoffs and annotations as PDF markup. Does not block viewing, 3D rendering, OBJ/DXF/Three.js export or import.",
+      "windows_evidence": [
         "cpp_extensions/src/pdf/pdf_writer.cpp",
         "cpp_extensions/src/pdf/bluebeam_annotation.cpp",
         "ost_visualizer/presentation/visualization/exporters/pdf_exporter.py",
-        "cpp_extensions/CMakeLists.txt QPDF references"
+        "cpp_extensions/CMakeLists.txt (QPDF)"
       ],
       "ios_evidence": [
-        "No qpdf/QPDF/pdf_writer implementation found by repository search",
-        "Core/Export contains OBJ, DXF, and Three.js writers only",
-        "Services/ExportService.mm exposes OBJ, DXF, and Three.js export paths only"
-      ]
+        "Services/ExportService.h",
+        "Core/Export/ (OBJ, DXF, Three.js writers only)",
+        "PlanView/Components/PDFCanvasView.mm"
+      ],
+      "parity_ids": []
     },
     {
       "id": "B-009",
-      "name": "OST/OSP export round trip",
-      "status": "Missing",
-      "current_state": "Desktop has OST/OSP exporters; iOS imports OST/OSP but does not write OST/OSP packages.",
-      "impact": "Blocks desktop-compatible project/package round trip.",
-      "desktop_evidence": [
-        "ost_visualizer/presentation/visualization/exporters/ost_exporter.py",
+      "name": "OST/OSP export (round trip)",
+      "status": "Not implemented",
+      "current_state": "No .ost or .osp writer and no CAB writer (no deflate/compress call anywhere; CabExtractor.cpp only inflates). A writer would also need data iOS does not keep: BidEmployees and PayClasses rows are never parsed (IMP-11) and column types are reduced to INTEGER/TEXT/REAL/BLOB (IMP-05, IMP-20).",
+      "impact": "iOS can import .ost/.osp but cannot write an edited project back to a desktop-compatible package.",
+      "windows_evidence": [
+        "ost_visualizer/infrastructure/mdb/exporters/ost_exporter.py",
         "ost_visualizer/presentation/visualization/exporters/osp_exporter.py"
       ],
+      "ios_evidence": ["Services/ExportService.h", "Core/Import/CabExtractor.cpp (read only)"],
+      "parity_ids": ["IMP-05", "IMP-11", "IMP-20"],
+      "correction": "Earlier docs cited presentation/visualization/exporters/ost_exporter.py, which does not exist."
+    },
+    {
+      "id": "B-010",
+      "name": "No iOS build or device run on record",
+      "status": "Needs verification",
+      "current_state": "Phase 0 added project.yml, build.yml and BUILD.md, all uncommitted. Nothing was built or launched: the authoring machine is Windows (no Xcode, xcodebuild, XcodeGen, ldid, macOS or device). Every statement about Objective-C/UIKit/bgfx behaviour in these docs comes from reading source.",
+      "impact": "Unknown whether project.yml generates a project that compiles and links, and whether the app runs.",
+      "windows_evidence": [],
+      "ios_evidence": ["project.yml", ".github/workflows/build.yml", "BUILD.md"],
+      "parity_ids": []
+    },
+    {
+      "id": "B-011",
+      "name": "No iOS behaviour tests or fixtures",
+      "status": "Not implemented",
+      "current_state": "Config/Tests has a harness with 10 self-tests and 0 iOS behaviour tests; Fixtures/ is empty; the repo has no .ost/.osp sample. 95 of the 216 divergences cannot be host-tested until their logic is moved from .mm files into Core; 13 are objc-only.",
+      "impact": "No regression protection for any fix; parity can only be re-measured with throw-away harnesses.",
+      "windows_evidence": [],
+      "ios_evidence": ["Config/Tests/", "Config/Tests/Fixtures/"],
+      "parity_ids": []
+    },
+    {
+      "id": "B-012",
+      "name": "Data-safety divergences in import, persistence and delete",
+      "status": "Implemented-diverges",
+      "current_state": "45 of the 216 divergences are data-safety (41 fix, 4 needs-decision). Examples: importing a second project can overwrite rows of the first (IMP-06, INSERT OR REPLACE with original UIDs, host-verified in Phase 1); import commits and reports success after SQL failures (IMP-08); every SQL error is swallowed (DBP-11); cascades leave orphans (DBP-12, DBP-14, COND-DEL-01); swipe-delete has no confirmation (BRW-01).",
+      "impact": "Silent data loss or partial import is possible on real projects.",
+      "windows_evidence": [],
       "ios_evidence": [
-        "Core/Export",
-        "Services/ExportService.mm"
+        "Core/Persistence/ProjectStore/Components/ProjectStore+Import.cpp",
+        "Core/Persistence/ProjectStore/ProjectStore.cpp",
+        "Controllers/DatabaseViewController.mm"
+      ],
+      "parity_ids": [
+        "IMP-06", "DBP-11", "IMP-08", "DBP-12", "COND-DEL-01", "IMP-07", "IMP-09", "BRW-01", "BRW-02",
+        "DBP-14", "DBP-17", "DBP-18", "DBP-20", "GEO-09", "UND-02", "UND-03", "COND-UPD-02",
+        "COND-UPD-01", "COND-UPD-03", "COND-DUP-01", "RPV-15", "RPV-16", "RPV-M01", "IMP-12", "IMP-13",
+        "IMP-10", "IMP-11", "DBP-35", "DBP-M02", "DBP-08", "EXP-08", "EXP-09", "BRW-05", "COND-STYLE-01",
+        "COND-REF-01", "COND-ELEV-01", "UND-06", "UND-08", "COL-PICK-01", "COND-M05", "IMP-M02",
+        "GEO-M02", "POS-M01", "IMP-M01", "DBP-31"
       ]
     }
   ],
@@ -94,284 +936,225 @@
       "id": "B-001",
       "name": "GLM availability",
       "status": "Replaced",
-      "current_state": "No active iOS GLM dependency was found; current meshing/curved length code uses portable C++ math.",
-      "needs_verification": "Curved/sloped geometry parity against desktop fixtures."
+      "verified_reason": "No glm reference exists in Core, Rendering, Services, Controllers or PlanView; curved geometry uses portable C++ math (Core/Meshing/gen_curved.cpp, Core/Domain/UomService.hpp).",
+      "remaining_caveat": "Dependency resolved, parity not: the curve code is a reimplementation and differs from Windows (QTY-07, QTY-08, QTY-09, MSH-05, MSH-06, MSH-07). Earlier docs called this a fixture-only check."
     },
     {
       "id": "B-002",
       "name": "Manifold / boolean operations",
-      "status": "Ported",
-      "current_state": "Manifold headers/static library are present, Project.plist links -lmanifold, boolean_ops.cpp includes Manifold, and render/export paths call boolean_difference_batch.",
-      "needs_verification": "Clean build/link and dense boolean stress testing."
+      "status": "Replaced (dependency)",
+      "verified_reason": "Libs/Manifold/include and lib/libmanifold.a are tracked, project.yml and Config/Project.plist link -lmanifold, Core/Geometry/boolean_ops.cpp differs from the Windows file only in include lines and a stale TODO comment on line 1, ProjectService.mm and ExportService.mm call boolean_difference_batch.",
+      "remaining_caveat": "Link and runtime on iOS not verified (B-010). Orchestration diverges (MSH-14, MSH-15, MSH-16, MSH-19, MSH-19b, EXP-05)."
     },
     {
       "id": "B-003",
       "name": "PDFium / PDF viewing",
-      "status": "Partial",
-      "current_state": "Basic PDF viewing uses CoreGraphics/CGPDF instead of PDFium.",
-      "limitation": "PDFCanvasView draws page 1 only; multi-page mapping is not implemented/proven."
+      "status": "Replaced",
+      "verified_reason": "CoreGraphics/CGPDF in PlanView/Components/PDFCanvasView.mm; no PDFium dependency.",
+      "remaining_caveat": "Draws page 1 only and ignores page_index, rotation and flip (LP-16). The earlier 'only if multi-page PDFs are required' condition is wrong: Windows always uses page_index = Index1-1 (per PARITY_MAP)."
     },
     {
       "id": "B-005",
       "name": "MDB / Access database access",
       "status": "Replaced",
-      "current_state": "Direct OST XML and OSP CAB import backed by SQLite replaces MDB/pyodbc on iOS.",
-      "needs_verification": "Fixture parity and preservation of non-loaded imported tables."
+      "verified_reason": "Direct .ost XML and .osp CAB import into local SQLite (Core/Import, Core/Persistence, ImportService.mm); no MDB/pyodbc on device.",
+      "remaining_caveat": "Import diverges (B-012, IMP-*); BidEmployees and PayClasses are not imported (IMP-11)."
     },
     {
       "id": "B-006",
-      "name": "PySide6 / Qt UI replacement",
+      "name": "PySide6 / Qt UI",
       "status": "Replaced",
-      "current_state": "UIKit controllers and views replace desktop PySide6/Qt for current iOS scope."
+      "verified_reason": "UIKit controllers and views under Controllers/ and PlanView/, AppDelegate.m, SceneDelegate.mm.",
+      "remaining_caveat": "Windows menus and dialogs are broader (see Not implemented in PORTING_STATUS.md)."
     },
     {
       "id": "B-007",
       "name": "File import and non-project export workflow",
-      "status": "Partial",
-      "current_state": "OST/OSP import and OBJ/DXF/Three.js sharing are source-wired.",
-      "limitation": "OST/OSP project export and PDF annotation export remain missing."
+      "status": "Superseded",
+      "verified_reason": "Import (.ost/.osp UTTypes, document picker, open-in) and OBJ/DXF/Three.js share flows exist (Info.plist, DatabaseViewController.mm, ViewController+Export.mm).",
+      "remaining_caveat": "Remaining export gaps are B-004 and B-009; content divergences are in the gaps table."
     },
     {
       "id": "B-008",
-      "name": "Renderer backend limitations",
+      "name": "Renderer backend",
       "status": "Replaced",
-      "current_state": "Renderer source initializes bgfx Metal and project config links bgfx plus Metal/MetalKit.",
-      "needs_verification": "Clean build/link and device GPU testing."
+      "verified_reason": "Rendering/Renderer.mm initialises bgfx RendererType::Metal; BgfxView.mm uses CAMetalLayer; generated shader headers are included; project.yml links the bgfx libraries plus Metal and MetalKit.",
+      "remaining_caveat": "Never run on a device (B-010)."
     }
   ],
-  "source_confirmed_systems": [
+  "partial_gaps": [
     {
-      "name": "UIKit app shell",
-      "status": "Replaced",
-      "ios_paths": [
-        "Main.m",
-        "AppDelegate.m",
-        "SceneDelegate.mm",
-        "Controllers",
-        "PlanView"
-      ]
+      "gap": "Data-safety (import, persistence, delete)",
+      "status": "Implemented-diverges",
+      "parity_ids": [
+        "IMP-06", "DBP-11", "IMP-08", "DBP-12", "COND-DEL-01", "IMP-07", "IMP-09", "BRW-01", "BRW-02",
+        "DBP-14", "DBP-17", "DBP-18", "DBP-20", "GEO-09", "UND-02", "UND-03", "COND-UPD-02",
+        "COND-UPD-01", "COND-UPD-03", "COND-DUP-01", "RPV-15", "RPV-16", "RPV-M01", "IMP-12", "IMP-13",
+        "IMP-10", "IMP-11", "DBP-35", "DBP-M02", "DBP-08", "EXP-08", "EXP-09", "BRW-05", "COND-STYLE-01",
+        "COND-REF-01", "COND-ELEV-01", "UND-06", "UND-08", "COL-PICK-01", "COND-M05", "IMP-M02",
+        "GEO-M02", "POS-M01", "IMP-M01", "DBP-31"
+      ],
+      "current_state": "See B-012. 45 ids; the full list is shown here because it is the highest-risk class."
     },
     {
-      "name": "OST XML import path",
-      "status": "Ported",
-      "desktop_paths": [
-        "ost_visualizer/infrastructure/mdb/importers/ost_importer.py"
-      ],
-      "ios_paths": [
-        "SceneDelegate.mm",
-        "Services/ImportService.mm",
-        "Core/Import/OstXmlParser.cpp"
-      ],
-      "needs_verification": "Representative OST fixture comparison."
+      "gap": "Metric measurement",
+      "status": "Not implemented",
+      "parity_ids": ["QTY-05", "QTY-06", "QTY-12", "QTY-16", "COND-METRIC-01", "ELV-02"],
+      "current_state": "UomService.hpp defines UOM codes 0-9. Codes 11-16 fall through convert_to_uom (divisor 1.0, raw inches) and get_uom_label (empty string). Bid.measure_base is loaded but only snap_increments_ost reads it. Labels for codes 4 and 7 differ and roofing is missing from the area picker (QTY-16)."
     },
     {
-      "name": "OSP import path",
-      "status": "Partial",
-      "desktop_paths": [
-        "ost_visualizer/infrastructure/mdb/importers/osp_importer.py"
-      ],
-      "ios_paths": [
-        "SceneDelegate.mm",
-        "Services/ImportService.mm",
-        "Core/Import/CabExtractor.cpp"
-      ],
-      "needs_verification": "Real OSP package variants, PDF extraction, path rewriting, overlays."
+      "gap": "Attachment and hole aggregation",
+      "status": "Implemented-diverges",
+      "parity_ids": ["QTY-01", "QTY-02", "QTY-03", "QTY-18", "RPV-17", "MSH-14"],
+      "current_state": "compute_page_quantities skips every takeoff with a parent_uid (UomService.hpp:767), so attachments placed on areas count 0, and passes 0.0 as attachment footprint and perimeter (UomService.hpp:790). Any child counts as a hole. 2D, 3D and exports drop attachments that have a parent."
     },
     {
-      "name": "SQLite table coverage",
-      "status": "Ported",
-      "desktop_paths": [
-        "ost_visualizer/infrastructure/mdb/database_creator.py"
-      ],
-      "ios_paths": [
-        "Core/Persistence/OstSchema.cpp",
-        "Core/Persistence/ProjectStore.cpp"
-      ],
-      "evidence": "Static comparison found all 64 desktop table names in iOS plus _AppMeta.",
-      "needs_verification": "Column semantics, schema-version behavior, fixture row parity, edit preservation."
+      "gap": "Quantity rounding",
+      "status": "Not implemented",
+      "parity_ids": ["QTY-04"],
+      "current_state": "round_quantity and round_up are edited, persisted and loaded, never applied. Not deferrable under the parity rule."
     },
     {
-      "name": "Manifold boolean operations",
-      "status": "Ported",
-      "desktop_paths": [
-        "cpp_extensions/src/boolean"
-      ],
-      "ios_paths": [
-        "Core/Geometry/boolean_ops.cpp",
-        "Libs/Manifold",
-        "Services/ProjectService.mm",
-        "Services/ExportService.mm"
-      ],
-      "needs_verification": "Clean link and stress testing."
+      "gap": "Quantity scope, formatting and arcs",
+      "status": "Implemented-diverges",
+      "parity_ids": ["QTY-07", "QTY-08", "QTY-09", "QTY-10", "QTY-11", "QTY-12", "QTY-14", "QTY-15", "QTY-22", "QTY-23"],
+      "current_state": "Sidebar totals mix the 2D page and the 3D page set (QTY-11) and are not refreshed on page or mode change (QTY-15). Arc length, slope factor and number formatting differ."
     },
     {
-      "name": "bgfx/Metal renderer",
-      "status": "Ported",
-      "desktop_paths": [
-        "cpp_extensions/src/renderer",
-        "ost_visualizer/presentation/components/mesh_view.py"
-      ],
-      "ios_paths": [
-        "Rendering/Renderer.mm",
-        "Rendering/BgfxView.mm",
-        "Rendering/Shaders/generated",
-        "Config/Project.plist",
-        "Libs/bgfx"
-      ],
-      "notes": "Replaces desktop OpenGL/Qt renderer and older software-renderer notes.",
-      "needs_verification": "Clean build and device rendering/picking."
+      "gap": "3D mesh pipeline",
+      "status": "Implemented-diverges",
+      "parity_ids": ["MSH-01", "MSH-02", "MSH-14", "MSH-15", "MSH-20", "GEO-05", "GEO-14", "GEO-15"],
+      "current_state": "Page-scale division of all geometry (MSH-01), no page rotation/flip (MSH-02), area slope and tessellation."
     },
     {
-      "name": "OBJ, DXF, and Three.js exports",
-      "status": "Ported",
-      "desktop_paths": [
-        "ost_visualizer/presentation/visualization/exporters/obj_exporter.py",
-        "ost_visualizer/presentation/visualization/exporters/dxf_exporter.py",
-        "ost_visualizer/presentation/visualization/renderers/threejs"
-      ],
-      "ios_paths": [
-        "Core/Export",
-        "Services/ExportService.mm",
-        "Controllers/ViewController/Components/ViewController+Export.mm"
-      ],
-      "needs_verification": "Device share flow and exported-file parity."
+      "gap": "Curved wall meshes",
+      "status": "Implemented-diverges",
+      "parity_ids": ["MSH-05", "MSH-06", "MSH-07"],
+      "current_state": "Segment count, arc side and straight-chord rule differ."
     },
     {
-      "name": "Project/edit persistence operations",
-      "status": "Partial",
-      "desktop_paths": [
-        "ost_visualizer/application/use_cases/project",
-        "ost_visualizer/infrastructure/mdb/components"
-      ],
-      "ios_paths": [
-        "Core/Persistence/ProjectStore/Components",
-        "Services/ImportService.mm"
-      ],
-      "notes": "Current-scope folder, layer visibility, takeoff, condition, and render-config writes are source-present.",
-      "needs_verification": "Desktop behavior parity and preservation of non-loaded tables after edits."
+      "gap": "Count shape meshes",
+      "status": "Implemented-diverges",
+      "parity_ids": ["MSH-08", "MSH-09", "MSH-10", "MSH-11", "MSH-13", "RPV-25"],
+      "current_state": "Only a box and a 24-segment cylinder exist. Ellipse draws as a circular cylinder (depth ignored); triangle, rhombus, hexagon and octagon draw as boxes."
     },
     {
-      "name": "Import error handling",
-      "status": "Partial",
-      "ios_paths": [
-        "Services/ImportService.mm",
-        "Controllers/DatabaseViewController.mm",
-        "SceneDelegate.mm"
-      ],
-      "notes": "Import failures use NSError and alerts for picker/URL import paths.",
-      "needs_verification": "Progress, cancellation, and representative failure cases."
+      "gap": "PDF and page rendering fidelity",
+      "status": "Implemented-diverges",
+      "parity_ids": ["LP-15", "LP-16", "GEO-06", "RPV-02", "RPV-03", "RPV-M04"],
+      "current_state": "Page 1 only, stored page size, no rotation/flip of the PDF; Image layer ignored; overlay fields loaded but never drawn; no bitonal/invert/adjust; no TIFF."
     },
     {
-      "name": "Dependency artifact workflows",
+      "gap": "Annotations",
+      "status": "Not implemented",
+      "parity_ids": [],
+      "current_state": "No annotation model, renderer, editor or export. Tables exist in the schema. Display Name / Display Dimension flags are stored but not drawn."
+    },
+    {
+      "gap": "Placement, drag and snapping",
+      "status": "Implemented-diverges",
+      "parity_ids": [
+        "RPV-04", "RPV-05", "RPV-06", "RPV-07", "RPV-08", "RPV-09", "RPV-10", "RPV-13", "RPV-15",
+        "RPV-20", "RPV-M01", "RPV-M03", "GEO-09", "GEO-M02"
+      ],
+      "current_state": "Angle snap 22.5 degrees (Windows 15), unconditional per-axis grid rounding, no endpoint/midpoint/PDF-line snap, no backout mode or paste backout."
+    },
+    {
+      "gap": "Write and use-case surface",
+      "status": "Not implemented",
+      "parity_ids": ["DBP-17", "DBP-18", "DBP-35"],
+      "current_state": "No page writes, layer create/rename/delete, condition create, condition-folder CRUD, bid create/duplicate or cover-sheet editing (searched). Writers do not validate existence or ownership."
+    },
+    {
+      "gap": "Condition editor correctness",
+      "status": "Implemented-diverges",
+      "parity_ids": [
+        "COND-UPD-01", "COND-UPD-02", "COND-UPD-03", "COND-STYLE-01", "COND-REF-01", "COND-ELEV-01",
+        "COND-M05", "COL-PICK-01", "DLG-PREC-01", "DLG-RISE-01", "DLG-FINITE-01", "UI-M01"
+      ],
+      "current_state": "Update rewrites every column and ColorLine, clears to '' instead of NULL, style change wipes notes and edits, ref number is coerced, elevation text is reformatted on blur."
+    },
+    {
+      "gap": "Elevation and position text",
+      "status": "Implemented-diverges",
+      "parity_ids": ["ELV-01", "ELV-02", "ELV-03", "ELV-04", "ELV-05", "ELV-06", "FMT-01", "DBP-07", "DBP-08", "POS-M01"],
+      "current_state": "extract_z_value is not the Windows grammar (ELV-01 to ELV-06); inchesToDisplay rounds half away from zero (FMT-01); position text is written with %.10g (DBP-07) and parsed leniently (DBP-08, POS-M01)."
+    },
+    {
+      "gap": "Export content",
+      "status": "Implemented-diverges",
+      "parity_ids": [
+        "EXP-01", "EXP-02", "EXP-03", "EXP-05", "EXP-06", "EXP-08", "EXP-09", "EXP-11", "EXP-12",
+        "EXP-13", "EXP-14", "EXP-15", "EXP-16", "EXP-19", "EXP-20", "EXP-21", "MSH-16"
+      ],
+      "current_state": "Three.js and DXF axes, mirrored export holes, per-takeoff instead of per-condition groups, no grayscale/opacity, unescaped HTML payload, raw bid name as file name; one alert for failure and empty export."
+    },
+    {
+      "gap": "OSP package rules",
+      "status": "Implemented-diverges",
+      "parity_ids": ["IMP-12", "IMP-13", "IMP-14", "IMP-15", "IMP-16", "IMP-17", "IMP-18", "IMP-M02", "IMP-M03"],
+      "current_state": "Basename-only staging collides, corrupt CAB blocks skipped silently, no package validation, only stored/MSZIP, member names not decoded."
+    },
+    {
+      "gap": "Layers and page selection",
+      "status": "Implemented-diverges",
+      "parity_ids": ["LP-08", "LP-10", "LP-11", "LP-12", "LP-18", "LP-22", "LP-24", "LP-25", "RPV-16"],
+      "current_state": "Pages ordered by Index1/Name instead of Sequence/Name/UID; folder tap replaces selection; Comments layer listed; initial page differs."
+    },
+    {
+      "gap": "Render settings and colour",
+      "status": "Implemented-diverges",
+      "parity_ids": ["SET-01", "SET-02", "SET-03", "COL-01", "COL-02", "COL-03", "COL-04"],
+      "current_state": "Default mode Solid (Windows Original), one mode for 2D and 3D, negative ColorFill drawn grey, alpha rules differ."
+    },
+    {
+      "gap": "Undo and redo",
+      "status": "Implemented-diverges",
+      "parity_ids": ["UND-01", "UND-02", "UND-03", "UND-06", "UND-07", "UND-08", "UND-09", "UND-10", "UND-11"],
+      "current_state": "Move, place and delete only; unbounded history; delete cascade covers direct children only."
+    },
+    {
+      "gap": "Camera",
+      "status": "Implemented-diverges",
+      "parity_ids": ["CAM-01", "CAM-02", "CAM-03", "CAM-04"],
+      "current_state": "Fit/Reset framing and pinch clamp differ; camera is refit instead of kept per bid."
+    },
+    {
+      "gap": "Project browser",
+      "status": "Implemented-diverges",
+      "parity_ids": [
+        "BRW-01", "BRW-02", "BRW-05", "BRW-08", "BRW-09", "BRW-10", "BRW-11", "BRW-12", "BRW-13",
+        "BRW-19", "BRW-21", "BRW-M01"
+      ],
+      "current_state": "Deleted Bids folder is identified by name (UID '1' on Windows); restore ignores OrigBidProjectUID; non-empty folders can be deleted."
+    },
+    {
+      "gap": "Build and signing configuration",
       "status": "Needs verification",
-      "ios_paths": [
-        ".github/workflows/build-bgfx-ios.yml",
-        ".github/workflows/build-manifold-ios.yml"
-      ],
-      "notes": "Manual workflows build dependency artifacts; they are not app CI."
-    }
-  ],
-  "partial_or_missing_systems": [
-    {
-      "name": "Loaded project model",
-      "status": "Partial",
-      "ios_paths": [
-        "Core/Domain",
-        "Core/Data/ProjectData.hpp",
-        "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp"
-      ],
-      "gap": "Loads visualization/editing subset, not every desktop use-case field."
-    },
-    {
-      "name": "Mesh generation",
-      "status": "Partial",
-      "ios_paths": [
-        "Core/Meshing",
-        "Core/Geometry"
-      ],
-      "gap": "Advanced count-shape parity is incomplete for ellipse width/depth, rhombus, triangle, hexagon, and octagon."
-    },
-    {
-      "name": "Measurement and quantity calculations",
-      "status": "Partial",
-      "ios_paths": [
-        "Core/Domain/UomService.hpp",
-        "Controllers/ConditionsViewController.mm"
-      ],
-      "gap": "Metric UOM normalization and attachment footprint/perimeter aggregation are incomplete; rounding fields are modeled/persisted but source-confirmed application in totals was not found."
-    },
-    {
-      "name": "2D PDF/page rendering",
-      "status": "Partial",
-      "ios_paths": [
-        "PlanView/Components/PDFCanvasView.mm",
-        "PlanView/PlanView.mm",
-        "Core/Domain/Page.hpp"
-      ],
-      "gap": "CoreGraphics draws page 1 only; overlay fields are loaded but not composited; bitonal/invert/raster modes are missing."
-    },
-    {
-      "name": "Annotation render/edit",
-      "status": "Missing",
-      "gap": "Annotation tables exist in schema, but no iOS annotation domain/UI renderer was found."
-    },
-    {
-      "name": "Plan editing and snapping",
-      "status": "Partial",
-      "ios_paths": [
-        "PlanView",
-        "Controllers/ViewController/Components"
-      ],
-      "gap": "Desktop endpoint/midpoint/perpendicular snap index, backout mode, paste-backout, detached view sync, and broad menu actions are not ported."
-    },
-    {
-      "name": "Licensing/update systems",
-      "status": "Obsolete",
-      "gap": "No iOS equivalent found; outside current iOS MVP."
-    },
-    {
-      "name": "Automated app tests and fixtures",
-      "status": "Missing",
-      "gap": "Desktop has pytest coverage; no iOS app test target, fixture suite, app build script, or app CI workflow was found in the repo inventory."
-    },
-    {
-      "name": "Build/signing package configuration",
-      "status": "Needs verification",
-      "ios_paths": [
-        "Config/Project.plist",
-        "Config/Entitlements.plist"
-      ],
-      "gap": "Manual link/resource settings and nonstandard entitlements need clean-build, signing, and distribution validation."
-    },
-    {
-      "name": "Export UX/error handling",
-      "status": "Partial",
-      "ios_paths": [
-        "Services/ExportService.mm",
-        "Controllers/ViewController/Components/ViewController+Export.mm"
-      ],
-      "gap": "OBJ/DXF/Three.js share flow exists with empty-mesh handling; write failures, progress, and share-target behavior need device validation."
+      "parity_ids": [],
+      "current_state": "Config/Entitlements.plist (Nyxian) carries 25 com.nyxian.pe.* keys; the CI path signs with a minimal get-task-allowed set; minimum iOS 14.8 vs libraries built for 16.0. See B-010."
     }
   ],
   "needs_manual_validation": [
-    "Clean build/link from a fresh checkout.",
-    "Manual bgfx and Manifold dependency artifact workflow validation.",
-    "Signing/entitlements validation for the current Config plists.",
-    "Device run for bgfx/Metal rendering, picking readback, camera controls, and sharing.",
-    "Representative OST/OSP fixture imports compared against desktop rows and loaded fields.",
-    "PDF page scaling, page selection, rotations, extracted paths, and overlay behavior.",
-    "Quantity parity for metric UOMs, attachments, rounding, holes, negatives, slope, grid, and curved lengths.",
-    "Large project memory/frame-time testing.",
-    "Manifold boolean stress testing.",
-    "OBJ/DXF/Three.js export share flow and file-write failure validation.",
-    "App-level CI/test target or repeatable fixture validation harness."
+    "A first build of project.yml with XcodeGen and xcodebuild, and a first run of build.yml on a runner (never done).",
+    "Compilation of every Objective-C/Objective-C++ file (Controllers, PlanView, Services, Rendering/*.mm, SceneDelegate.mm): never compiled in this job.",
+    "Install and launch of the fake-signed IPA on a device; .ost/.osp open-in and document-picker import.",
+    "bgfx/Metal on device: rendering, OIT passes, picking readback, selection highlight, frame time and memory on large projects.",
+    "Manifold on device: link of libmanifold.a, runtime robustness and time with many negatives and drop stubs; host run with -DOST_TEST_BOOLEAN=ON.",
+    "Representative .ost and .osp fixtures compared with Windows rows and loaded fields (none in the repo).",
+    "PDF background scaling, rotation, multi-page files and extracted OSP paths.",
+    "Export on device: share sheet, large outputs, write failures; the HTML viewer needs network (unpkg.com).",
+    "Behaviour tests for the 108 core-cpp divergences, and extraction of logic from .mm into Core for the 95 needs-extraction-from-objc ones.",
+    "Entitlements and signing: Config/Entitlements.plist (Nyxian keys) and the minimal fake-sign set in Config/Entitlements.fakesign.plist, with the installer actually used.",
+    "iPad layout (popovers are configured in the sources; not seen running)."
   ],
   "obsolete_historical": [
-    "Metal unavailable / software rasterizer production path",
-    "Desktop OpenGL renderer must be ported directly",
-    "PDFium required for basic PDF viewing",
-    "MDB/pyodbc required on iOS",
-    "PySide6 blocks UI",
-    "GLM blocks curved meshes"
+    "'Metal is not available / software rasterizer is production': obsolete (bgfx on Metal).",
+    "'Desktop OpenGL renderer must be ported directly': obsolete (replaced by bgfx/Metal).",
+    "'PDFium must be built for PDF viewing': obsolete for viewing (CGPDF).",
+    "'MDB/pyodbc required on iOS': obsolete (SQLite plus direct import).",
+    "'PySide6 blocks UI': obsolete (UIKit).",
+    "'GLM blocks curved meshes': obsolete (no GLM use).",
+    "'No .xcodeproj, CI or test target': no longer accurate, see Corrections."
   ]
 }
