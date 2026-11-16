@@ -5,6 +5,7 @@
 #include <zlib.h>
 #include <cstring>
 #include <algorithm>
+#include <string>
 
 namespace ost_import
 {
@@ -163,51 +164,118 @@ namespace ost_import
         return entries;
     }
 
-    static std::vector<char> decompress_folder(const char *data, size_t length,
-                                               const CabFolder &folder,
-                                               uint8_t data_reserve_size)
+    // Cabinet checksum (Microsoft Cabinet File Format, CSUMCOMPUTE; the same as libmspack cabd_checksum): XOR of the
+    // little-endian 32-bit words of the data, the 1-3 trailing bytes read as a partial word.
+    static uint32_t cab_checksum(const unsigned char *data, size_t bytes, uint32_t checksum)
     {
-        std::vector<char> result;
+        for (size_t words = bytes >> 2; words > 0; --words, data += 4)
+            checksum ^= (uint32_t)data[0] | ((uint32_t)data[1] << 8) | ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 24);
+        uint32_t tail = 0;
+        switch (bytes & 3)
+        {
+        case 3:
+            tail |= (uint32_t)(*data++) << 16;
+            // fall through
+        case 2:
+            tail |= (uint32_t)(*data++) << 8;
+            // fall through
+        case 1:
+            tail |= (uint32_t)(*data);
+            break;
+        default:
+            break;
+        }
+        return checksum ^ tail;
+    }
+
+    // Decodes every CFDATA block of a folder. The Windows importer extracts through the Windows cabinet library
+    // (FDICopy), where any corrupt block makes the whole extraction fail, so nothing here is skipped or repaired: a
+    // truncated block, a CFDATA checksum that does not match (a checksum of 0 means "none"), an MSZIP block without
+    // the "CK" signature or that does not inflate, and a block that does not produce exactly cbUncomp bytes all
+    // fail the folder. Returns false (and a description in `detail`) instead of a shifted/partial buffer.
+    static bool decompress_folder(const char *data, size_t length,
+                                  const CabFolder &folder,
+                                  uint8_t data_reserve_size,
+                                  std::vector<char> &result,
+                                  std::string &detail)
+    {
+        result.clear();
         size_t offset = folder.data_offset;
 
         unsigned char window[MSZIP_WINDOW];
         size_t window_size = 0;
 
+        if (folder.compress_type != COMPRESS_NONE && folder.compress_type != COMPRESS_MSZIP)
+        {
+            detail = "unsupported compression type " + std::to_string(folder.compress_type);
+            return false;
+        }
+
         for (uint16_t block = 0; block < folder.data_count; block++)
         {
-            if (offset + 8 > length)
-                break;
+            const std::string where = "CFDATA block " + std::to_string(block + 1) + " of " + std::to_string(folder.data_count);
+            if (offset > length || length - offset < 8 + (size_t)data_reserve_size)
+            {
+                detail = where + " is truncated";
+                return false;
+            }
 
-            uint16_t comp_size = read_u16(data + offset + 4);
-            uint16_t uncomp_size = read_u16(data + offset + 6);
+            const uint32_t stored_checksum = read_u32(data + offset);
+            const uint16_t comp_size = read_u16(data + offset + 4);
+            const uint16_t uncomp_size = read_u16(data + offset + 6);
+            const size_t header_offset = offset;
             offset += 8 + data_reserve_size;
 
-            if (offset + comp_size > length)
-                break;
+            if (length - offset < comp_size)
+            {
+                detail = where + " is truncated";
+                return false;
+            }
 
             const char *block_data = data + offset;
 
+            if (stored_checksum != 0)
+            {
+                const uint32_t partial = cab_checksum(reinterpret_cast<const unsigned char *>(block_data), comp_size, 0);
+                const uint32_t computed =
+                    cab_checksum(reinterpret_cast<const unsigned char *>(data + header_offset + 4), 4, partial);
+                if (computed != stored_checksum)
+                {
+                    detail = where + " has a wrong checksum";
+                    return false;
+                }
+            }
+
             if (folder.compress_type == COMPRESS_NONE)
             {
+                if (comp_size != uncomp_size)
+                {
+                    detail = where + " stores " + std::to_string(comp_size) + " bytes but declares " +
+                             std::to_string(uncomp_size);
+                    return false;
+                }
                 result.insert(result.end(), block_data, block_data + comp_size);
             }
-            else if (folder.compress_type == COMPRESS_MSZIP)
+            else
             {
                 if (comp_size < 2 || block_data[0] != 'C' || block_data[1] != 'K')
                 {
-                    offset += comp_size;
-                    continue;
+                    detail = where + " lacks the MSZIP signature";
+                    return false;
                 }
 
                 const char *deflate_data = block_data + 2;
                 size_t deflate_len = comp_size - 2;
-                size_t out_size = uncomp_size > 0 ? uncomp_size : MSZIP_WINDOW;
-                std::vector<char> buf(out_size);
+                size_t out_size = uncomp_size;
+                std::vector<char> buf(out_size > 0 ? out_size : 1);
 
                 z_stream strm;
                 memset(&strm, 0, sizeof(strm));
                 if (inflateInit2(&strm, -MAX_WBITS) != Z_OK)
-                    break;
+                {
+                    detail = "the inflater could not be initialised";
+                    return false;
+                }
 
                 if (window_size > 0)
                     inflateSetDictionary(&strm, window, (uInt)window_size);
@@ -218,15 +286,24 @@ namespace ost_import
                 strm.avail_out = (uInt)out_size;
 
                 int ret = inflate(&strm, Z_SYNC_FLUSH);
+                size_t produced = out_size - strm.avail_out;
                 inflateEnd(&strm);
 
-                if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR)
+                // Z_OK / Z_BUF_ERROR are fine when the buffer is exactly full (the end-of-block code of the last
+                // symbol has not been read yet); anything that is an error, or a block that falls short of or
+                // runs past cbUncomp, is corruption.
+                const bool stream_ok = (ret == Z_STREAM_END) || ret == Z_OK || ret == Z_BUF_ERROR;
+                if (!stream_ok)
                 {
-                    offset += comp_size;
-                    continue;
+                    detail = where + " does not inflate (zlib " + std::to_string(ret) + ")";
+                    return false;
                 }
-
-                size_t produced = out_size - strm.avail_out;
+                if (produced != out_size)
+                {
+                    detail = where + " inflates to " + std::to_string(produced) + " bytes but declares " +
+                             std::to_string(out_size);
+                    return false;
+                }
 
                 if (produced >= MSZIP_WINDOW)
                 {
@@ -246,15 +323,11 @@ namespace ost_import
 
                 result.insert(result.end(), buf.begin(), buf.begin() + produced);
             }
-            else
-            {
-                break;
-            }
 
             offset += comp_size;
         }
 
-        return result;
+        return true;
     }
 
     std::vector<CabEntry> list_cab(const char *data, size_t length)
@@ -270,16 +343,25 @@ namespace ost_import
         return parse_files(data, length, hdr.files_offset, hdr.file_count);
     }
 
-    std::vector<char> extract_cab_file(const char *data, size_t length,
-                                       const std::string &filename)
+    CabExtractResult extract_cab_member(const char *data, size_t length,
+                                        const std::string &filename)
     {
+        CabExtractResult out;
         CabHeader hdr;
         if (!parse_header(data, length, hdr))
-            return {};
+        {
+            out.status = CabStatus::NotACabinet;
+            out.detail = "not a cabinet file";
+            return out;
+        }
 
         size_t folder_offset = header_end_offset(data, length, hdr);
         if (folder_offset == 0)
-            return {};
+        {
+            out.status = CabStatus::Corrupt;
+            out.detail = "the cabinet header is truncated";
+            return out;
+        }
 
         auto folders = parse_folders(data, length, folder_offset,
                                      hdr.folder_count, hdr.folder_reserve_size);
@@ -299,22 +381,47 @@ namespace ost_import
         }
 
         if (!target)
-            return {};
+        {
+            out.status = CabStatus::NotFound;
+            out.detail = "no member named " + filename;
+            return out;
+        }
         if (target->folder_index >= folders.size())
-            return {};
+        {
+            out.status = CabStatus::Corrupt;
+            out.detail = "the member points at a folder that does not exist";
+            return out;
+        }
 
-        auto folder_data = decompress_folder(data, length,
-                                             folders[target->folder_index],
-                                             hdr.data_reserve_size);
+        std::vector<char> folder_data;
+        if (!decompress_folder(data, length, folders[target->folder_index], hdr.data_reserve_size,
+                               folder_data, out.detail))
+        {
+            out.status = CabStatus::Corrupt;
+            return out;
+        }
 
-        uint32_t start = target->offset_in_folder;
-        uint32_t end = start + target->uncompressed_size;
-
+        const uint64_t start = target->offset_in_folder;
+        const uint64_t end = start + target->uncompressed_size;
         if (end > folder_data.size())
-            return {};
+        {
+            out.status = CabStatus::Corrupt;
+            out.detail = "the member extends past the end of its folder";
+            return out;
+        }
 
-        return std::vector<char>(folder_data.begin() + start,
-                                 folder_data.begin() + end);
+        out.status = CabStatus::Ok;
+        out.data.assign(folder_data.begin() + (size_t)start, folder_data.begin() + (size_t)end);
+        return out;
+    }
+
+    std::vector<char> extract_cab_file(const char *data, size_t length,
+                                       const std::string &filename)
+    {
+        CabExtractResult result = extract_cab_member(data, length, filename);
+        if (result.status != CabStatus::Ok)
+            return {};
+        return std::move(result.data);
     }
 
 }

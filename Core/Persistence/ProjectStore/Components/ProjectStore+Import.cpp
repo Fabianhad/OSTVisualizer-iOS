@@ -1,247 +1,98 @@
 // ProjectStore component — import (OST file → database).
-#include "../ProjectStore_Internal.hpp"
+//
+// Windows counterpart: ImportOperationsMixin.import_ost_data (import_operations.py) driven by OstImporter._transform
+// (ost_importer.py). The steps (UID floor, master-data reconciliation, UID remap, bid number, typed row writes) live in
+// ProjectStore+ImportWriter.cpp / ProjectStore+ImportMasterData.cpp and Import/OstImportTransform.cpp.
+#include "../ProjectStore_ImportInternal.hpp"
 #include "../../OstSchema.hpp"
 
 namespace ost_store
 {
 
-    static bool insert_rows(ost_db::OstDatabase &db,
-                            const std::string &table,
-                            const ost_import::RowList &rows)
-    {
-        if (rows.empty())
-            return true;
-
-        for (const auto &row : rows)
-        {
-            std::string row_sql = build_insert(table, row);
-            if (row_sql.empty())
-                return false;
-            ost_db::Statement stmt = db.prepare(row_sql);
-            if (!stmt.valid())
-                return false;
-            bind_row(stmt, row);
-            stmt.step();
-        }
-        return true;
-    }
-
-    static std::unordered_map<std::string, std::string>
-    resolve_global_table_by_name(ost_db::OstDatabase &db,
-                                 const std::string &table,
-                                 const ost_import::RowList &incoming)
-    {
-        std::unordered_map<std::string, std::string> uid_map;
-        if (incoming.empty())
-            return uid_map;
-
-        std::unordered_map<std::string, std::string> existing_by_name;
-        {
-            ost_db::Statement stmt = db.prepare(
-                "SELECT UID, Name FROM [" + table + "]");
-            if (stmt.valid())
-            {
-                while (stmt.step())
-                {
-                    existing_by_name[stmt.column_text(1)] = stmt.column_text(0);
-                }
-            }
-        }
-
-        int next_uid = 1;
-        {
-            ost_db::Statement stmt = db.prepare(
-                "SELECT COALESCE(MAX(UID), 0) FROM [" + table + "]");
-            if (stmt.valid() && stmt.step())
-                next_uid = stmt.column_int(0) + 1;
-        }
-
-        for (const auto &row : incoming)
-        {
-            auto uid_it = row.find("UID");
-            auto name_it = row.find("Name");
-            std::string old_uid = (uid_it != row.end()) ? uid_it->second : "";
-            std::string name = (name_it != row.end()) ? name_it->second : "";
-
-            auto exist_it = existing_by_name.find(name);
-            if (exist_it != existing_by_name.end())
-            {
-                uid_map[old_uid] = exist_it->second;
-            }
-            else
-            {
-                std::string new_uid = std::to_string(next_uid++);
-                uid_map[old_uid] = new_uid;
-                existing_by_name[name] = new_uid;
-
-                ost_import::Row new_row = row;
-                new_row["UID"] = new_uid;
-                std::string sql = build_insert(table, new_row);
-                if (!sql.empty())
-                {
-                    ost_db::Statement stmt = db.prepare(sql);
-                    if (stmt.valid())
-                    {
-                        bind_row(stmt, new_row);
-                        stmt.step();
-                    }
-                }
-            }
-        }
-        return uid_map;
-    }
-
     bool import_project(const std::string &db_path,
-                        const ost_import::OstRawData &raw_data)
+                        const ost_import::OstRawData &raw_data,
+                        ImportResult *result)
     {
+        ImportResult scratch;
+        ImportResult &out = result ? *result : scratch;
+        out = ImportResult();
+
         if (raw_data.empty())
+        {
+            out.error = "The OST file has no Bid element.";
             return false;
+        }
 
         ost_db::OstDatabase db;
         if (!db.open(db_path))
+        {
+            out.error = "The database could not be opened: " + db.last_error_message();
             return false;
-
-        db.begin_transaction();
-
-        std::unordered_map<std::string, std::string> cdn_uid_map;
-        std::unordered_map<std::string, std::string> job_status_uid_map;
-        {
-            auto cdn_it = raw_data.global_tables.find("CdnTypes");
-            if (cdn_it != raw_data.global_tables.end())
-                cdn_uid_map = resolve_global_table_by_name(db, "CdnTypes", cdn_it->second);
-
-            auto js_it = raw_data.global_tables.find("JobStatuses");
-            if (js_it != raw_data.global_tables.end())
-                job_status_uid_map = resolve_global_table_by_name(db, "JobStatuses", js_it->second);
         }
 
+        if (!db.begin_transaction())
         {
-            ost_import::Row bid_row = raw_data.bid_row;
-            if (!job_status_uid_map.empty())
-            {
-                auto js_it = bid_row.find("JobStatusUID");
-                if (js_it != bid_row.end() && !js_it->second.empty())
-                {
-                    auto map_it = job_status_uid_map.find(js_it->second);
-                    if (map_it != job_status_uid_map.end())
-                        js_it->second = map_it->second;
-                }
-            }
-            std::string sql = build_insert("Bids", bid_row);
-            if (!sql.empty())
-            {
-                ost_db::Statement stmt = db.prepare(sql);
-                if (stmt.valid())
-                {
-                    bind_row(stmt, bid_row);
-                    stmt.step();
-                }
-            }
+            out.error = "The import transaction could not be started: " + db.last_error_message();
+            return false;
         }
 
-        for (const char *table : ost_schema::BID_SECTIONS)
+        // Windows runs the whole import (master data, bid number, bid row, every table) in one connection scope: any
+        // failure rolls everything back and the import reports failure (import_operations.py import_ost_data).
+        auto fail = [&db, &out](const std::string &message) -> bool
         {
-            auto it = raw_data.bid_tables.find(table);
-            if (it == raw_data.bid_tables.end())
-                continue;
+            if (db.in_transaction())
+                db.rollback();
+            out.error = message;
+            return false;
+        };
 
-            if (it->first == "BidConditions" && !cdn_uid_map.empty())
-            {
-                for (const auto &row : it->second)
-                {
-                    ost_import::Row remapped = row;
-                    auto ctu_it = remapped.find("CdnTypeUID");
-                    if (ctu_it != remapped.end() && !ctu_it->second.empty())
-                    {
-                        auto map_it = cdn_uid_map.find(ctu_it->second);
-                        if (map_it != cdn_uid_map.end())
-                            ctu_it->second = map_it->second;
-                    }
-                    std::string sql = build_insert("BidConditions", remapped);
-                    if (!sql.empty())
-                    {
-                        ost_db::Statement stmt = db.prepare(sql);
-                        if (stmt.valid())
-                        {
-                            bind_row(stmt, remapped);
-                            stmt.step();
-                        }
-                    }
-                }
-            }
-            else
-            {
-                insert_rows(db, it->first, it->second);
-            }
-        }
+        std::string error;
+        long long max_uid = 0;
+        if (!import_get_max_uid(db, max_uid, error))
+            return fail(error);
 
-        // Insert remaining bid tables not in BID_SECTIONS
-        for (const auto &pair : raw_data.bid_tables)
+        ost_import::UidMap cdn_uid_map, job_status_uid_map, access_level_uid_map, pay_class_uid_map, employee_uid_map;
+        if (!import_resolve_cdn_types(db, raw_data, max_uid, cdn_uid_map, error))
+            return fail(error);
+        if (!import_resolve_job_statuses(db, raw_data, max_uid, job_status_uid_map, error))
+            return fail(error);
+        if (!import_resolve_access_levels(db, raw_data, access_level_uid_map, error))
+            return fail(error);
+        if (!import_resolve_pay_classes(db, raw_data, pay_class_uid_map, error))
+            return fail(error);
+        if (!import_resolve_employees(db, raw_data, pay_class_uid_map, access_level_uid_map, employee_uid_map, error))
+            return fail(error);
+
+        ost_import::OstRawData remapped = ost_import::transform(
+            raw_data, max_uid, cdn_uid_map, job_status_uid_map, employee_uid_map, pay_class_uid_map);
+
+        if (!import_assign_next_bid_no(db, remapped.bid_row, error))
+            return fail(error);
+
+        // The importer has no target-project picker on iOS (Windows ImportHandler passes target_project_uid): the bid
+        // is stored without a project, i.e. Bids.BidProjectUID = NULL (import_operations.py:74-77).
+        remapped.bid_row["BidProjectUID"] = "NULL";
+
+        if (!import_write_to_db(db, remapped, error))
+            return fail(error);
+
+        // A failed COMMIT is a failed import (OstDatabase::commit has already rolled the transaction back).
+        if (!db.commit())
+            return fail("The import could not be committed: " + db.last_error_message());
+
+        auto bid_uid = remapped.bid_row.find("UID");
+        if (bid_uid != remapped.bid_row.end() && !bid_uid->second.empty() && bid_uid->second != "0" &&
+            bid_uid->second != "NULL")
         {
-            bool in_sections = false;
-            for (const char *s : ost_schema::BID_SECTIONS)
-                if (pair.first == s)
-                {
-                    in_sections = true;
-                    break;
-                }
-            if (!in_sections)
-                insert_rows(db, pair.first, pair.second);
+            out.bid_uid = bid_uid->second;
         }
-
-        for (const char *table : ost_schema::PAGE_SECTIONS)
+        else
         {
-            auto it = raw_data.page_tables.find(table);
-            if (it != raw_data.page_tables.end())
-                insert_rows(db, it->first, it->second);
+            // The file's Bid had no UID: the database numbered the row itself (autonumber = highest UID so far).
+            ost_db::Statement stmt = db.prepare("SELECT MAX([UID]) FROM [Bids]");
+            if (stmt.valid() && stmt.step())
+                out.bid_uid = stmt.column_text(0);
         }
-
-        // Insert remaining page tables not in PAGE_SECTIONS
-        for (const auto &pair : raw_data.page_tables)
-        {
-            bool in_sections = false;
-            for (const char *s : ost_schema::PAGE_SECTIONS)
-                if (pair.first == s)
-                {
-                    in_sections = true;
-                    break;
-                }
-            if (!in_sections)
-                insert_rows(db, pair.first, pair.second);
-        }
-
-        for (const auto &pair : raw_data.global_tables)
-        {
-            if (pair.first == "CdnTypes" || pair.first == "JobStatuses")
-                continue;
-
-            for (const auto &row : pair.second)
-            {
-                std::string sql = "INSERT OR IGNORE INTO [" + pair.first + "] (";
-                std::string placeholders;
-                bool first = true;
-                for (const auto &col : row)
-                {
-                    if (!first)
-                    {
-                        sql += ", ";
-                        placeholders += ", ";
-                    }
-                    sql += "[" + col.first + "]";
-                    placeholders += "?";
-                    first = false;
-                }
-                sql += ") VALUES (" + placeholders + ")";
-                ost_db::Statement stmt = db.prepare(sql);
-                if (stmt.valid())
-                {
-                    bind_row(stmt, row);
-                    stmt.step();
-                }
-            }
-        }
-
-        db.commit();
         return true;
     }
 

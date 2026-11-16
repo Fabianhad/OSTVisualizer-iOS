@@ -4,6 +4,7 @@
 #include "ProjectStore.hpp"
 #include "../OstDatabase.hpp"
 #include "../OstSchema.hpp"
+#include "../../Domain/PositionParser.hpp"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -52,53 +53,15 @@ namespace ost_store
 
     std::pair<double, bool> extract_z_value(const std::string &name);
 
-    static inline std::string build_insert(const std::string &table,
-                                           const ost_import::Row &row)
-    {
-        if (row.empty())
-            return "";
-        std::string cols, placeholders;
-        bool first = true;
-        for (const auto &pair : row)
-        {
-            if (!first)
-            {
-                cols += ", ";
-                placeholders += ", ";
-            }
-            cols += "[" + pair.first + "]";
-            placeholders += "?";
-            first = false;
-        }
-        return "INSERT OR REPLACE INTO [" + table + "] (" + cols + ") VALUES (" + placeholders + ")";
-    }
+    // The import used to build "INSERT OR REPLACE" statements here (build_insert/bind_row): a colliding primary key
+    // silently overwrote another project's row (IMP-06). Rows are now written by import_insert_raw_row
+    // (ProjectStore_ImportInternal.hpp), a plain INSERT with typed values.
 
-    static inline void bind_row(ost_db::Statement &stmt, const ost_import::Row &row)
-    {
-        int idx = 1;
-        for (const auto &pair : row)
-        {
-            const std::string &val = pair.second;
-            if (val.empty() || val == "NULL")
-                stmt.bind_null(idx);
-            else
-                stmt.bind_text(idx, val);
-            idx++;
-        }
-    }
-
+    // Windows serialization.encode_position(position, preserve_indices=<every index>), the form every takeoff write
+    // path uses (full float repr joined by ';', trailing newline): no quantization of dragged positions (DBP-07).
     static inline std::string serialize_position(const std::vector<double> &position)
     {
-        std::string s;
-        for (size_t i = 0; i < position.size(); i++)
-        {
-            if (i > 0)
-                s += ';';
-            char buf[64];
-            snprintf(buf, sizeof(buf), "%.10g", position[i]);
-            s += buf;
-        }
-        return s;
+        return ost_domain::encode_position(position);
     }
 
     static inline std::string get_pref(ost_db::OstDatabase &db, const std::string &key,
@@ -114,17 +77,17 @@ namespace ost_store
         return def;
     }
 
-    static inline void set_pref(ost_db::OstDatabase &db, const std::string &key,
+    // false when the preference could not be written (statement failed to prepare or run).
+    static inline bool set_pref(ost_db::OstDatabase &db, const std::string &key,
                                 const std::string &value)
     {
         ost_db::Statement stmt = db.prepare(
             "INSERT OR REPLACE INTO _AppPreferences (Key, Value) VALUES (?, ?)");
-        if (stmt.valid())
-        {
-            stmt.bind_text(1, key);
-            stmt.bind_text(2, value);
-            stmt.step();
-        }
+        if (!stmt.valid())
+            return false;
+        stmt.bind_text(1, key);
+        stmt.bind_text(2, value);
+        return stmt.run();
     }
 
 }

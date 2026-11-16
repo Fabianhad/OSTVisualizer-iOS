@@ -20,8 +20,7 @@ namespace ost_store
 
         stmt.bind_int(1, visible ? -1 : 0);
         stmt.bind_text(2, layer_uid);
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
     bool save_takeoff_position(const std::string &db_path,
@@ -40,8 +39,7 @@ namespace ost_store
 
         stmt.bind_text(1, serialize_position(position));
         stmt.bind_text(2, takeoff_uid);
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
     std::string insert_takeoff(const std::string &db_path,
@@ -57,7 +55,12 @@ namespace ost_store
         {
             ost_db::Statement max_stmt = db.prepare(
                 "SELECT MAX(UID) FROM BidTakeoffs");
-            if (max_stmt.valid() && max_stmt.step())
+            if (!max_stmt.valid())
+                return {};
+            const ost_db::StepResult max_result = max_stmt.step_result();
+            if (max_result == ost_db::StepResult::Error)
+                return {};
+            if (max_result == ost_db::StepResult::Row)
             {
                 int max_uid = max_stmt.column_int(0);
                 uid = std::to_string(max_uid + 1);
@@ -93,7 +96,8 @@ namespace ost_store
         stmt.bind_int(8, takeoff.curve);
         stmt.bind_text(9, parent);
         stmt.bind_int(10, takeoff.is_negative ? 1 : 0);
-        stmt.step();
+        if (!stmt.run())
+            return {};
         return uid;
     }
 
@@ -117,7 +121,13 @@ namespace ost_store
                 return false;
             }
             parent_stmt.bind_text(1, takeoff_uid);
-            if (parent_stmt.step())
+            const ost_db::StepResult parent_result = parent_stmt.step_result();
+            if (parent_result == ost_db::StepResult::Error)
+            {
+                db.exec("ROLLBACK");
+                return false;
+            }
+            if (parent_result == ost_db::StepResult::Row)
             {
                 std::string parent_uid = parent_stmt.column_text(0);
                 if (parent_uid.empty() || parent_uid == "0")
@@ -132,6 +142,11 @@ namespace ost_store
                     child_stmt.bind_text(1, takeoff_uid);
                     while (child_stmt.step())
                         takeoff_uids.push_back(child_stmt.column_text(0));
+                    if (child_stmt.failed())
+                    {
+                        db.exec("ROLLBACK");
+                        return false;
+                    }
                 }
             }
         }
@@ -159,7 +174,11 @@ namespace ost_store
             }
             for (size_t i = 0; i < takeoff_uids.size(); ++i)
                 stmt.bind_text(static_cast<int>(i + 1), takeoff_uids[i]);
-            stmt.step();
+            if (!stmt.run())
+            {
+                db.exec("ROLLBACK");
+                return false;
+            }
         }
 
         {
@@ -172,7 +191,11 @@ namespace ost_store
             }
             for (size_t i = 0; i < takeoff_uids.size(); ++i)
                 stmt.bind_text(static_cast<int>(i + 1), takeoff_uids[i]);
-            stmt.step();
+            if (!stmt.run())
+            {
+                db.exec("ROLLBACK");
+                return false;
+            }
         }
 
         {
@@ -185,7 +208,11 @@ namespace ost_store
             }
             for (size_t i = 0; i < takeoff_uids.size(); ++i)
                 stmt.bind_text(static_cast<int>(i + 1), takeoff_uids[i]);
-            stmt.step();
+            if (!stmt.run())
+            {
+                db.exec("ROLLBACK");
+                return false;
+            }
         }
 
         return db.commit();
@@ -207,8 +234,7 @@ namespace ost_store
 
         stmt.bind_int(1, is_negative ? 1 : 0);
         stmt.bind_text(2, takeoff_uid);
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
 }

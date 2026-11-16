@@ -19,17 +19,17 @@ namespace ost_meshing
         return sum * 0.5;
     }
 
+    // Windows area.py calc_z: the slope always rises along +proj; the sign of rise / run is ignored (only the takeoff
+    // rotation picks the direction). Windows works in the 3D frame (X, Y) = (x, -z): its Y term (y - cy) * sin is
+    // -((z - cz) * sin) here, so the projection is a subtraction (exact, negation commutes with the arithmetic).
     static double slope_y_for_vertex(double x, double z,
                                      double cx, double cz, double cos_r, double sin_r,
-                                     double min_proj, double span, double slope_h,
-                                     double rise, double run, bool asc,
+                                     double min_proj, double span, double slope_ratio,
                                      double y_base, double thickness)
     {
-        double proj = (x - cx) * cos_r + (z - cz) * sin_r;
-        double progress = (span > 1e-10) ? (proj - min_proj) / span : 0.0;
-        double h_chg = span * progress * std::abs(rise) / std::abs(run);
-        double y = y_base + thickness + (asc ? h_chg : slope_h - h_chg);
-        return y;
+        double proj = (x - cx) * cos_r - (z - cz) * sin_r;
+        double progress = (span > 0) ? (proj - min_proj) / span : 0.0;
+        return y_base + thickness + span * progress * slope_ratio;
     }
 
     ost_geometry::CppMeshData generate_area_mesh(
@@ -46,8 +46,7 @@ namespace ost_meshing
         double y_b = y_offset;
         bool has_slope = (run != 0.0 && rise != 0.0);
         double cx = 0, cz = 0, cos_r = 1, sin_r = 0;
-        double min_proj = 0, span = 0, slope_h = 0;
-        bool asc = false;
+        double min_proj = 0, span = 0, slope_ratio = 0;
 
         if (has_slope)
         {
@@ -69,13 +68,12 @@ namespace ost_meshing
             double max_proj = -1e30;
             for (const auto &v : vertices)
             {
-                double proj = (v.first - cx) * cos_r + (v.second - cz) * sin_r;
+                double proj = (v.first - cx) * cos_r - (v.second - cz) * sin_r;
                 min_proj = std::min(min_proj, proj);
                 max_proj = std::max(max_proj, proj);
             }
             span = max_proj - min_proj;
-            slope_h = span * std::abs(rise) / std::abs(run);
-            asc = (rise > 0 && run > 0) || (rise < 0 && run < 0);
+            slope_ratio = std::abs(rise) / std::abs(run);
         }
 
         size_t total_outer = n;
@@ -90,7 +88,7 @@ namespace ost_meshing
             double x = vertices[i].first, z = vertices[i].second;
             mesh.vertices[i] = {x, y_b, z};
             double y_t = has_slope
-                             ? slope_y_for_vertex(x, z, cx, cz, cos_r, sin_r, min_proj, span, slope_h, rise, run, asc, y_offset, thickness)
+                             ? slope_y_for_vertex(x, z, cx, cz, cos_r, sin_r, min_proj, span, slope_ratio, y_offset, thickness)
                              : y_offset + thickness;
             mesh.vertices[i + n] = {x, y_t, z};
         }
@@ -108,23 +106,27 @@ namespace ost_meshing
                 double x = h[i].first, z = h[i].second;
                 mesh.vertices[h_offset + i] = {x, y_b, z};
                 double y_t = has_slope
-                                 ? slope_y_for_vertex(x, z, cx, cz, cos_r, sin_r, min_proj, span, slope_h, rise, run, asc, y_offset, thickness)
+                                 ? slope_y_for_vertex(x, z, cx, cz, cos_r, sin_r, min_proj, span, slope_ratio, y_offset, thickness)
                                  : y_offset + thickness;
                 mesh.vertices[h_offset + hn + i] = {x, y_t, z};
             }
             h_offset += hn * 2;
         }
 
+        // Windows hands earcut the 3D footprint (X, Y) = (x, -z) (area.py triangulate); ear selection and the diagonals
+        // depend on the orientation, so the mirrored (x, z) frame would pick other triangles. Earcut's output has a
+        // fixed orientation in the frame it is given, i.e. the opposite of the (x, z) one: the caps below reverse it to
+        // keep the outward-facing winding of the rest of the shell.
         std::vector<std::vector<std::array<double, 2>>> polygon;
         polygon.resize(1 + holes.size());
         polygon[0].resize(n);
         for (size_t i = 0; i < n; i++)
-            polygon[0][i] = {vertices[i].first, vertices[i].second};
+            polygon[0][i] = {vertices[i].first, -vertices[i].second};
         for (size_t hi = 0; hi < holes.size(); hi++)
         {
             polygon[1 + hi].resize(holes[hi].size());
             for (size_t i = 0; i < holes[hi].size(); i++)
-                polygon[1 + hi][i] = {holes[hi][i].first, holes[hi][i].second};
+                polygon[1 + hi][i] = {holes[hi][i].first, -holes[hi][i].second};
         }
 
         std::vector<uint32_t> indices = ost_geometry::triangulate_polygon(polygon);
@@ -159,15 +161,15 @@ namespace ost_meshing
 
         for (size_t i = 0; i + 2 < indices.size(); i += 3)
         {
-            mesh.faces.push_back({remap_earcut_idx(indices[i]),
+            mesh.faces.push_back({remap_earcut_idx(indices[i + 2]),
                                   remap_earcut_idx(indices[i + 1]),
-                                  remap_earcut_idx(indices[i + 2])});
+                                  remap_earcut_idx(indices[i])});
         }
         for (size_t i = 0; i + 2 < indices.size(); i += 3)
         {
-            mesh.faces.push_back({remap_earcut_idx_top(indices[i + 2]),
+            mesh.faces.push_back({remap_earcut_idx_top(indices[i]),
                                   remap_earcut_idx_top(indices[i + 1]),
-                                  remap_earcut_idx_top(indices[i])});
+                                  remap_earcut_idx_top(indices[i + 2])});
         }
 
         bool is_ccw = calc_signed_area(vertices) > 0;

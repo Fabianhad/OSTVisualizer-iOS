@@ -5,16 +5,29 @@ namespace ost_store
 {
     static const char *DELETED_BIDS_PROJECT_NAME = "Deleted Bids";
 
+    // `ok` is set to false when the lookup itself failed: the answer is then unknown, and a caller that is about to
+    // change the folder must not treat "unknown" as "not the system folder".
     static bool folder_is_deleted_bids(ost_db::OstDatabase &db,
-                                       const std::string &folder_uid)
+                                       const std::string &folder_uid,
+                                       bool &ok)
     {
+        ok = true;
         ost_db::Statement stmt = db.prepare(
             "SELECT 1 FROM BidProjects WHERE UID = ? AND Name = ?");
         if (!stmt.valid())
+        {
+            ok = false;
             return false;
+        }
         stmt.bind_text(1, folder_uid);
         stmt.bind_text(2, DELETED_BIDS_PROJECT_NAME);
-        return stmt.step();
+        const ost_db::StepResult result = stmt.step_result();
+        if (result == ost_db::StepResult::Error)
+        {
+            ok = false;
+            return false;
+        }
+        return result == ost_db::StepResult::Row;
     }
 
     ost_domain::DatabaseHierarchy load_hierarchy(const std::string &db_path)
@@ -87,14 +100,22 @@ namespace ost_store
             if (!existing.valid())
                 return "";
             existing.bind_text(1, DELETED_BIDS_PROJECT_NAME);
-            if (existing.step())
+            const ost_db::StepResult existing_result = existing.step_result();
+            if (existing_result == ost_db::StepResult::Error)
+                return "";
+            if (existing_result == ost_db::StepResult::Row)
                 return existing.column_text(0);
         }
 
         std::string folder_uid = "1";
         ost_db::Statement max_stmt = db.prepare(
             "SELECT MAX(UID) FROM BidProjects");
-        if (max_stmt.valid() && max_stmt.step())
+        if (!max_stmt.valid())
+            return "";
+        const ost_db::StepResult max_result = max_stmt.step_result();
+        if (max_result == ost_db::StepResult::Error)
+            return "";
+        if (max_result == ost_db::StepResult::Row)
         {
             int max_uid = max_stmt.column_int(0);
             folder_uid = std::to_string(max_uid + 1);
@@ -107,7 +128,8 @@ namespace ost_store
 
         stmt.bind_text(1, folder_uid);
         stmt.bind_text(2, name);
-        stmt.step();
+        if (!stmt.run())
+            return "";
         return folder_uid;
     }
 
@@ -119,8 +141,12 @@ namespace ost_store
         if (!db.open(db_path))
             return false;
 
-        if (new_name == DELETED_BIDS_PROJECT_NAME && !folder_is_deleted_bids(db, folder_uid))
-            return false;
+        if (new_name == DELETED_BIDS_PROJECT_NAME)
+        {
+            bool lookup_ok = true;
+            if (!folder_is_deleted_bids(db, folder_uid, lookup_ok) || !lookup_ok)
+                return false;
+        }
 
         ost_db::Statement stmt = db.prepare(
             "UPDATE BidProjects SET Name = ? WHERE UID = ?");
@@ -129,8 +155,7 @@ namespace ost_store
 
         stmt.bind_text(1, new_name);
         stmt.bind_text(2, folder_uid);
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
     bool delete_folder(const std::string &db_path,
@@ -140,33 +165,46 @@ namespace ost_store
         if (!db.open(db_path))
             return false;
 
-        if (folder_is_deleted_bids(db, folder_uid))
+        bool lookup_ok = true;
+        if (folder_is_deleted_bids(db, folder_uid, lookup_ok) || !lookup_ok)
             return false;
 
-        db.begin_transaction();
+        if (!db.begin_transaction())
+            return false;
 
         {
             ost_db::Statement stmt = db.prepare(
                 "UPDATE Bids SET BidProjectUID = NULL WHERE BidProjectUID = ?");
-            if (stmt.valid())
+            if (!stmt.valid())
             {
-                stmt.bind_text(1, folder_uid);
-                stmt.step();
+                db.rollback();
+                return false;
+            }
+            stmt.bind_text(1, folder_uid);
+            if (!stmt.run())
+            {
+                db.rollback();
+                return false;
             }
         }
 
         {
             ost_db::Statement stmt = db.prepare(
                 "DELETE FROM BidProjects WHERE UID = ?");
-            if (stmt.valid())
+            if (!stmt.valid())
             {
-                stmt.bind_text(1, folder_uid);
-                stmt.step();
+                db.rollback();
+                return false;
+            }
+            stmt.bind_text(1, folder_uid);
+            if (!stmt.run())
+            {
+                db.rollback();
+                return false;
             }
         }
 
-        db.commit();
-        return true;
+        return db.commit();
     }
 
     bool assign_bid_to_folder(const std::string &db_path,
@@ -184,8 +222,7 @@ namespace ost_store
 
         stmt.bind_text(1, folder_uid);
         stmt.bind_text(2, bid_uid);
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
     bool remove_bid_from_folder(const std::string &db_path,
@@ -201,8 +238,7 @@ namespace ost_store
             return false;
 
         stmt.bind_text(1, bid_uid);
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
 }

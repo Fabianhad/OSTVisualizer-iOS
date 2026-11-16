@@ -13,6 +13,7 @@
 #include "ProjectStore.hpp"
 #include "../OstDatabase.hpp"
 #include "../OstSchema.hpp"
+#include "../../Domain/PositionParser.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cctype>
@@ -25,6 +26,8 @@ namespace ost_store
     static const char *DELETED_BIDS_PROJECT_NAME = "Deleted Bids";
     static const char *PREFERRED_DELETED_BIDS_PROJECT_UID = "1";
 
+    // Returns the UID of the canonical 'Deleted Bids' project, creating it (and merging duplicates) when needed.
+    // Returns "" when any statement failed: the caller's open transaction must then be rolled back.
     static std::string resolve_deleted_bids_project_uid(ost_db::OstDatabase &db)
     {
         std::vector<std::string> deleted_uids;
@@ -36,6 +39,8 @@ namespace ost_store
             stmt.bind_text(1, DELETED_BIDS_PROJECT_NAME);
             while (stmt.step())
                 deleted_uids.push_back(stmt.column_text(0));
+            if (stmt.failed())
+                return "";
         }
 
         std::string canonical_uid;
@@ -58,7 +63,10 @@ namespace ost_store
             if (!existing.valid())
                 return "";
             existing.bind_text(1, PREFERRED_DELETED_BIDS_PROJECT_UID);
-            preferred_available = !existing.step();
+            const ost_db::StepResult existing_result = existing.step_result();
+            if (existing_result == ost_db::StepResult::Error)
+                return "";
+            preferred_available = (existing_result == ost_db::StepResult::Done);
 
             if (preferred_available)
             {
@@ -79,7 +87,8 @@ namespace ost_store
                 return "";
             insert.bind_text(1, canonical_uid);
             insert.bind_text(2, DELETED_BIDS_PROJECT_NAME);
-            insert.step();
+            if (!insert.run())
+                return "";
             return canonical_uid;
         }
 
@@ -94,14 +103,16 @@ namespace ost_store
                 return "";
             move_bids.bind_text(1, canonical_uid);
             move_bids.bind_text(2, uid);
-            move_bids.step();
+            if (!move_bids.run())
+                return "";
 
             ost_db::Statement delete_folder = db.prepare(
                 "DELETE FROM BidProjects WHERE UID = ?");
             if (!delete_folder.valid())
                 return "";
             delete_folder.bind_text(1, uid);
-            delete_folder.step();
+            if (!delete_folder.run())
+                return "";
         }
 
         return canonical_uid;
@@ -120,290 +131,22 @@ namespace ost_store
         return stmt.step();
     }
 
-    static bool is_xml_newline_entity_at(const std::string &text,
-                                         size_t pos,
-                                         size_t &entity_len)
-    {
-        static const char *patterns[] = {
-            "&#xa;",
-            "&#x0a;",
-            "&#10;",
-        };
-
-        for (const char *pattern : patterns)
-        {
-            size_t len = std::strlen(pattern);
-            if (pos + len > text.size())
-                continue;
-
-            bool match = true;
-            for (size_t i = 0; i < len; ++i)
-            {
-                unsigned char a = static_cast<unsigned char>(text[pos + i]);
-                unsigned char b = static_cast<unsigned char>(pattern[i]);
-                if (std::tolower(a) != std::tolower(b))
-                {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match)
-            {
-                entity_len = len;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
+    // parse_position and extract_z_value are thin wrappers over the Windows ports in Domain/PositionParser.hpp
+    // (domain/utils/position.py::parse_position, infrastructure/parsers/position_parser.py::extract_z_value_from_name).
     std::vector<double> parse_position(const std::string &pos_str)
     {
-        if (pos_str.empty())
-            return {};
-
-        std::string clean;
-        clean.reserve(pos_str.size());
-        size_t i = 0;
-        while (i < pos_str.size())
-        {
-            size_t entity_len = 0;
-            if (is_xml_newline_entity_at(pos_str, i, entity_len))
-            {
-                i += entity_len;
-                continue;
-            }
-            clean.push_back(pos_str[i]);
-            i++;
-        }
-
-        std::vector<double> result;
-        std::istringstream ss(clean);
-        std::string token;
-        while (std::getline(ss, token, ';'))
-        {
-            size_t start = token.find_first_not_of(" \t\r\n");
-            if (start == std::string::npos)
-                continue;
-            size_t end = token.find_last_not_of(" \t\r\n");
-            token = token.substr(start, end - start + 1);
-            if (token.empty())
-                continue;
-            try
-            {
-                result.push_back(std::stod(token));
-            }
-            catch (...)
-            {
-                return {};
-            }
-        }
-
-        return result;
+        return ost_domain::parse_position(pos_str);
     }
 
-    static double parse_fractional_inches(const std::string &text)
-    {
-        std::string s = text;
-        size_t start = s.find_first_not_of(" \t");
-        if (start != std::string::npos)
-            s = s.substr(start);
-
-        bool neg = (!s.empty() && s[0] == '-');
-        if (neg)
-            s = s.substr(1);
-        start = s.find_first_not_of(" \t");
-        if (start != std::string::npos)
-            s = s.substr(start);
-
-        double val = 0.0;
-        size_t space = s.find(' ');
-        if (space != std::string::npos && s.find('/') != std::string::npos)
-        {
-            val = std::stod(s.substr(0, space));
-            std::string frac_s = s.substr(space + 1);
-            size_t slash = frac_s.find('/');
-            if (slash != std::string::npos)
-            {
-                double n = std::stod(frac_s.substr(0, slash));
-                double d = std::stod(frac_s.substr(slash + 1));
-                if (d != 0.0)
-                    val += n / d;
-            }
-        }
-        else if (s.find('/') != std::string::npos)
-        {
-            size_t slash = s.find('/');
-            double n = std::stod(s.substr(0, slash));
-            double d = std::stod(s.substr(slash + 1));
-            if (d != 0.0)
-                val = n / d;
-        }
-        else
-        {
-            try
-            {
-                val = std::stod(s);
-            }
-            catch (...)
-            {
-            }
-        }
-
-        return neg ? -val : val;
-    }
-
-    static void skip_spaces(const std::string &s, size_t &i)
-    {
-        while (i < s.size() && (s[i] == ' ' || s[i] == '\t'))
-            i++;
-    }
-
-    static bool parse_number_at(const std::string &s, size_t &i, double &out)
-    {
-        skip_spaces(s, i);
-        if (i >= s.size())
-            return false;
-        size_t start = i;
-        if (s[i] == '-')
-            i++;
-        skip_spaces(s, i);
-        if (i >= s.size() || (!std::isdigit(s[i]) && s[i] != '.'))
-        {
-            i = start;
-            return false;
-        }
-        while (i < s.size() && (std::isdigit(s[i]) || s[i] == '.'))
-            i++;
-        try
-        {
-            out = std::stod(s.substr(start, i - start));
-            return true;
-        }
-        catch (...)
-        {
-            i = start;
-            return false;
-        }
-    }
-
+    // The Windows extract_z_value_from_name raises ValueError for an unreadable fraction (zero denominator, e.g.
+    // "Wall @B 1/0\""); the Windows MDB reader (bid_data_reader.py) catches it, logs a warning and stores (0.0, False).
     std::pair<double, bool> extract_z_value(const std::string &name)
     {
-        if (name.empty())
-            return {0.0, false};
-
-        size_t at_pos = name.find('@');
-        if (at_pos == std::string::npos)
-            return {0.0, false};
-
-        size_t i = at_pos + 1;
-        skip_spaces(name, i);
-
+        double z_inches = 0.0;
         bool is_top = false;
-        if (i < name.size() && (name[i] == 't' || name[i] == 'T'))
-        {
-            is_top = true;
-            i++;
-        }
-        else if (i < name.size() && (name[i] == 'b' || name[i] == 'B'))
-        {
-            is_top = false;
-            i++;
-        }
-        skip_spaces(name, i);
-
-        double num1 = 0;
-        if (!parse_number_at(name, i, num1))
+        if (!ost_domain::extract_z_value_from_name(name, z_inches, is_top))
             return {0.0, false};
-
-        skip_spaces(name, i);
-        if (i >= name.size())
-            return {0.0, false};
-
-        char unit = name[i];
-
-        if (unit == '\'' || unit == (char)0xE2)
-        {
-            i++;
-            if (unit == (char)0xE2 && i + 1 < name.size())
-                i += 2;
-            skip_spaces(name, i);
-            if (i < name.size() && name[i] == '-')
-            {
-                i++;
-                skip_spaces(name, i);
-            }
-
-            double inches = 0;
-            size_t inch_start = i;
-            if (parse_number_at(name, i, inches))
-            {
-                skip_spaces(name, i);
-                if (i < name.size() && name[i] == '/')
-                {
-                    i = inch_start;
-                    inches = parse_fractional_inches(name.substr(inch_start));
-                    while (i < name.size() && name[i] != '"' && name[i] != '\'' && name[i] != ' ')
-                        i++;
-                }
-                else if (i < name.size() && name[i] == ' ')
-                {
-                    size_t sp = i;
-                    skip_spaces(name, i);
-                    if (i < name.size() && std::isdigit(name[i]))
-                    {
-                        i = inch_start;
-                        inches = parse_fractional_inches(name.substr(inch_start));
-                    }
-                    else
-                    {
-                        i = sp;
-                    }
-                }
-            }
-            double total = std::abs(num1) * 12.0 + inches;
-            if (std::signbit(num1))
-                total = -total;
-            return {total, is_top};
-        }
-
-        if (unit == '"')
-        {
-            return {num1, is_top};
-        }
-
-        std::string rest = name.substr(i);
-        std::string rest_low = rest;
-        std::transform(rest_low.begin(), rest_low.end(), rest_low.begin(), ::tolower);
-
-        if (rest_low.substr(0, 2) == "cm")
-        {
-            return {num1 / 2.54, is_top};
-        }
-        if (rest_low[0] == 'm' && (rest_low.size() < 2 || rest_low[1] == ' ' || rest_low[1] == '\0' || rest_low.substr(0, 6) == "meters" || rest_low.substr(0, 5) == "meter"))
-        {
-            size_t mi = 1;
-            while (mi < rest_low.size() && std::isalpha(rest_low[mi]))
-                mi++;
-            skip_spaces(rest_low, mi);
-
-            if (mi < rest_low.size() && (rest_low.substr(mi, 3) == "and" || rest_low[mi] == '+'))
-            {
-                while (mi < rest_low.size() && !std::isdigit(rest_low[mi]) && rest_low[mi] != '-')
-                    mi++;
-                double cm_val = 0;
-                if (parse_number_at(rest_low, mi, cm_val))
-                {
-                    skip_spaces(rest_low, mi);
-                    if (mi < rest_low.size() && rest_low.substr(mi, 2) == "cm")
-                        return {(num1 * 100.0 + cm_val) / 2.54, is_top};
-                }
-            }
-            return {num1 * 100.0 / 2.54, is_top};
-        }
-
-        return {0.0, false};
+        return {z_inches, is_top};
     }
 
     bool create_schema(const std::string &db_path)
@@ -607,7 +350,11 @@ namespace ost_store
         else
             stmt.bind_text(2, current_project_uid);
         stmt.bind_text(3, bid_uid);
-        stmt.step();
+        if (!stmt.run())
+        {
+            db.rollback();
+            return false;
+        }
 
         return db.commit();
     }
@@ -635,8 +382,7 @@ namespace ost_store
             if (!stmt.valid())
                 return false;
             stmt.bind_text(1, bid_uid);
-            stmt.step();
-            return true;
+            return stmt.run();
         };
 
         // Match the desktop MDB delete_bids cascade, including the tables that
@@ -745,7 +491,11 @@ namespace ost_store
             return false;
         }
         stmt.bind_text(1, bid_uid);
-        stmt.step();
+        if (!stmt.run())
+        {
+            db.rollback();
+            return false;
+        }
 
         return db.commit();
     }

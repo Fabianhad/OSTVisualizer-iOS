@@ -15,8 +15,23 @@ namespace ost_store
 
     bool create_schema(const std::string &db_path);
 
+    // Outcome details of import_project (optional out parameter).
+    struct ImportResult
+    {
+        // UID the imported bid got in the target database (every imported row is re-numbered, so this is NOT the
+        // UID the file carried). Empty when the import failed.
+        std::string bid_uid;
+        // Why the import failed (the Windows message where it has one, e.g. "Imported master-data identity is
+        // ambiguous for CdnTypes.Name: matching UIDs 40, 41."). Empty on success.
+        std::string error;
+    };
+
+    // Imports one parsed OST file into the database in ONE transaction: master data is reconciled with the existing
+    // rows, every bid row gets a new UID above the database's UID floor, the bid gets Settings.NextBidNo as its BidNo
+    // and no project folder. Any failure rolls everything back and returns false.
     bool import_project(const std::string &db_path,
-                        const ost_import::OstRawData &raw_data);
+                        const ost_import::OstRawData &raw_data,
+                        ImportResult *result = nullptr);
 
     bool is_bid_imported(const std::string &db_path,
                          const std::string &bid_uid);

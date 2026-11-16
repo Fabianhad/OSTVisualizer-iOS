@@ -15,6 +15,10 @@ namespace ost_meshing
         bool valid = false;
     };
 
+    // Windows MeshFactory.create_mesh_for_takeoff. scale_ratio multiplies every coordinate and dimension: the Windows
+    // pipeline meshes in raw OST units (the page scale ratio never scales a mesh), so callers pass 1.0
+    // (TakeoffMeshBuilder.hpp does). `holes` are area hole rings already in the mesh frame (-x, -y), see
+    // TakeoffMeshBuilder.hpp for the shared hole grouping.
     MeshResult create_mesh_for_takeoff(
         const ost_domain::Takeoff &takeoff,
         const ost_domain::Condition &condition,

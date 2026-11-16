@@ -3,6 +3,9 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <cmath>
+#include <limits>
+#include <stdexcept>
 
 namespace ost_meshing
 {
@@ -31,106 +34,153 @@ namespace ost_meshing
         mesh.faces.push_back({u(ib + n - 1), u(ot + n - 1), u(ob + n - 1)});
     }
 
-    static std::vector<std::pair<double, double>> generate_curve_points(
+    namespace
+    {
+        // ---- Windows cpp_extensions/src/linear_geom/linear_geom.cpp, verbatim, in the Windows XY frame ----
+        constexpr double kInf = std::numeric_limits<double>::infinity();
+
+        double perp_slope(double dx, double dy)
+        {
+            if (dy == 0.0)
+                return kInf;
+            if (dx == 0.0)
+                return 0.0;
+            return -dx / dy;
+        }
+
+        // The arc always runs from the start through the control point to the end: counter-clockwise to the end when
+        // the control angle lies inside the counter-clockwise arc start -> end, otherwise clockwise.
+        double arc_sweep(double a_s, double a_e, double a_c)
+        {
+            constexpr double TWO_PI = 2.0 * M_PI;
+            double ccw_to_end = std::fmod(a_e - a_s, TWO_PI);
+            if (ccw_to_end < 0.0)
+                ccw_to_end += TWO_PI;
+            double ccw_to_ctl = std::fmod(a_c - a_s, TWO_PI);
+            if (ccw_to_ctl < 0.0)
+                ccw_to_ctl += TWO_PI;
+            return ccw_to_ctl <= ccw_to_end ? ccw_to_end : ccw_to_end - TWO_PI;
+        }
+
+        // A control point within 1e-9 x chord length of an end point means "no curve": the straight chord.
+        bool control_is_at_an_end(double x1, double y1, double x2, double y2, double cx, double cy)
+        {
+            constexpr double STRAIGHT_CHORD_EPSILON = 1e-9;
+            double nearest = std::min(std::hypot(cx - x1, cy - y1), std::hypot(cx - x2, cy - y2));
+            return nearest <= STRAIGHT_CHORD_EPSILON * std::hypot(x2 - x1, y2 - y1);
+        }
+
+        std::vector<std::pair<double, double>> straight_chord_pts(
+            double x1, double y1, double x2, double y2, int segs)
+        {
+            std::vector<std::pair<double, double>> pts;
+            pts.reserve(static_cast<size_t>(segs) + 1);
+            for (int i = 0; i <= segs; ++i)
+            {
+                double t = static_cast<double>(i) / segs;
+                double u = 1.0 - t;
+                pts.push_back({u * x1 + t * x2, u * y1 + t * y2});
+            }
+            return pts;
+        }
+
+        // curve_pts_impl; gen_adv_curve_pts (the one the Windows wall uses) returns exactly the same points.
+        std::vector<std::pair<double, double>> curve_pts_impl(
+            double x1, double y1, double x2, double y2,
+            double cx, double cy, int segs)
+        {
+            if (segs < 1)
+                throw std::invalid_argument("segments must be at least 1");
+            if (control_is_at_an_end(x1, y1, x2, y2, cx, cy))
+                return straight_chord_pts(x1, y1, x2, y2, segs);
+            double m1x = (x1 + cx) * 0.5, m1y = (y1 + cy) * 0.5;
+            double m2x = (cx + x2) * 0.5, m2y = (cy + y2) * 0.5;
+            double ps1 = perp_slope(cx - x1, cy - y1);
+            double ps2 = perp_slope(x2 - cx, y2 - cy);
+            double ctr_x = kInf, ctr_y = kInf;
+            bool found = false;
+            if (ps1 == kInf && ps2 != kInf)
+            {
+                ctr_x = m1x;
+                ctr_y = m2y + ps2 * (m1x - m2x);
+                found = true;
+            }
+            else if (ps2 == kInf && ps1 != kInf)
+            {
+                ctr_x = m2x;
+                ctr_y = m1y + ps1 * (m2x - m1x);
+                found = true;
+            }
+            else if (std::abs(ps1 - ps2) > 1e-10)
+            {
+                ctr_x = (m2y - m1y + ps1 * m1x - ps2 * m2x) / (ps1 - ps2);
+                ctr_y = m1y + ps1 * (ctr_x - m1x);
+                found = true;
+            }
+            if (found)
+            {
+                double r1 = std::hypot(ctr_x - x1, ctr_y - y1);
+                double r2 = std::hypot(ctr_x - x2, ctr_y - y2);
+                double rc = std::hypot(ctr_x - cx, ctr_y - cy);
+                if (std::abs(r1 - r2) < 0.1 && std::abs(r1 - rc) < 0.1)
+                {
+                    double r = r1;
+                    double a_s = std::atan2(y1 - ctr_y, x1 - ctr_x);
+                    double a_e = std::atan2(y2 - ctr_y, x2 - ctr_x);
+                    double a_c = std::atan2(cy - ctr_y, cx - ctr_x);
+                    double a_diff = arc_sweep(a_s, a_e, a_c);
+                    std::vector<std::pair<double, double>> pts;
+                    pts.reserve(static_cast<size_t>(segs) + 1);
+                    for (int i = 0; i <= segs; ++i)
+                    {
+                        double t = static_cast<double>(i) / segs;
+                        double a = a_s + t * a_diff;
+                        pts.push_back({ctr_x + r * std::cos(a), ctr_y + r * std::sin(a)});
+                    }
+                    return pts;
+                }
+            }
+            std::vector<std::pair<double, double>> pts;
+            pts.reserve(static_cast<size_t>(segs) + 1);
+            for (int i = 0; i <= segs; ++i)
+            {
+                double t = static_cast<double>(i) / segs;
+                double u = 1.0 - t;
+                pts.push_back({u * u * x1 + 2.0 * u * t * cx + t * t * x2,
+                               u * u * y1 + 2.0 * u * t * cy + t * t * y2});
+            }
+            return pts;
+        }
+    } // namespace
+
+    // The iOS mesh frame is (x, z) = (X_windows, -Y_windows). The curve is computed in the Windows frame (negating is
+    // exact) so the points are bit-identical to the Windows ones; the sweep direction flips with the mirror and
+    // fmod / the +2 pi wrap are not mirror symmetric.
+    std::vector<std::pair<double, double>> generate_curve_points(
         double x1, double z1, double x2, double z2,
         double cx, double cz, int segments)
     {
-        std::vector<std::pair<double, double>> pts;
-        double m1x = (x1 + cx) * 0.5, m1z = (z1 + cz) * 0.5;
-        double m2x = (cx + x2) * 0.5, m2z = (cz + z2) * 0.5;
-        double d1x = cx - x1, d1z = cz - z1;
-        double d2x = x2 - cx, d2z = z2 - cz;
-
-        bool arc_valid = false;
-        double ctr_x = 0, ctr_z = 0, radius = 0;
-        bool v1 = std::abs(d1z) < 1e-10;
-        bool v2 = std::abs(d2z) < 1e-10;
-        double ps1 = v1 ? 0 : -d1x / d1z;
-        double ps2 = v2 ? 0 : -d2x / d2z;
-
-        if (v1 && !v2)
-        {
-            ctr_x = m1x;
-            ctr_z = m2z + ps2 * (m1x - m2x);
-            arc_valid = true;
-        }
-        else if (v2 && !v1)
-        {
-            ctr_x = m2x;
-            ctr_z = m1z + ps1 * (m2x - m1x);
-            arc_valid = true;
-        }
-        else if (!v1 && !v2 && std::abs(ps1 - ps2) > 1e-10)
-        {
-            ctr_x = (m2z - m1z + ps1 * m1x - ps2 * m2x) / (ps1 - ps2);
-            ctr_z = m1z + ps1 * (ctr_x - m1x);
-            arc_valid = true;
-        }
-
-        if (arc_valid)
-        {
-            double r1 = std::hypot(ctr_x - x1, ctr_z - z1);
-            double r2 = std::hypot(ctr_x - x2, ctr_z - z2);
-            double rc = std::hypot(ctr_x - cx, ctr_z - cz);
-
-            if (std::abs(r1 - r2) < 0.1 && std::abs(r1 - rc) < 0.1)
-            {
-                radius = r1;
-                double a_s = std::atan2(z1 - ctr_z, x1 - ctr_x);
-                double a_e = std::atan2(z2 - ctr_z, x2 - ctr_x);
-                double cross1 = (x1 - ctr_x) * (cz - ctr_z) - (z1 - ctr_z) * (cx - ctr_x);
-                double cross2 = (cx - ctr_x) * (z2 - ctr_z) - (cz - ctr_z) * (x2 - ctr_x);
-                bool clockwise = (cross1 + cross2) < 0;
-
-                if (clockwise)
-                {
-                    if (a_e > a_s)
-                        a_e -= 2.0 * M_PI;
-                }
-                else
-                {
-                    if (a_e < a_s)
-                        a_e += 2.0 * M_PI;
-                }
-
-                double a_diff = a_e - a_s;
-                pts.resize(segments + 1);
-                for (int i = 0; i <= segments; i++)
-                {
-                    double t = static_cast<double>(i) / segments;
-                    double a = a_s + t * a_diff;
-                    pts[i] = {ctr_x + radius * std::cos(a), ctr_z + radius * std::sin(a)};
-                }
-                return pts;
-            }
-        }
-        pts.resize(segments + 1);
-        for (int i = 0; i <= segments; i++)
-        {
-            double t = static_cast<double>(i) / segments;
-            double u = 1.0 - t;
-            pts[i] = {u * u * x1 + 2 * u * t * cx + t * t * x2,
-                      u * u * z1 + 2 * u * t * cz + t * t * z2};
-        }
+        auto pts = curve_pts_impl(x1, -z1, x2, -z2, cx, -cz, segments);
+        for (auto &p : pts)
+            p.second = -p.second;
         return pts;
     }
 
-    static int calc_adaptive_segments(double x1, double z1, double x2, double z2,
-                                      double cx, double cz)
+    // Windows calc_adaptive_segs: both parts truncate to int separately. The expressions are symmetric under z -> -z.
+    int calc_curve_segments(double x1, double z1, double x2, double z2,
+                            double cx, double cz)
     {
-        double chord = std::hypot(x2 - x1, z2 - z1);
+        double chord_d = std::hypot(x2 - x1, z2 - z1);
         double curve_d = (std::hypot(cx - x1, cz - z1) + std::hypot(x2 - cx, z2 - cz)) * 0.8;
-        double base = std::max(chord, curve_d) / 5.0;
-        base = clamp_val(base, 6.0, 64.0);
-
-        if (chord > 0)
+        int base_s = std::clamp(static_cast<int>(std::max(chord_d, curve_d) / 5.0), 6, 64);
+        if (chord_d > 0)
         {
             double dx = x2 - x1, dz = z2 - z1;
-            double t = clamp_val(((cx - x1) * dx + (cz - z1) * dz) / (dx * dx + dz * dz), 0.0, 1.0);
+            double t = std::clamp(((cx - x1) * dx + (cz - z1) * dz) / (dx * dx + dz * dz), 0.0, 1.0);
             double offset = std::hypot(cx - (x1 + t * dx), cz - (z1 + t * dz));
-            base += offset / 5.0;
+            base_s += static_cast<int>(offset / 5.0);
         }
-        return static_cast<int>(clamp_val(base, 6.0, 64.0));
+        return std::clamp(base_s, 6, 64);
     }
 
     ost_geometry::CppMeshData generate_curved_linear_mesh(
@@ -141,7 +191,7 @@ namespace ost_meshing
     {
         ost_geometry::CppMeshData mesh;
 
-        int segs = calc_adaptive_segments(x1, z1, x2, z2, cx, cz);
+        int segs = calc_curve_segments(x1, z1, x2, z2, cx, cz);
         auto curve_pts = generate_curve_points(x1, z1, x2, z2, cx, cz, segs);
         int n = static_cast<int>(curve_pts.size());
         if (n < 2)
@@ -173,7 +223,7 @@ namespace ost_meshing
                 tz = ((pz - curve_pts[i - 1].second) + (curve_pts[i + 1].second - pz)) * 0.5;
             }
             double tlen = std::hypot(tx, tz);
-            if (tlen > 1e-10)
+            if (tlen > 0) // Windows gen_curved_wall_pts: any non-zero tangent is normalised (also a numerically tiny one)
             {
                 tx /= tlen;
                 tz /= tlen;

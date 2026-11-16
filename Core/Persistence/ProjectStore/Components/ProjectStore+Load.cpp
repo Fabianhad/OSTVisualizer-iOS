@@ -1,5 +1,6 @@
 // ProjectStore component — load_project (DB → in-memory ProjectData).
 #include "../ProjectStore_Internal.hpp"
+#include "../../../Domain/UomService.hpp"
 
 namespace ost_store
 {
@@ -229,6 +230,11 @@ namespace ost_store
                         if (it != project.cdn_types.end())
                             cdn.cdn_type_name = it->second.name;
                     }
+
+                    // Windows (bid_data_reader) normalizes every loaded condition: units of the other measurement
+                    // system are converted (bid.measure_base == 1 is metric) and a unit that does not fit the
+                    // slot's calculation becomes the first valid unit of that calculation.
+                    ost_domain::normalize_condition_uoms_for_system(cdn, project.bid.measure_base == 1);
 
                     project.conditions[cdn.uid] = std::move(cdn);
                 }

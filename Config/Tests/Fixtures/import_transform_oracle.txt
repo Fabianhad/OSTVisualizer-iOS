@@ -1,0 +1,2170 @@
+CASE 0
+MAXUID 103
+MAP cdn 
+MAP job 10=170	 7 =363
+MAP emp 8=244	4=768	20=859
+MAP pay 
+BID UID=0	OrigBidProjectUID=7	ParentUID=4	BidTakeoffToUID=10	SomethingElseUID=3	Name=x y	Count= 3 
+BTABLE BidAreas
+BTABLE BidTypAreas
+ROW UID=5	TypGroupMarkerUID=9	OrigParentBidUID=3	BidPageViewUID=9	OrigBidProjectUID=30	ParentUID=21
+ROW UID=999	BidProjectUID=999	BidPageFolderUID=21	CdnTypeUID=21	TypGroupUID=999	JobName=-1
+ROW UID=12	PrManagerUID=10	ParentBidUID=	OrigBidProjectUID=21	GUID=5	BidConditionUID=1	CdnTypeUID=1	Name= 3 	Sequence=NULL
+BTABLE BidConditionFolders
+ROW UID=999	BidTakeoffToUID= 7 	BidLayerUID=5	Count=1	JobName= 3 	Sequence=2
+BTABLE BidEmployees
+ROW UID=8	EstimatorUID=5	BidConditionFolderUID=NULL	BidPageSelectedUID=	BidZoneUID=4
+ROW UID=12	OrigBidProjectUID=NULL	BidPageSelectedUID=9	BidPageUID=	TypPageTakeoffUID=12	ParentCommentUID= 7 	BidPageViewUID=0	JobName=Area	Name=NULL
+ROW UID=4	CdnTypeUID=3	BidAreaSelected=2.5
+BTABLE BidConditions
+ROW UID=2	OrigParentBidUID=	Sequence=	JobName=abc
+ROW UID=21	ParentBidUID=3	Notes=1
+ROW UID=2	PrManagerUID=2	BidConditionFolderUID=NULL	JobName=-1	Notes= 3 
+BTABLE OCRProps
+BTABLE BidHotLinks
+ROW UID=7	OrigParentBidUID=11	BidProjectUID=abc	ParentCommentUID=2	BidTakeoffFromUID=
+PTABLE BidHighlights
+ROW UID=30	TypGroupUID=30	OCRUID=10	TypGroupMarkerUID=	BidTypAreaUID=10	BidPageFolderUID=NULL	TypGroupTakeoffUID=
+ROW UID=20	GUID=
+PTABLE BidTakeoffs
+ROW TranslateAreaUID=abc	SomethingElseUID=abc	ParentBidUID=5	ParentCommentUID=abc	BidConditionFolderUID=11	BidConditionUID=11	Count=NULL	Name=2.5	JobName=0
+ROW UID=4	BidAreaSelected=abc	Notes=2	Sequence=1
+ROW UID=9	BidTakeoffToUID=21	SourceBidUID=10	PayClassUID= 7 	Count=NULL
+ROW UID=1	ParentBidUID=7	OrigParentBidUID=11	TypPageTakeoffUID=4	Count= 3 	Notes=0
+ROW UID=1	BidZoneUID=5	OrigBidProjectUID=4	Name=0	BidAreaSelected=Area
+PTABLE BidPageSettings
+ROW UID=7	TranslateAreaUID=NULL	EmployeeUID=21	SourceBidUID=30	JobStatusUID=1	OrigParentBidUID= 7 	JobName=-1	BidAreaSelected=abc
+ROW UID=1	BidAreaUID=0	TypGroupTakeoffUID=0	SourceBidUID=30	TypPageTakeoffUID=20	BidPageFolderUID=11	PayClassUID=1	BidAreaSelected= 3 	BidPageUID=7
+ROW UID= 7 	OrigBidProjectUID=0	EmployeeUID=NULL	JobSiteManagerUID=abc	BidPageFolderUID=9	Sequence= 3 	Notes=abc	Name=abc	BidAreaSelected=	BidPageUID=
+ROW UID=	Name=2	BidAreaSelected=1	Count=	BidPageUID=
+EXPECT
+BID UID=NULL	OrigBidProjectUID=NULL	ParentUID=108	BidTakeoffToUID=10	SomethingElseUID=3	Name=x y	Count= 3 
+BTABLE BidAreas
+BTABLE BidTypAreas
+ROW UID=104	TypGroupMarkerUID=114	OrigParentBidUID=NULL	BidPageViewUID=114	OrigBidProjectUID=NULL	ParentUID=110
+ROW UID=105	BidProjectUID=NULL	BidPageFolderUID=110	CdnTypeUID=21	TypGroupUID=105	JobName=-1
+ROW UID=106	PrManagerUID=NULL	ParentBidUID=	OrigBidProjectUID=NULL	GUID=5	BidConditionUID=115	CdnTypeUID=1	Name= 3 	Sequence=NULL
+BTABLE BidConditionFolders
+ROW UID=105	BidTakeoffToUID=116	BidLayerUID=104	Count=1	JobName= 3 	Sequence=2
+BTABLE BidEmployees
+ROW UID=107	EstimatorUID=NULL	BidConditionFolderUID=NULL	BidPageSelectedUID=NULL	BidZoneUID=108
+ROW UID=106	OrigBidProjectUID=NULL	BidPageSelectedUID=NULL	BidPageUID=	TypPageTakeoffUID=106	ParentCommentUID=116	BidPageViewUID=NULL	JobName=Area	Name=NULL
+ROW UID=108	CdnTypeUID=3	BidAreaSelected=2.5
+BTABLE BidConditions
+ROW UID=109	OrigParentBidUID=	Sequence=	JobName=abc
+ROW UID=110	ParentBidUID=NULL	Notes=1
+ROW UID=109	PrManagerUID=NULL	BidConditionFolderUID=NULL	JobName=-1	Notes= 3 
+BTABLE OCRProps
+BTABLE BidHotLinks
+ROW UID=111	OrigParentBidUID=NULL	BidProjectUID=NULL	ParentCommentUID=109	BidTakeoffFromUID=
+PTABLE BidHighlights
+ROW UID=112	TypGroupUID=112	OCRUID=NULL	TypGroupMarkerUID=	BidTypAreaUID=10	BidPageFolderUID=NULL	TypGroupTakeoffUID=
+ROW UID=113	GUID=
+PTABLE BidTakeoffs
+ROW TranslateAreaUID=abc	SomethingElseUID=abc	ParentBidUID=NULL	ParentCommentUID=abc	BidConditionFolderUID=11	BidConditionUID=11	Count=NULL	Name=2.5	JobName=0
+ROW UID=108	BidAreaSelected=abc	Notes=2	Sequence=1
+ROW UID=114	BidTakeoffToUID=110	SourceBidUID=NULL	PayClassUID=NULL	Count=NULL
+ROW UID=115	ParentBidUID=NULL	OrigParentBidUID=NULL	TypPageTakeoffUID=108	Count= 3 	Notes=0
+ROW UID=115	BidZoneUID=104	OrigBidProjectUID=NULL	Name=0	BidAreaSelected=Area
+PTABLE BidPageSettings
+ROW UID=111	TranslateAreaUID=NULL	EmployeeUID=NULL	SourceBidUID=NULL	JobStatusUID=NULL	OrigParentBidUID=NULL	JobName=-1	BidAreaSelected=abc
+ROW UID=116	OrigBidProjectUID=NULL	EmployeeUID=NULL	JobSiteManagerUID=NULL	BidPageFolderUID=114	Sequence= 3 	Notes=abc	Name=abc	BidAreaSelected=	BidPageUID=
+ROW UID=115	BidAreaUID=NULL	TypGroupTakeoffUID=NULL	SourceBidUID=NULL	TypPageTakeoffUID=113	BidPageFolderUID=11	PayClassUID=NULL	BidAreaSelected= 3 	BidPageUID=111
+ROW UID=	Name=2	BidAreaSelected=1	Count=	BidPageUID=
+END
+CASE 1
+MAXUID 592
+MAP cdn 9=226	5=782	12=587	7=675
+MAP job 
+MAP emp 
+MAP pay 8=90	2=144
+BID UID=0	BidZoneUID=9	BidConditionUID=999
+BTABLE BidPlanRooms
+BTABLE BidPages
+ROW UID=5	OCRUID=	BidTypAreaUID=8	Notes=Area	BidAreaSelected=1
+PTABLE BidTexts
+ROW UID=999	ParentBidUID=21	TypGroupTakeoffUID=	EmployeeUID=7	BidConditionFolderUID=2
+ROW JobStatusUID=2	ParentBidUID=5	BidAreaSelected= 3 
+ROW UID=30	TypPageTakeoffUID=2	BidUID=0	Sequence=abc	JobName=NULL	Name= 3 
+ROW UID=2	BidPageFolderUID=999	SomethingElseUID= 7 	ParentUID=21
+ROW UID=21	JobStatusUID=	Notes=	Count=2
+PTABLE BidDimensions
+ROW UID=4	ParentUID=999	BidPageViewUID=8	Name=NULL	Notes=1
+ROW UID=	ParentUID=30	JobName=Area
+ROW UID=4	PayClassUID=2	TypGroupTakeoffUID=abc	JobSiteManagerUID=4	ParentBidUID=5	BidAreaSelected=2	Sequence= 3 
+PTABLE BidAnnotationClouds
+ROW UID=20	ParentCommentUID=10	Notes=NULL	BidAreaSelected=2
+ROW UID=30	BidPageViewUID=3	TranslateAreaUID=21	JobSiteManagerUID=12	MasterAreaUID=5	TypGroupUID=9	Name=2.5
+ROW UID=999	JobStatusUID=21	OCRUID=2	ParentCommentUID= 7 	PrManagerUID=0	Sequence= 3 	Count=abc
+ROW UID=12	ParentCommentUID=30	TypGroupMarkerUID= 7 	TranslateAreaUID=abc	SomethingElseUID=4	BidAreaUID=NULL	ParentUID=999	Count=-1
+ROW SomethingElseUID=NULL	BidPageUID=11	Sequence=2.5
+PTABLE BidLegends
+ROW UID=0	TypPageTakeoffUID=21
+PTABLE BidPageSettings
+EXPECT
+BID UID=NULL	BidZoneUID=9	BidConditionUID=594
+BTABLE BidPlanRooms
+BTABLE BidPages
+ROW UID=593	OCRUID=	BidTypAreaUID=8	Notes=Area	BidAreaSelected=1
+PTABLE BidTexts
+ROW UID=594	ParentBidUID=NULL	TypGroupTakeoffUID=	EmployeeUID=NULL	BidConditionFolderUID=596
+ROW JobStatusUID=NULL	ParentBidUID=NULL	BidAreaSelected= 3 
+ROW UID=595	TypPageTakeoffUID=596	BidUID=NULL	Sequence=abc	JobName=NULL	Name= 3 
+ROW UID=596	BidPageFolderUID=594	SomethingElseUID= 7 	ParentUID=597
+ROW UID=597	JobStatusUID=	Notes=	Count=2
+PTABLE BidDimensions
+ROW UID=598	ParentUID=594	BidPageViewUID=8	Name=NULL	Notes=1
+ROW UID=	ParentUID=595	JobName=Area
+ROW UID=598	PayClassUID=144	TypGroupTakeoffUID=abc	JobSiteManagerUID=NULL	ParentBidUID=NULL	BidAreaSelected=2	Sequence= 3 
+PTABLE BidAnnotationClouds
+ROW UID=599	ParentCommentUID=10	Notes=NULL	BidAreaSelected=2
+ROW UID=595	BidPageViewUID=3	TranslateAreaUID=597	JobSiteManagerUID=NULL	MasterAreaUID=593	TypGroupUID=9	Name=2.5
+ROW UID=594	JobStatusUID=NULL	OCRUID=NULL	ParentCommentUID= 7 	PrManagerUID=NULL	Sequence= 3 	Count=abc
+ROW UID=600	ParentCommentUID=595	TypGroupMarkerUID= 7 	TranslateAreaUID=abc	SomethingElseUID=4	BidAreaUID=NULL	ParentUID=594	Count=-1
+ROW SomethingElseUID=NULL	BidPageUID=11	Sequence=2.5
+PTABLE BidLegends
+ROW UID=NULL	TypPageTakeoffUID=597
+PTABLE BidPageSettings
+END
+CASE 2
+MAXUID 359
+MAP cdn 7=824	11=451	9=600	2=675
+MAP job 4=151	 7 =688	11=769
+MAP emp 20=145	11=1	 7 =60
+MAP pay 20=631
+BID UID=1	BidProjectUID=5	TypGroupTakeoffUID=0	BidPageSelectedUID=20	JobSiteManagerUID=0	BidConditionUID=20	TypGroupUID=20
+BTABLE BidAreas
+ROW UID=12	BidZoneUID=1
+BTABLE BidEmployees
+ROW UID=8	BidTakeoffFromUID=11	BidPageUID=9	BidTypAreaUID=0	BidPageFolderUID=30	JobName=2.5	BidAreaSelected=0	Sequence=NULL
+BTABLE BidLayers
+PTABLE BidAnnotationClouds
+ROW JobName=abc
+PTABLE BidPageSettings
+ROW UID=1	PayClassUID=20	TypGroupMarkerUID= 7 	GUID=2	OrigParentBidUID=12	BidTakeoffFromUID=3	ParentBidUID=9	Count=0	Sequence=2	JobName=2	BidAreaSelected=-1	BidPageUID=8
+ROW UID=8	BidTakeoffFromUID=abc	JobSiteManagerUID=5	Notes=NULL	Count=Area	Sequence=	BidAreaSelected= 3 
+ROW UID=9	BidPageViewUID=9	JobStatusUID=	OCRUID=8	ParentCommentUID=999	OrigBidProjectUID=8	PayClassUID=999	Sequence=2	Name=2	BidAreaSelected=0	BidPageUID=8
+ROW UID=abc	CoverSheetSelItemUID=1	Notes=Area	Sequence=1	JobName=-1	BidPageUID=20
+ROW UID=20	BidPageSelectedUID=7	BidZoneUID=7	BidTakeoffFromUID=	BidConditionUID=2	PayClassUID=9	MasterAreaUID=NULL	BidAreaSelected=0
+ROW UID=12	BidPageSelectedUID=4	TypPageTakeoffUID=0	OrigParentBidUID=7	TranslateAreaUID=abc	BidAreaSelected=	Count=2.5	BidPageUID=7
+ROW UID=21	SomethingElseUID=11	PayClassUID=999	BidPageViewUID=999	BidTakeoffToUID=11	BidAreaUID=8	BidAreaSelected= 3 	BidPageUID=21
+ROW UID=3	BidPageFolderUID=3	BidPageUID=0	BidTypAreaUID=NULL	TypGroupTakeoffUID= 7 	BidConditionFolderUID=0	BidAreaSelected=0
+EXPECT
+BID UID=360	BidProjectUID=NULL	TypGroupTakeoffUID=NULL	BidPageSelectedUID=NULL	JobSiteManagerUID=NULL	BidConditionUID=365	TypGroupUID=365
+BTABLE BidAreas
+ROW UID=361	BidZoneUID=360
+BTABLE BidEmployees
+ROW UID=362	BidTakeoffFromUID=11	BidPageUID=363	BidTypAreaUID=NULL	BidPageFolderUID=30	JobName=2.5	BidAreaSelected=0	Sequence=NULL
+BTABLE BidLayers
+PTABLE BidAnnotationClouds
+ROW JobName=abc
+PTABLE BidPageSettings
+ROW UID=360	PayClassUID=631	TypGroupMarkerUID= 7 	GUID=2	OrigParentBidUID=NULL	BidTakeoffFromUID=367	ParentBidUID=NULL	Count=0	Sequence=2	JobName=2	BidAreaSelected=-1	BidPageUID=362
+ROW UID=363	BidPageViewUID=363	JobStatusUID=	OCRUID=NULL	ParentCommentUID=999	OrigBidProjectUID=NULL	PayClassUID=NULL	Sequence=2	Name=2	BidAreaSelected=0	BidPageUID=362
+ROW UID=364	CoverSheetSelItemUID=NULL	Notes=Area	Sequence=1	JobName=-1	BidPageUID=365
+ROW UID=365	BidPageSelectedUID=NULL	BidZoneUID=7	BidTakeoffFromUID=	BidConditionUID=2	PayClassUID=NULL	MasterAreaUID=NULL	BidAreaSelected=0
+ROW UID=361	BidPageSelectedUID=NULL	TypPageTakeoffUID=NULL	OrigParentBidUID=NULL	TranslateAreaUID=364	BidAreaSelected=	Count=2.5	BidPageUID=7
+ROW UID=367	BidPageFolderUID=367	BidPageUID=NULL	BidTypAreaUID=NULL	TypGroupTakeoffUID= 7 	BidConditionFolderUID=NULL	BidAreaSelected=0
+ROW UID=362	BidTakeoffFromUID=364	JobSiteManagerUID=NULL	Notes=NULL	Count=Area	Sequence=	BidAreaSelected= 3 
+ROW UID=366	SomethingElseUID=11	PayClassUID=NULL	BidPageViewUID=999	BidTakeoffToUID=11	BidAreaUID=362	BidAreaSelected= 3 	BidPageUID=366
+END
+CASE 3
+MAXUID 413
+MAP cdn  7 =422
+MAP job 10=45	1=38
+MAP emp 7=757
+MAP pay 7=110	9=122	12=530	10=802	3=50	11=384
+BID UID=	PrManagerUID=0	OrigBidProjectUID=0	BidAreaUID=2	OCRUID=7	Count=x y	BidAreaSelected=2.5
+BTABLE BidTypAreas
+ROW UID=NULL	BidTakeoffToUID=3	PrManagerUID=10	Count=
+ROW UID=20	BidAreaUID=NULL	JobStatusUID=7	BidZoneUID=7	JobName=2.5	Notes=abc	Name=
+BTABLE BidLayers
+ROW BidPageFolderUID=21	OrigBidProjectUID=9	Sequence=	BidAreaSelected=2	Name=0
+ROW UID=30	BidLayerUID=3	TypPageTakeoffUID=21	JobStatusUID=0	BidPageSelectedUID=12	Sequence=
+ROW UID=0	MasterAreaUID=abc	OrigBidProjectUID=2	BidAreaSelected=-1	Count=NULL
+BTABLE BidTypAreaCounts
+BTABLE UserMasterConditions
+ROW UID=7	BidUID=3	BidConditionFolderUID=NULL	Count=	Name=	Sequence=0
+PTABLE BidHighlights
+ROW UID=1	BidProjectUID=21	BidAreaUID=999	Count=2
+ROW UID=10	TypPageTakeoffUID=10	BidTakeoffToUID=0	CdnTypeUID=0	Count=x y	Notes=2.5	Name=2.5
+ROW UID=NULL	GUID=999	OCRUID=NULL	MasterAreaUID=10	BidPageSelectedUID=8	BidPageViewUID=0	ParentCommentUID=7	BidAreaSelected=x y
+ROW UID=5	BidPageFolderUID=4	BidAreaUID=7	Name=2	Sequence=abc
+ROW UID=11	CoverSheetSelItemUID=3	BidProjectUID=30	BidUID=2	BidPageFolderUID=8	EstimatorUID=999	BidAreaSelected=	Name=x y
+PTABLE BidAnnotationOvals
+PTABLE BidALines
+ROW UID=10
+ROW UID=9	OCRUID=abc	ParentBidUID= 7 	SomethingElseUID= 7 
+ROW UID=	EstimatorUID=	JobSiteManagerUID=1	EmployeeUID=1	BidTakeoffToUID=21	Sequence=Area
+ROW UID=3
+PTABLE BidAnnoInk
+ROW UID=3	BidZoneUID=11	CdnTypeUID=20	MasterAreaUID= 7 	JobName=abc	BidAreaSelected=-1	Count=2
+ROW UID=30	ParentBidUID=3	Count=Area	JobName=0	Notes=Area
+ROW UID=7	BidPageUID=7	JobStatusUID=3	BidAreaSelected=Area	Sequence=x y
+ROW OrigBidProjectUID=8	Name= 3 	Sequence=abc
+ROW UID=12	BidTypAreaUID=0	BidUID=5	BidPageSelectedUID= 7 
+PTABLE BidPageSettings
+ROW UID=2	BidPageViewUID=20	BidTypAreaUID=11	TypGroupUID=5	BidZoneUID=30	ParentCommentUID=NULL	CdnTypeUID=abc	JobName=-1	BidAreaSelected=0	BidPageUID=5
+ROW UID= 7 	TranslateAreaUID=10	OCRUID=9	JobName=	BidAreaSelected=0
+ROW UID=	MasterAreaUID=21	BidAreaSelected=2	BidPageUID=5
+EXPECT
+BID UID=	PrManagerUID=NULL	OrigBidProjectUID=NULL	BidAreaUID=425	OCRUID=NULL	Count=x y	BidAreaSelected=2.5
+BTABLE BidTypAreas
+ROW UID=414	BidTakeoffToUID=423	PrManagerUID=NULL	Count=
+ROW UID=415	BidAreaUID=414	JobStatusUID=NULL	BidZoneUID=417	JobName=2.5	Notes=abc	Name=
+BTABLE BidLayers
+ROW BidPageFolderUID=21	OrigBidProjectUID=NULL	Sequence=	BidAreaSelected=2	Name=0
+ROW UID=416	BidLayerUID=423	TypPageTakeoffUID=21	JobStatusUID=NULL	BidPageSelectedUID=NULL	Sequence=
+ROW UID=NULL	MasterAreaUID=abc	OrigBidProjectUID=NULL	BidAreaSelected=-1	Count=NULL
+BTABLE BidTypAreaCounts
+BTABLE UserMasterConditions
+ROW UID=417	BidUID=423	BidConditionFolderUID=414	Count=	Name=	Sequence=0
+PTABLE BidHighlights
+ROW UID=418	BidProjectUID=NULL	BidAreaUID=999	Count=2
+ROW UID=419	TypPageTakeoffUID=419	BidTakeoffToUID=NULL	CdnTypeUID=NULL	Count=x y	Notes=2.5	Name=2.5
+ROW UID=414	GUID=999	OCRUID=NULL	MasterAreaUID=419	BidPageSelectedUID=NULL	BidPageViewUID=NULL	ParentCommentUID=417	BidAreaSelected=x y
+ROW UID=420	BidPageFolderUID=4	BidAreaUID=417	Name=2	Sequence=abc
+ROW UID=421	CoverSheetSelItemUID=NULL	BidProjectUID=NULL	BidUID=425	BidPageFolderUID=8	EstimatorUID=NULL	BidAreaSelected=	Name=x y
+PTABLE BidAnnotationOvals
+PTABLE BidALines
+ROW UID=419
+ROW UID=422	OCRUID=NULL	ParentBidUID=NULL	SomethingElseUID= 7 
+ROW UID=	EstimatorUID=	JobSiteManagerUID=NULL	EmployeeUID=NULL	BidTakeoffToUID=21	Sequence=Area
+ROW UID=423
+PTABLE BidAnnoInk
+ROW UID=423	BidZoneUID=421	CdnTypeUID=20	MasterAreaUID=426	JobName=abc	BidAreaSelected=-1	Count=2
+ROW UID=416	ParentBidUID=NULL	Count=Area	JobName=0	Notes=Area
+ROW UID=417	BidPageUID=417	JobStatusUID=NULL	BidAreaSelected=Area	Sequence=x y
+ROW OrigBidProjectUID=NULL	Name= 3 	Sequence=abc
+ROW UID=424	BidTypAreaUID=NULL	BidUID=420	BidPageSelectedUID=NULL
+PTABLE BidPageSettings
+ROW UID=425	BidPageViewUID=415	BidTypAreaUID=421	TypGroupUID=420	BidZoneUID=416	ParentCommentUID=414	CdnTypeUID=abc	JobName=-1	BidAreaSelected=0	BidPageUID=420
+ROW UID=426	TranslateAreaUID=419	OCRUID=NULL	JobName=	BidAreaSelected=0
+ROW UID=	MasterAreaUID=21	BidAreaSelected=2	BidPageUID=420
+END
+CASE 4
+MAXUID 288
+MAP cdn 5=253	20=256	12=129
+MAP job 7=89
+MAP emp 8=33	10=695	12=859	=365	5=526	3=453
+MAP pay 4=294
+BID UID=1	MasterPageUID=4	BidLayerUID=30	BidAreaUID=21	BidTypAreaUID=10	PrManagerUID=30	BidConditionUID=12
+BTABLE BidPlanRooms
+ROW UID=9	JobName=1	BidAreaSelected=2.5
+ROW UID=10	EstimatorUID=1	JobSiteManagerUID=2	OrigBidProjectUID=20	TypGroupUID=abc	ParentCommentUID=4	CoverSheetSelItemUID=7	Sequence=x y
+ROW UID=4	TypGroupMarkerUID=20	BidTakeoffToUID=2	TypGroupUID= 7 	OrigParentBidUID=21	TranslateAreaUID=1	PrManagerUID=8
+BTABLE BidConditionUser
+ROW JobSiteManagerUID=	BidTypAreaUID=1	MasterPageUID=5	BidPageUID=4	PayClassUID=999	BidAreaSelected=Area	Sequence= 3 	Notes=0
+ROW UID=5	BidTakeoffFromUID=2	ParentBidUID=2	ParentUID=NULL	BidPageUID= 7 	TranslateAreaUID=2	EstimatorUID=1
+ROW UID=2	BidPageViewUID=8	EstimatorUID=	PayClassUID=	TypGroupTakeoffUID=1	Name=NULL
+BTABLE BidTypGroupViews
+PTABLE BidAnnotationOvals
+ROW UID=30	JobSiteManagerUID=10	CoverSheetSelItemUID=999	BidConditionUID=1	TypPageTakeoffUID=8	Name=abc	Notes=1
+ROW UID=11	BidAreaUID=NULL	JobStatusUID=20	TypPageTakeoffUID=abc
+PTABLE BidAreaTranslations
+ROW UID=3	OCRUID=11	EstimatorUID=abc	Name=Area
+ROW UID=11	BidProjectUID=999	CdnTypeUID=11
+ROW UID=30	EmployeeUID=abc	OrigParentBidUID=11	Sequence=0	JobName=-1
+ROW UID=21	Notes= 3 
+ROW UID=10	ParentCommentUID=30	BidPageFolderUID=20	BidTakeoffToUID=2	PayClassUID= 7 	BidProjectUID=9	Notes=x y	BidAreaSelected=Area
+PTABLE BidAnnoInk
+PTABLE BidALines
+ROW UID=4	TypGroupMarkerUID=0	Count=2.5
+PTABLE BidPageSettings
+ROW UID= 7 	BidPageFolderUID=30	BidPageSelectedUID=NULL	PayClassUID=10	TypPageTakeoffUID=12	BidAreaSelected= 3 	BidPageUID=7
+ROW UID=0	PayClassUID=12	BidPageSelectedUID=20	MasterAreaUID=9	Sequence=abc	BidAreaSelected=2
+ROW UID= 7 	PrManagerUID=30	BidAreaSelected=0	BidPageUID=0
+ROW JobSiteManagerUID=1	OrigBidProjectUID=21	TypGroupUID=30	JobName=NULL	BidAreaSelected=2	BidPageUID=20
+EXPECT
+BID UID=289	MasterPageUID=292	BidLayerUID=295	BidAreaUID=298	BidTypAreaUID=291	PrManagerUID=NULL	BidConditionUID=12
+BTABLE BidPlanRooms
+ROW UID=290	JobName=1	BidAreaSelected=2.5
+ROW UID=291	EstimatorUID=NULL	JobSiteManagerUID=NULL	OrigBidProjectUID=NULL	TypGroupUID=abc	ParentCommentUID=292	CoverSheetSelItemUID=NULL	Sequence=x y
+ROW UID=292	TypGroupMarkerUID=20	BidTakeoffToUID=294	TypGroupUID=299	OrigParentBidUID=NULL	TranslateAreaUID=289	PrManagerUID=33
+BTABLE BidConditionUser
+ROW JobSiteManagerUID=	BidTypAreaUID=289	MasterPageUID=293	BidPageUID=292	PayClassUID=NULL	BidAreaSelected=Area	Sequence= 3 	Notes=0
+ROW UID=293	BidTakeoffFromUID=294	ParentBidUID=NULL	ParentUID=NULL	BidPageUID=299	TranslateAreaUID=294	EstimatorUID=NULL
+ROW UID=294	BidPageViewUID=8	EstimatorUID=	PayClassUID=	TypGroupTakeoffUID=289	Name=NULL
+BTABLE BidTypGroupViews
+PTABLE BidAnnotationOvals
+ROW UID=295	JobSiteManagerUID=695	CoverSheetSelItemUID=NULL	BidConditionUID=289	TypPageTakeoffUID=8	Name=abc	Notes=1
+ROW UID=296	BidAreaUID=NULL	JobStatusUID=NULL	TypPageTakeoffUID=abc
+PTABLE BidAreaTranslations
+ROW UID=297	OCRUID=NULL	EstimatorUID=NULL	Name=Area
+ROW UID=296	BidProjectUID=NULL	CdnTypeUID=11
+ROW UID=295	EmployeeUID=NULL	OrigParentBidUID=NULL	Sequence=0	JobName=-1
+ROW UID=298	Notes= 3 
+ROW UID=291	ParentCommentUID=295	BidPageFolderUID=20	BidTakeoffToUID=294	PayClassUID=NULL	BidProjectUID=NULL	Notes=x y	BidAreaSelected=Area
+PTABLE BidAnnoInk
+PTABLE BidALines
+ROW UID=292	TypGroupMarkerUID=NULL	Count=2.5
+PTABLE BidPageSettings
+ROW UID=299	PrManagerUID=NULL	BidAreaSelected=0	BidPageUID=NULL
+ROW UID=299	BidPageFolderUID=295	BidPageSelectedUID=NULL	PayClassUID=NULL	TypPageTakeoffUID=12	BidAreaSelected= 3 	BidPageUID=7
+ROW UID=NULL	PayClassUID=NULL	BidPageSelectedUID=NULL	MasterAreaUID=290	Sequence=abc	BidAreaSelected=2
+ROW JobSiteManagerUID=NULL	OrigBidProjectUID=NULL	TypGroupUID=295	JobName=NULL	BidAreaSelected=2	BidPageUID=20
+END
+CASE 5
+MAXUID 528
+MAP cdn  7 =302	8=258	7=218	5=301	3=140	10=36
+MAP job 9=96	4=397
+MAP emp 7=731
+MAP pay 11=498	8=847	9=20	=511	4=217
+BID UID=5	JobStatusUID=11	TypGroupMarkerUID=1	OrigBidProjectUID=21	BidAreaSelected=2	Name=2	Sequence=-1
+BTABLE UserMasterConditions
+ROW UID=10	ParentUID=NULL	BidPageViewUID=10	OCRUID=30	ParentBidUID=NULL	Count=0	Name=Area	Sequence=abc
+ROW UID=1	BidPageViewUID=9	MasterPageUID=	SourceBidUID=8	TypGroupUID=2	MasterAreaUID=30	TypGroupTakeoffUID=9	JobName=2.5	Notes=-1
+ROW UID=10	BidPageSelectedUID=NULL	TypGroupMarkerUID=abc	GUID=11	BidConditionFolderUID=9	ParentBidUID=10	Sequence=x y
+BTABLE BidConditionUser
+ROW UID=7	BidAreaSelected=	JobName=0
+ROW UID=20	SourceBidUID=20	BidConditionUID=11	CoverSheetSelItemUID=NULL	Notes=2	Name=2.5	JobName=NULL
+PTABLE BidDimensions
+ROW UID=abc	BidTakeoffToUID=abc	BidUID=12	MasterAreaUID=20	TypGroupUID=	JobName=	Name=x y
+ROW UID=abc	CdnTypeUID=21	TypGroupMarkerUID=7
+PTABLE BidAnnotationClouds
+ROW BidLayerUID=4	SourceBidUID=NULL	JobSiteManagerUID=8	TypGroupMarkerUID=30	PayClassUID=0	BidTakeoffToUID=20
+ROW TranslateAreaUID=21	CdnTypeUID=3	EmployeeUID=4	EstimatorUID=20	BidLayerUID= 7 	BidAreaSelected=2.5	Sequence=Area
+ROW UID=2	PayClassUID=1	TranslateAreaUID=11	JobStatusUID=5	BidAreaUID=3	EmployeeUID=12	Name=2	Count=1
+PTABLE BidPageSettings
+ROW UID=11	JobSiteManagerUID=abc	BidPageUID=12	PayClassUID=1	Sequence=NULL	Count= 3 	JobName=0	BidAreaSelected=2
+ROW UID=30	BidAreaSelected=2	BidPageUID=5
+ROW UID=7	TranslateAreaUID=5	BidTakeoffFromUID=20	TypGroupUID=4	Count=0	BidAreaSelected=-1
+ROW UID=3	BidPageUID=7	CdnTypeUID=9	BidLayerUID=NULL	JobSiteManagerUID=11	Sequence=x y	BidAreaSelected=2
+ROW UID=2	EmployeeUID=7	SourceBidUID=1	BidTakeoffFromUID=7	BidConditionUID=4	BidUID=5	BidAreaSelected= 3 	BidPageUID=5
+ROW UID=12	BidUID=21	PrManagerUID=0	BidPageUID=0	TypGroupMarkerUID=4	OrigBidProjectUID=3	CoverSheetSelItemUID=9	Notes=abc	Sequence=Area	Name=NULL	BidAreaSelected=
+ROW UID=2	TranslateAreaUID=NULL	BidAreaSelected=abc	BidPageUID=5
+EXPECT
+BID UID=529	JobStatusUID=NULL	TypGroupMarkerUID=531	OrigBidProjectUID=NULL	BidAreaSelected=2	Name=2	Sequence=-1
+BTABLE UserMasterConditions
+ROW UID=530	ParentUID=NULL	BidPageViewUID=530	OCRUID=NULL	ParentBidUID=NULL	Count=0	Name=Area	Sequence=abc
+ROW UID=531	BidPageViewUID=9	MasterPageUID=	SourceBidUID=NULL	TypGroupUID=535	MasterAreaUID=537	TypGroupTakeoffUID=9	JobName=2.5	Notes=-1
+ROW UID=530	BidPageSelectedUID=NULL	TypGroupMarkerUID=534	GUID=11	BidConditionFolderUID=9	ParentBidUID=NULL	Sequence=x y
+BTABLE BidConditionUser
+ROW UID=532	BidAreaSelected=	JobName=0
+ROW UID=533	SourceBidUID=NULL	BidConditionUID=536	CoverSheetSelItemUID=NULL	Notes=2	Name=2.5	JobName=NULL
+PTABLE BidDimensions
+ROW UID=534	BidTakeoffToUID=534	BidUID=539	MasterAreaUID=533	TypGroupUID=	JobName=	Name=x y
+ROW UID=534	CdnTypeUID=21	TypGroupMarkerUID=532
+PTABLE BidAnnotationClouds
+ROW BidLayerUID=4	SourceBidUID=NULL	JobSiteManagerUID=NULL	TypGroupMarkerUID=537	PayClassUID=NULL	BidTakeoffToUID=533
+ROW TranslateAreaUID=21	CdnTypeUID=140	EmployeeUID=NULL	EstimatorUID=NULL	BidLayerUID= 7 	BidAreaSelected=2.5	Sequence=Area
+ROW UID=535	PayClassUID=NULL	TranslateAreaUID=536	JobStatusUID=NULL	BidAreaUID=538	EmployeeUID=NULL	Name=2	Count=1
+PTABLE BidPageSettings
+ROW UID=532	TranslateAreaUID=529	BidTakeoffFromUID=533	TypGroupUID=4	Count=0	BidAreaSelected=-1
+ROW UID=539	BidUID=21	PrManagerUID=NULL	BidPageUID=NULL	TypGroupMarkerUID=4	OrigBidProjectUID=NULL	CoverSheetSelItemUID=NULL	Notes=abc	Sequence=Area	Name=NULL	BidAreaSelected=
+ROW UID=535	TranslateAreaUID=NULL	BidAreaSelected=abc	BidPageUID=529
+ROW UID=536	JobSiteManagerUID=NULL	BidPageUID=539	PayClassUID=NULL	Sequence=NULL	Count= 3 	JobName=0	BidAreaSelected=2
+ROW UID=535	EmployeeUID=731	SourceBidUID=NULL	BidTakeoffFromUID=532	BidConditionUID=4	BidUID=529	BidAreaSelected= 3 	BidPageUID=529
+ROW UID=538	BidPageUID=532	CdnTypeUID=9	BidLayerUID=NULL	JobSiteManagerUID=NULL	Sequence=x y	BidAreaSelected=2
+END
+CASE 6
+MAXUID 419
+MAP cdn 5=111	10=143	4=804	 7 =34	9=227
+MAP job 8=420	11=869	 7 =629
+MAP emp 2=591	9=832	1=128	5=382	10=589	20=884
+MAP pay 11=304	 7 =546	4=258
+BID UID=0	BidPageViewUID=8	SomethingElseUID=21	TypGroupTakeoffUID=0
+BTABLE BidPlanRooms
+ROW UID=21	BidConditionUID=21	BidConditionFolderUID=1	BidTypAreaUID=3	GUID=12	CdnTypeUID=999	JobName= 3 	Name=1
+ROW UID=21	Sequence=-1
+ROW BidPageUID=4	TypGroupUID=0	BidConditionUID=11	Name=2	Notes=abc
+BTABLE BidAreas
+BTABLE BidLayers
+BTABLE UserMasterConditions
+ROW BidPageViewUID=	ParentCommentUID=12	JobSiteManagerUID=2	Count=NULL
+ROW UID=	BidPageSelectedUID=30	OrigBidProjectUID=8	BidTypAreaUID=8	JobSiteManagerUID= 7 	BidUID=30	BidAreaSelected=-1	Count=-1
+BTABLE BidPages
+ROW UID=11	PrManagerUID=abc	TypGroupMarkerUID=3	BidAreaUID=0	Name=0	Count=0
+ROW UID=20	ParentUID=21	TypGroupMarkerUID=abc	Sequence=
+BTABLE BidNamedViews
+ROW UID=21	Name=abc	Sequence= 3 	Notes=NULL
+ROW CoverSheetSelItemUID=0	BidAreaUID=21	BidConditionUID=21	BidTakeoffFromUID=10	BidZoneUID=11	SourceBidUID=21	Count=abc	Notes=1
+PTABLE BidAnnotationOvals
+ROW UID=	CoverSheetSelItemUID=	GUID=5	BidConditionUID=	Count=2.5	Sequence=NULL	BidAreaSelected=1
+ROW UID=20	BidTypAreaUID=999	TypGroupTakeoffUID=4	Name=2.5	JobName=-1
+ROW UID=21	EmployeeUID=21	TranslateAreaUID=21	OrigBidProjectUID=4	Notes=-1	JobName=0
+PTABLE BidPageSettings
+ROW UID=	MasterPageUID=7	BidPageFolderUID=7	PayClassUID=0	TypPageTakeoffUID=5	Sequence=	Notes=2	Count=Area	BidAreaSelected=1	BidPageUID=NULL
+ROW UID=12	BidPageViewUID=4	BidAreaSelected=abc	Sequence=x y	BidPageUID=NULL
+ROW UID=2	TypGroupTakeoffUID=11	TranslateAreaUID=12	Count=0	BidAreaSelected=0	BidPageUID=0
+ROW UID=10	BidAreaSelected=-1	BidPageUID=NULL
+ROW UID=20	OrigParentBidUID=2	MasterAreaUID=1	BidPageUID=0	Sequence=	JobName=2.5	BidAreaSelected=0
+ROW UID=5	BidAreaSelected=2
+EXPECT
+BID UID=NULL	BidPageViewUID=8	SomethingElseUID=21	TypGroupTakeoffUID=NULL
+BTABLE BidPlanRooms
+ROW UID=420	BidConditionUID=420	BidConditionFolderUID=1	BidTypAreaUID=3	GUID=12	CdnTypeUID=999	JobName= 3 	Name=1
+ROW UID=420	Sequence=-1
+ROW BidPageUID=4	TypGroupUID=NULL	BidConditionUID=421	Name=2	Notes=abc
+BTABLE BidAreas
+BTABLE BidLayers
+BTABLE UserMasterConditions
+ROW BidPageViewUID=	ParentCommentUID=423	JobSiteManagerUID=591	Count=NULL
+ROW UID=	BidPageSelectedUID=NULL	OrigBidProjectUID=NULL	BidTypAreaUID=8	JobSiteManagerUID=NULL	BidUID=30	BidAreaSelected=-1	Count=-1
+BTABLE BidPages
+ROW UID=421	PrManagerUID=NULL	TypGroupMarkerUID=3	BidAreaUID=NULL	Name=0	Count=0
+ROW UID=422	ParentUID=420	TypGroupMarkerUID=abc	Sequence=
+BTABLE BidNamedViews
+ROW UID=420	Name=abc	Sequence= 3 	Notes=NULL
+ROW CoverSheetSelItemUID=NULL	BidAreaUID=420	BidConditionUID=420	BidTakeoffFromUID=425	BidZoneUID=421	SourceBidUID=NULL	Count=abc	Notes=1
+PTABLE BidAnnotationOvals
+ROW UID=	CoverSheetSelItemUID=	GUID=5	BidConditionUID=	Count=2.5	Sequence=NULL	BidAreaSelected=1
+ROW UID=422	BidTypAreaUID=999	TypGroupTakeoffUID=4	Name=2.5	JobName=-1
+ROW UID=420	EmployeeUID=NULL	TranslateAreaUID=420	OrigBidProjectUID=NULL	Notes=-1	JobName=0
+PTABLE BidPageSettings
+ROW UID=423	BidPageViewUID=4	BidAreaSelected=abc	Sequence=x y	BidPageUID=NULL
+ROW UID=424	TypGroupTakeoffUID=421	TranslateAreaUID=423	Count=0	BidAreaSelected=0	BidPageUID=NULL
+ROW UID=425	BidAreaSelected=-1	BidPageUID=NULL
+ROW UID=422	OrigParentBidUID=NULL	MasterAreaUID=1	BidPageUID=NULL	Sequence=	JobName=2.5	BidAreaSelected=0
+ROW UID=426	BidAreaSelected=2
+END
+CASE 7
+MAXUID 278
+MAP cdn 11=88	8=46	20=727	2=148	 7 =831
+MAP job 12=763	1=632	5=258	9=691
+MAP emp 2=717
+MAP pay 11=144	12=409	5=809	9=429
+BID UID=	ParentUID=7	Sequence=2.5	Name=x y
+BTABLE BidSettings
+BTABLE BidNamedViews
+ROW UID=8	JobName=x y	Sequence=NULL
+BTABLE BidHotLinks
+ROW UID=20	BidConditionUID=3	Sequence=1	BidAreaSelected= 3 
+PTABLE BidAreaTranslations
+ROW UID=30	OrigParentBidUID=9	BidPageSelectedUID=11	OrigBidProjectUID= 7 	CdnTypeUID=8
+ROW UID=NULL
+ROW UID= 7 	EstimatorUID=999	JobSiteManagerUID=20	JobStatusUID=21	Notes=-1	Sequence=-1	JobName=
+ROW UID=21	BidAreaUID=20	MasterAreaUID=30	MasterPageUID=3	JobName=1
+PTABLE BidComments
+ROW UID=	BidTakeoffToUID=NULL	BidConditionUID=20	EmployeeUID=8	BidZoneUID=11	Notes=-1	Name=-1
+ROW UID=NULL	BidConditionUID=3	OCRUID=8	JobSiteManagerUID=21	GUID=0	BidPageUID=7
+ROW UID=10	BidAreaUID=12	BidPageFolderUID=7	EstimatorUID=8	BidTakeoffToUID=5	BidPageSelectedUID=8	TypGroupMarkerUID=30
+ROW EmployeeUID=999	CdnTypeUID=7	JobName=Area	Sequence=2	Name=-1
+ROW UID=20	BidPageUID=1	GUID=0	BidLayerUID=2	BidPageSelectedUID=30	Sequence=abc	Notes=x y	JobName=Area
+PTABLE BidAnnotationPolygons
+ROW UID=21	CoverSheetSelItemUID=4	JobName=0
+ROW UID=999	PayClassUID= 7 	PrManagerUID=8	SourceBidUID=10	BidTakeoffFromUID=20	BidAreaSelected=2	Count=	Notes= 3 
+PTABLE BidTakeoffs
+ROW UID=5	JobSiteManagerUID= 7 	BidConditionUID=7	ParentBidUID=NULL	TranslateAreaUID=1	TypGroupUID=12	Sequence= 3 	Name=2.5	BidAreaSelected=-1
+ROW UID=0	TypGroupTakeoffUID= 7 	BidLayerUID= 7 	TypGroupMarkerUID=21	Sequence=NULL	Notes=0
+EXPECT
+BID UID=	ParentUID=7	Sequence=2.5	Name=x y
+BTABLE BidSettings
+BTABLE BidNamedViews
+ROW UID=279	JobName=x y	Sequence=NULL
+BTABLE BidHotLinks
+ROW UID=280	BidConditionUID=3	Sequence=1	BidAreaSelected= 3 
+PTABLE BidAreaTranslations
+ROW UID=281	OrigParentBidUID=NULL	BidPageSelectedUID=NULL	OrigBidProjectUID=NULL	CdnTypeUID=46
+ROW UID=282
+ROW UID=283	EstimatorUID=NULL	JobSiteManagerUID=NULL	JobStatusUID=NULL	Notes=-1	Sequence=-1	JobName=
+ROW UID=284	BidAreaUID=280	MasterAreaUID=281	MasterPageUID=3	JobName=1
+PTABLE BidComments
+ROW UID=	BidTakeoffToUID=282	BidConditionUID=280	EmployeeUID=NULL	BidZoneUID=11	Notes=-1	Name=-1
+ROW UID=282	BidConditionUID=3	OCRUID=NULL	JobSiteManagerUID=NULL	GUID=NULL	BidPageUID=7
+ROW UID=285	BidAreaUID=12	BidPageFolderUID=7	EstimatorUID=NULL	BidTakeoffToUID=287	BidPageSelectedUID=NULL	TypGroupMarkerUID=281
+ROW EmployeeUID=NULL	CdnTypeUID=7	JobName=Area	Sequence=2	Name=-1
+ROW UID=280	BidPageUID=1	GUID=NULL	BidLayerUID=2	BidPageSelectedUID=NULL	Sequence=abc	Notes=x y	JobName=Area
+PTABLE BidAnnotationPolygons
+ROW UID=284	CoverSheetSelItemUID=NULL	JobName=0
+ROW UID=286	PayClassUID=NULL	PrManagerUID=NULL	SourceBidUID=NULL	BidTakeoffFromUID=280	BidAreaSelected=2	Count=	Notes= 3 
+PTABLE BidTakeoffs
+ROW UID=287	JobSiteManagerUID=NULL	BidConditionUID=7	ParentBidUID=NULL	TranslateAreaUID=1	TypGroupUID=12	Sequence= 3 	Name=2.5	BidAreaSelected=-1
+ROW UID=NULL	TypGroupTakeoffUID=283	BidLayerUID=283	TypGroupMarkerUID=284	Sequence=NULL	Notes=0
+PTABLE BidPageSettings
+END
+CASE 8
+MAXUID 22
+MAP cdn 12=576	7=394	5=160	1=763
+MAP job 12=851	9=878	1=443	2=231	11=13
+MAP emp 1=159	11=154	9=821	12=184	 7 =827
+MAP pay 
+BID UID=1	TranslateAreaUID=NULL	BidConditionFolderUID=8	BidPageViewUID=1	JobStatusUID=9	BidLayerUID=30
+BTABLE BidEmployees
+ROW UID=21	ParentBidUID=8	SourceBidUID=3	TranslateAreaUID=999	PrManagerUID=	TypGroupMarkerUID=21	GUID=5	Sequence=abc	Notes=x y	Count= 3 
+ROW UID=1	SourceBidUID=21	ParentUID=10	CoverSheetSelItemUID=21	Sequence=2	Name=1
+ROW UID=10	ParentUID=7	BidConditionFolderUID=1	Name= 3 
+BTABLE BidConditionUser
+ROW UID=20	BidConditionUID=1	BidTakeoffToUID=4	EmployeeUID=4	BidUID=2	BidAreaSelected=0	JobName=x y
+BTABLE BidZones
+ROW UID=20	EmployeeUID=4	Count=	Sequence=-1	Notes= 3 
+ROW UID=abc	SourceBidUID=0	CdnTypeUID=5	PayClassUID=20	BidUID=10	ParentBidUID=20	BidTakeoffToUID=3	BidAreaSelected=x y
+BTABLE BidTypGroupViews
+BTABLE BidNamedViews
+PTABLE BidPageSettings
+ROW UID=21	Notes= 3 	Sequence=	BidAreaSelected=0	BidPageUID=5
+ROW UID=3	EstimatorUID=abc	BidConditionUID=999	BidLayerUID=10	OCRUID=7	TypPageTakeoffUID=10	PrManagerUID=20	BidAreaSelected=-1	BidPageUID=7
+ROW UID=12	BidConditionFolderUID=7	GUID=999	Name=NULL	BidAreaSelected=	BidPageUID=20
+ROW UID=9	TypGroupTakeoffUID= 7 	TranslateAreaUID=0	EmployeeUID=0	BidAreaSelected=0	BidPageUID=5
+ROW OrigParentBidUID=30	BidPageViewUID=999	TypGroupUID=8	Name=abc	Sequence=1	BidPageUID=7
+ROW UID=11	CoverSheetSelItemUID=20	GUID=3	TranslateAreaUID=4	JobName=1	BidAreaSelected=	BidPageUID=
+ROW UID=7	EstimatorUID=30	MasterPageUID=	BidAreaSelected=	BidPageUID=5
+ROW UID=7	BidProjectUID=9	BidTakeoffToUID=NULL	BidLayerUID=11	TranslateAreaUID=12	ParentBidUID= 7 	Name= 3 	BidAreaSelected=-1	BidPageUID=0
+EXPECT
+BID UID=23	TranslateAreaUID=NULL	BidConditionFolderUID=8	BidPageViewUID=23	JobStatusUID=878	BidLayerUID=30
+BTABLE BidEmployees
+ROW UID=24	ParentBidUID=NULL	SourceBidUID=NULL	TranslateAreaUID=999	PrManagerUID=	TypGroupMarkerUID=24	GUID=5	Sequence=abc	Notes=x y	Count= 3 
+ROW UID=23	SourceBidUID=NULL	ParentUID=25	CoverSheetSelItemUID=NULL	Sequence=2	Name=1
+ROW UID=25	ParentUID=32	BidConditionFolderUID=23	Name= 3 
+BTABLE BidConditionUser
+ROW UID=26	BidConditionUID=23	BidTakeoffToUID=4	EmployeeUID=NULL	BidUID=2	BidAreaSelected=0	JobName=x y
+BTABLE BidZones
+ROW UID=26	EmployeeUID=NULL	Count=	Sequence=-1	Notes= 3 
+ROW UID=27	SourceBidUID=NULL	CdnTypeUID=160	PayClassUID=NULL	BidUID=25	ParentBidUID=NULL	BidTakeoffToUID=28	BidAreaSelected=x y
+BTABLE BidTypGroupViews
+BTABLE BidNamedViews
+PTABLE BidPageSettings
+ROW UID=24	Notes= 3 	Sequence=	BidAreaSelected=0	BidPageUID=5
+ROW UID=28	EstimatorUID=NULL	BidConditionUID=999	BidLayerUID=25	OCRUID=NULL	TypPageTakeoffUID=25	PrManagerUID=NULL	BidAreaSelected=-1	BidPageUID=32
+ROW UID=29	BidConditionFolderUID=32	GUID=999	Name=NULL	BidAreaSelected=	BidPageUID=26
+ROW UID=30	TypGroupTakeoffUID= 7 	TranslateAreaUID=NULL	EmployeeUID=NULL	BidAreaSelected=0	BidPageUID=5
+ROW OrigParentBidUID=NULL	BidPageViewUID=999	TypGroupUID=8	Name=abc	Sequence=1	BidPageUID=32
+ROW UID=31	CoverSheetSelItemUID=NULL	GUID=3	TranslateAreaUID=4	JobName=1	BidAreaSelected=	BidPageUID=
+ROW UID=32	EstimatorUID=NULL	MasterPageUID=	BidAreaSelected=	BidPageUID=5
+ROW UID=32	BidProjectUID=NULL	BidTakeoffToUID=NULL	BidLayerUID=31	TranslateAreaUID=29	ParentBidUID=NULL	Name= 3 	BidAreaSelected=-1	BidPageUID=NULL
+END
+CASE 9
+MAXUID 226
+MAP cdn 5=818	=360	11=689	 7 =274	9=652
+MAP job 7=821	10=156	 7 =818	9=654	3=492
+MAP emp 20=448	8=539	4=851	2=64
+MAP pay 
+BID UID=1	BidPageSelectedUID=8	BidAreaUID=20	SourceBidUID=NULL	TypPageTakeoffUID=1
+BTABLE BidConditions
+ROW UID=10	BidProjectUID=21	ParentUID=abc	BidTakeoffToUID=9	MasterAreaUID=11	OrigBidProjectUID=21	Sequence= 3 
+ROW UID=	BidPageSelectedUID=10	Sequence=2.5	Count=x y	JobName=0
+ROW OrigBidProjectUID=2	JobSiteManagerUID=3	TranslateAreaUID=8	BidTakeoffToUID=NULL	BidAreaSelected=	Sequence=1
+BTABLE BidHotLinks
+ROW UID=11	BidAreaSelected=1
+PTABLE BidAnnotationRects
+ROW UID=2	ParentUID=1	BidAreaUID=10	PayClassUID=30	BidConditionUID=4	BidZoneUID=2	OrigBidProjectUID=NULL
+ROW UID=3	SourceBidUID=11	BidTakeoffToUID=5	JobStatusUID=7	BidUID=9	OrigBidProjectUID=5	BidAreaSelected=1	Sequence= 3 
+ROW BidPageUID=3	SomethingElseUID=20	TypGroupMarkerUID=7	ParentCommentUID=12	JobName=Area
+ROW UID=1	Notes=abc	Sequence=2	Count=x y
+PTABLE BidCallOuts
+ROW UID=21	SomethingElseUID=8	BidPageUID=NULL	OrigParentBidUID=8	SourceBidUID=11
+ROW UID=8	GUID=11	Name=0	Sequence=x y	Notes=abc
+ROW UID=21	EstimatorUID=10	BidAreaSelected=NULL	Count=0	Name=x y
+PTABLE BidMarkedPages
+ROW UID=20	GUID=NULL	TranslateAreaUID=20	OrigBidProjectUID=0	BidZoneUID=21	CoverSheetSelItemUID=abc	OCRUID=	Name=NULL
+ROW UID=1	BidPageFolderUID=4	ParentUID=5	OrigBidProjectUID=NULL	SomethingElseUID=11	BidTakeoffToUID=30	Sequence=	JobName= 3 	Notes=-1
+EXPECT
+BID UID=227	BidPageSelectedUID=NULL	BidAreaUID=234	SourceBidUID=NULL	TypPageTakeoffUID=227
+BTABLE BidConditions
+ROW UID=228	BidProjectUID=NULL	ParentUID=abc	BidTakeoffToUID=9	MasterAreaUID=229	OrigBidProjectUID=NULL	Sequence= 3 
+ROW UID=	BidPageSelectedUID=NULL	Sequence=2.5	Count=x y	JobName=0
+ROW OrigBidProjectUID=NULL	JobSiteManagerUID=NULL	TranslateAreaUID=233	BidTakeoffToUID=NULL	BidAreaSelected=	Sequence=1
+BTABLE BidHotLinks
+ROW UID=229	BidAreaSelected=1
+PTABLE BidAnnotationRects
+ROW UID=230	ParentUID=227	BidAreaUID=228	PayClassUID=NULL	BidConditionUID=4	BidZoneUID=230	OrigBidProjectUID=NULL
+ROW UID=231	SourceBidUID=NULL	BidTakeoffToUID=5	JobStatusUID=821	BidUID=9	OrigBidProjectUID=NULL	BidAreaSelected=1	Sequence= 3 
+ROW BidPageUID=231	SomethingElseUID=20	TypGroupMarkerUID=7	ParentCommentUID=12	JobName=Area
+ROW UID=227	Notes=abc	Sequence=2	Count=x y
+PTABLE BidCallOuts
+ROW UID=232	SomethingElseUID=8	BidPageUID=NULL	OrigParentBidUID=NULL	SourceBidUID=NULL
+ROW UID=233	GUID=11	Name=0	Sequence=x y	Notes=abc
+ROW UID=232	EstimatorUID=NULL	BidAreaSelected=NULL	Count=0	Name=x y
+PTABLE BidMarkedPages
+ROW UID=234	GUID=NULL	TranslateAreaUID=234	OrigBidProjectUID=NULL	BidZoneUID=232	CoverSheetSelItemUID=NULL	OCRUID=	Name=NULL
+ROW UID=227	BidPageFolderUID=4	ParentUID=5	OrigBidProjectUID=NULL	SomethingElseUID=11	BidTakeoffToUID=30	Sequence=	JobName= 3 	Notes=-1
+PTABLE BidPageSettings
+END
+CASE 10
+MAXUID 113
+MAP cdn 8=491	5=727
+MAP job 20=455	9=33
+MAP emp 12=241	=119	20=201	11=212	9=106
+MAP pay 
+BID UID=	OrigBidProjectUID=5	BidConditionFolderUID=21	BidPageViewUID=999	JobSiteManagerUID=NULL	PrManagerUID=NULL	Name=2
+BTABLE BidTypAreas
+BTABLE BidConditionFolders
+BTABLE BidLayers
+ROW UID=7	TypGroupUID=9	JobName=	Name=
+ROW UID=NULL	TypGroupUID=abc	JobName=-1
+BTABLE BidPages
+ROW UID=21	EmployeeUID=12	BidLayerUID= 7 	BidPageUID=21	OrigBidProjectUID=7	BidConditionUID=	TypGroupTakeoffUID=0	Notes=	Name=Area	Sequence=1
+ROW UID=NULL	JobSiteManagerUID=4	BidTypAreaUID=abc	BidTakeoffFromUID=10	MasterAreaUID=999	BidLayerUID=	OrigBidProjectUID=NULL	BidAreaSelected=-1
+ROW UID=8	PayClassUID=abc	BidConditionUID=12	BidTakeoffFromUID=NULL	EmployeeUID=NULL	BidZoneUID=21	BidTakeoffToUID=8	Notes=x y
+PTABLE BidDimensions
+ROW UID=0	MasterAreaUID=4	OrigBidProjectUID=10	BidZoneUID=5	BidUID=8	OCRUID=abc	Notes=2.5	BidAreaSelected=abc	Count=1
+ROW UID=5	PayClassUID=11	BidTakeoffFromUID=21	OrigBidProjectUID=12	SomethingElseUID=	Sequence=-1	Name=NULL	Notes=2
+ROW UID=20	BidPageViewUID=3	Notes=abc
+PTABLE BidTexts
+PTABLE BidArrows
+ROW UID=abc	BidPageUID=
+ROW UID=	TypGroupMarkerUID=21	PrManagerUID=5	TranslateAreaUID=	Sequence=0	Count=NULL	JobName=Area
+ROW UID=1	OCRUID=9	PrManagerUID=1	EstimatorUID=12	BidTakeoffToUID=21
+ROW UID=9	BidAreaUID=11	MasterAreaUID=999	BidPageViewUID= 7 	JobSiteManagerUID=	Sequence=1
+PTABLE BidCallOuts
+ROW UID=NULL	BidPageViewUID=11	BidTakeoffToUID=	CoverSheetSelItemUID=999	Count=0	JobName=x y	Name=NULL
+ROW UID=7
+EXPECT
+BID UID=	OrigBidProjectUID=NULL	BidConditionFolderUID=116	BidPageViewUID=999	JobSiteManagerUID=NULL	PrManagerUID=NULL	Name=2
+BTABLE BidTypAreas
+BTABLE BidConditionFolders
+BTABLE BidLayers
+ROW UID=114	TypGroupUID=122	JobName=	Name=
+ROW UID=115	TypGroupUID=120	JobName=-1
+BTABLE BidPages
+ROW UID=116	EmployeeUID=241	BidLayerUID= 7 	BidPageUID=116	OrigBidProjectUID=NULL	BidConditionUID=	TypGroupTakeoffUID=NULL	Notes=	Name=Area	Sequence=1
+ROW UID=115	JobSiteManagerUID=NULL	BidTypAreaUID=120	BidTakeoffFromUID=10	MasterAreaUID=999	BidLayerUID=	OrigBidProjectUID=NULL	BidAreaSelected=-1
+ROW UID=117	PayClassUID=NULL	BidConditionUID=12	BidTakeoffFromUID=115	EmployeeUID=NULL	BidZoneUID=116	BidTakeoffToUID=117	Notes=x y
+PTABLE BidDimensions
+ROW UID=NULL	MasterAreaUID=4	OrigBidProjectUID=NULL	BidZoneUID=118	BidUID=117	OCRUID=NULL	Notes=2.5	BidAreaSelected=abc	Count=1
+ROW UID=118	PayClassUID=NULL	BidTakeoffFromUID=116	OrigBidProjectUID=NULL	SomethingElseUID=	Sequence=-1	Name=NULL	Notes=2
+ROW UID=119	BidPageViewUID=3	Notes=abc
+PTABLE BidTexts
+PTABLE BidArrows
+ROW UID=120	BidPageUID=
+ROW UID=	TypGroupMarkerUID=116	PrManagerUID=NULL	TranslateAreaUID=	Sequence=0	Count=NULL	JobName=Area
+ROW UID=121	OCRUID=NULL	PrManagerUID=NULL	EstimatorUID=241	BidTakeoffToUID=116
+ROW UID=122	BidAreaUID=11	MasterAreaUID=999	BidPageViewUID= 7 	JobSiteManagerUID=	Sequence=1
+PTABLE BidCallOuts
+ROW UID=115	BidPageViewUID=11	BidTakeoffToUID=	CoverSheetSelItemUID=NULL	Count=0	JobName=x y	Name=NULL
+ROW UID=114
+PTABLE BidPageSettings
+END
+CASE 11
+MAXUID 574
+MAP cdn 20=213	10=613
+MAP job 1=503	20=503	12=829	4=157	3=450
+MAP emp 4=616	9=292	3=36
+MAP pay 
+BID UID=1	TypGroupUID=999	OrigBidProjectUID=3	TypPageTakeoffUID=4	TypGroupMarkerUID=NULL	JobStatusUID=8	JobName=0	Name=-1	Count=2.5
+EXPECT
+BID UID=575	TypGroupUID=999	OrigBidProjectUID=NULL	TypPageTakeoffUID=4	TypGroupMarkerUID=NULL	JobStatusUID=NULL	JobName=0	Name=-1	Count=2.5
+PTABLE BidPageSettings
+END
+CASE 12
+MAXUID 272
+MAP cdn 20=545	9=813	2=321	1=832	3=59	11=608
+MAP job 2=739
+MAP emp 5=425	7=702	 7 =727	2=698
+MAP pay 12=215	5=338	7=385
+BID UID=5	JobStatusUID=2	TypGroupMarkerUID=10	BidPageSelectedUID=30	CdnTypeUID=9
+BTABLE BidAreas
+ROW EmployeeUID=4	Sequence=1	JobName= 3 	Name=0
+ROW UID=NULL	BidTakeoffToUID= 7 	TypPageTakeoffUID=7	ParentUID=10	OrigBidProjectUID=30	Notes=0	Count=	Name=abc
+BTABLE BidTypAreaCounts
+ROW UID=4	OrigBidProjectUID=3	BidConditionUID=30	ParentBidUID= 7 	GUID=7	OCRUID=11	BidAreaSelected=2.5	Count=	Name=2.5
+ROW UID=10	TypGroupMarkerUID=1	OCRUID=12	BidTypAreaUID=2	JobName=x y	Sequence=2.5
+ROW UID=1	PrManagerUID=7	TypGroupMarkerUID=7	BidConditionUID=1	Name=2	BidAreaSelected=abc
+PTABLE BidAnnotationClouds
+ROW UID=7	PrManagerUID=20	OCRUID=10	Name=0	Sequence=Area
+PTABLE BidAnnotationPolygons
+EXPECT
+BID UID=273	JobStatusUID=739	TypGroupMarkerUID=276	BidPageSelectedUID=NULL	CdnTypeUID=813
+BTABLE BidAreas
+ROW EmployeeUID=NULL	Sequence=1	JobName= 3 	Name=0
+ROW UID=274	BidTakeoffToUID= 7 	TypPageTakeoffUID=278	ParentUID=276	OrigBidProjectUID=NULL	Notes=0	Count=	Name=abc
+BTABLE BidTypAreaCounts
+ROW UID=275	OrigBidProjectUID=NULL	BidConditionUID=30	ParentBidUID=NULL	GUID=7	OCRUID=NULL	BidAreaSelected=2.5	Count=	Name=2.5
+ROW UID=276	TypGroupMarkerUID=277	OCRUID=NULL	BidTypAreaUID=2	JobName=x y	Sequence=2.5
+ROW UID=277	PrManagerUID=702	TypGroupMarkerUID=278	BidConditionUID=277	Name=2	BidAreaSelected=abc
+PTABLE BidAnnotationClouds
+ROW UID=278	PrManagerUID=NULL	OCRUID=NULL	Name=0	Sequence=Area
+PTABLE BidAnnotationPolygons
+PTABLE BidPageSettings
+END
+CASE 13
+MAXUID 485
+MAP cdn 
+MAP job 12=725	 7 =127	3=320	20=802	4=164
+MAP emp =492
+MAP pay =296	12=117	2=627
+BID UID=	BidProjectUID=30	BidAreaUID=12	JobName=2	Name=NULL
+BTABLE BidPlanRooms
+ROW UID=999	BidProjectUID=7	BidZoneUID=999
+ROW UID=5
+ROW UID=3	OCRUID=	EmployeeUID=20	CoverSheetSelItemUID=21	TypPageTakeoffUID=7	BidAreaSelected=0	Name=0
+BTABLE BidTypAreas
+ROW ParentBidUID=10	BidZoneUID=	JobName=x y	Count=1
+ROW UID=10	BidUID=999	MasterAreaUID=9	JobStatusUID=1	ParentUID=999	CoverSheetSelItemUID=7	BidTakeoffFromUID=0	BidAreaSelected=2	Count=	Sequence=-1
+BTABLE BidConditionFolders
+BTABLE BidLayers
+ROW UID=8	PayClassUID=10	ParentUID=30
+BTABLE BidTypAreaCounts
+BTABLE BidPages
+ROW UID=30	JobName=1	Notes=2.5	Name= 3 
+ROW UID=abc	BidPageSelectedUID=abc	Notes=2
+ROW UID=abc	BidZoneUID=999	BidProjectUID=5	MasterAreaUID=30	PayClassUID=12	TypPageTakeoffUID=abc	Count= 3 	BidAreaSelected=	Sequence=1
+BTABLE BidNamedViews
+ROW UID=9	JobSiteManagerUID= 7 	Name=NULL	Count=Area
+ROW UID=5	TypGroupTakeoffUID= 7 	EstimatorUID=999	BidUID=5	BidAreaUID=NULL	Name=NULL	Notes=abc	BidAreaSelected=-1
+PTABLE BidAnnotationRects
+ROW UID= 7 	SomethingElseUID=2	OrigBidProjectUID=3	TypGroupMarkerUID=4	BidPageSelectedUID=30	Notes=-1
+ROW UID=4	BidZoneUID=9	EmployeeUID=4	Notes=NULL
+ROW UID=abc	BidUID=9	MasterPageUID=20	CdnTypeUID=9	BidTypAreaUID=999	ParentBidUID=0
+ROW UID=3	TypGroupUID=12	SomethingElseUID=0	BidTypAreaUID=0	BidProjectUID=21	Notes=-1
+PTABLE BidAreaTranslations
+ROW UID=20	JobSiteManagerUID=abc	BidConditionUID=1	MasterPageUID=8	ParentCommentUID=999	JobName=Area
+ROW UID=20	Count=1
+ROW UID=5	BidPageViewUID=11	BidUID=10	BidAreaSelected=Area	Name=1
+PTABLE BidAnnotationClouds
+ROW UID=4	PrManagerUID= 7 
+ROW UID=1	BidAreaUID=8	BidZoneUID=3	BidLayerUID=3	BidTakeoffToUID=1	BidTakeoffFromUID=11	BidAreaSelected=abc
+PTABLE BidAnnotationOvals
+ROW UID=0	TypGroupTakeoffUID=8	EmployeeUID=2	PayClassUID=0	BidProjectUID=30	BidConditionFolderUID=5	Count=2	Sequence=	Notes=NULL
+ROW UID=	Count=2	Name= 3 
+ROW UID=1	BidUID=20	BidProjectUID=3
+ROW UID=abc	BidTakeoffToUID= 7 	SourceBidUID=1	ParentUID=10	MasterPageUID=2	EstimatorUID= 7 	Notes=Area	Name= 3 	Count= 3 
+PTABLE BidPageSettings
+ROW UID=5	GUID= 7 	ParentBidUID=4	PayClassUID=1	ParentUID=7	BidAreaSelected=2
+ROW UID=11	JobStatusUID=4	OrigBidProjectUID=NULL	Sequence= 3 	BidAreaSelected=	Name= 3 	BidPageUID=21
+ROW UID=7	BidAreaSelected=abc	Sequence= 3 	Notes=	BidPageUID=7
+ROW UID=0	ParentUID=11	EstimatorUID=abc	BidAreaSelected=-1	BidPageUID=7
+EXPECT
+BID UID=	BidProjectUID=NULL	BidAreaUID=12	JobName=2	Name=NULL
+BTABLE BidPlanRooms
+ROW UID=486	BidProjectUID=NULL	BidZoneUID=486
+ROW UID=487
+ROW UID=488	OCRUID=	EmployeeUID=NULL	CoverSheetSelItemUID=NULL	TypPageTakeoffUID=499	BidAreaSelected=0	Name=0
+BTABLE BidTypAreas
+ROW ParentBidUID=NULL	BidZoneUID=	JobName=x y	Count=1
+ROW UID=489	BidUID=486	MasterAreaUID=493	JobStatusUID=NULL	ParentUID=486	CoverSheetSelItemUID=NULL	BidTakeoffFromUID=NULL	BidAreaSelected=2	Count=	Sequence=-1
+BTABLE BidConditionFolders
+BTABLE BidLayers
+ROW UID=490	PayClassUID=NULL	ParentUID=491
+BTABLE BidTypAreaCounts
+BTABLE BidPages
+ROW UID=491	JobName=1	Notes=2.5	Name= 3 
+ROW UID=492	BidPageSelectedUID=492	Notes=2
+ROW UID=492	BidZoneUID=486	BidProjectUID=NULL	MasterAreaUID=491	PayClassUID=117	TypPageTakeoffUID=492	Count= 3 	BidAreaSelected=	Sequence=1
+BTABLE BidNamedViews
+ROW UID=493	JobSiteManagerUID=NULL	Name=NULL	Count=Area
+ROW UID=487	TypGroupTakeoffUID=494	EstimatorUID=NULL	BidUID=487	BidAreaUID=NULL	Name=NULL	Notes=abc	BidAreaSelected=-1
+PTABLE BidAnnotationRects
+ROW UID=494	SomethingElseUID=2	OrigBidProjectUID=NULL	TypGroupMarkerUID=495	BidPageSelectedUID=491	Notes=-1
+ROW UID=495	BidZoneUID=493	EmployeeUID=NULL	Notes=NULL
+ROW UID=492	BidUID=493	MasterPageUID=496	CdnTypeUID=9	BidTypAreaUID=486	ParentBidUID=NULL
+ROW UID=488	TypGroupUID=12	SomethingElseUID=NULL	BidTypAreaUID=NULL	BidProjectUID=NULL	Notes=-1
+PTABLE BidAreaTranslations
+ROW UID=496	JobSiteManagerUID=NULL	BidConditionUID=497	MasterPageUID=490	ParentCommentUID=486	JobName=Area
+ROW UID=496	Count=1
+ROW UID=487	BidPageViewUID=498	BidUID=489	BidAreaSelected=Area	Name=1
+PTABLE BidAnnotationClouds
+ROW UID=495	PrManagerUID=NULL
+ROW UID=497	BidAreaUID=490	BidZoneUID=488	BidLayerUID=488	BidTakeoffToUID=497	BidTakeoffFromUID=498	BidAreaSelected=abc
+PTABLE BidAnnotationOvals
+ROW UID=NULL	TypGroupTakeoffUID=490	EmployeeUID=NULL	PayClassUID=NULL	BidProjectUID=NULL	BidConditionFolderUID=487	Count=2	Sequence=	Notes=NULL
+ROW UID=	Count=2	Name= 3 
+ROW UID=497	BidUID=496	BidProjectUID=NULL
+ROW UID=492	BidTakeoffToUID=494	SourceBidUID=NULL	ParentUID=489	MasterPageUID=2	EstimatorUID=NULL	Notes=Area	Name= 3 	Count= 3 
+PTABLE BidPageSettings
+ROW UID=498	JobStatusUID=164	OrigBidProjectUID=NULL	Sequence= 3 	BidAreaSelected=	Name= 3 	BidPageUID=21
+ROW UID=499	BidAreaSelected=abc	Sequence= 3 	Notes=	BidPageUID=499
+ROW UID=NULL	ParentUID=498	EstimatorUID=NULL	BidAreaSelected=-1	BidPageUID=499
+ROW UID=487	GUID= 7 	ParentBidUID=NULL	PayClassUID=NULL	ParentUID=499	BidAreaSelected=2
+END
+CASE 14
+MAXUID 117
+MAP cdn 
+MAP job 8=123	20=192	7=224	4=771	11=618	3=740
+MAP emp 10=535	4=446	7=554	 7 =90	1=850	8=197
+MAP pay 1=333	 7 =590	20=786
+BID UID=	JobSiteManagerUID=10	TypPageTakeoffUID=abc	MasterPageUID=21	OCRUID=NULL	Count=0	Notes=-1	JobName=1
+BTABLE BidTypAreas
+ROW UID= 7 	JobStatusUID=999	EstimatorUID=1
+ROW UID=5	BidTakeoffToUID=NULL	MasterPageUID=3	BidConditionFolderUID=0	BidAreaUID=0	OrigBidProjectUID=21	BidZoneUID= 7 	Name=0	BidAreaSelected=1	Notes=-1
+BTABLE BidConditionFolders
+ROW UID=NULL	CoverSheetSelItemUID= 7 	Sequence=abc	Name=	JobName=1
+ROW UID=8	CdnTypeUID=3
+BTABLE BidPageFolders
+ROW TypGroupTakeoffUID=11	EstimatorUID=9	CoverSheetSelItemUID= 7 	BidProjectUID=4	Notes=0	Name= 3 	BidAreaSelected=-1
+ROW UID=2	BidProjectUID=20	GUID=20	Count= 3 
+ROW UID=abc	BidUID=8	ParentCommentUID=11	MasterPageUID=	CdnTypeUID= 7 	JobName=1
+BTABLE OCRProps
+BTABLE BidPages
+ROW UID=7	TypGroupMarkerUID=9	BidTakeoffToUID=9	Notes=2	Name=2.5	JobName=2.5
+BTABLE BidHotLinks
+ROW UID=8	SourceBidUID=4	BidProjectUID=4	BidConditionFolderUID= 7 	ParentBidUID=30
+PTABLE BidAnnotationRects
+ROW UID=21	TypGroupUID=10	JobSiteManagerUID=	Name=-1
+ROW UID=1	Notes=x y	Sequence=abc
+ROW UID=8	BidAreaUID=10	JobSiteManagerUID=11	ParentBidUID=NULL	Count=2	Sequence=Area	BidAreaSelected=1
+EXPECT
+BID UID=	JobSiteManagerUID=535	TypPageTakeoffUID=123	MasterPageUID=125	OCRUID=NULL	Count=0	Notes=-1	JobName=1
+BTABLE BidTypAreas
+ROW UID=118	JobStatusUID=NULL	EstimatorUID=850
+ROW UID=119	BidTakeoffToUID=120	MasterPageUID=3	BidConditionFolderUID=NULL	BidAreaUID=NULL	OrigBidProjectUID=NULL	BidZoneUID=118	Name=0	BidAreaSelected=1	Notes=-1
+BTABLE BidConditionFolders
+ROW UID=120	CoverSheetSelItemUID=NULL	Sequence=abc	Name=	JobName=1
+ROW UID=121	CdnTypeUID=3
+BTABLE BidPageFolders
+ROW TypGroupTakeoffUID=11	EstimatorUID=NULL	CoverSheetSelItemUID=NULL	BidProjectUID=NULL	Notes=0	Name= 3 	BidAreaSelected=-1
+ROW UID=122	BidProjectUID=NULL	GUID=20	Count= 3 
+ROW UID=123	BidUID=121	ParentCommentUID=11	MasterPageUID=	CdnTypeUID= 7 	JobName=1
+BTABLE OCRProps
+BTABLE BidPages
+ROW UID=124	TypGroupMarkerUID=9	BidTakeoffToUID=9	Notes=2	Name=2.5	JobName=2.5
+BTABLE BidHotLinks
+ROW UID=121	SourceBidUID=NULL	BidProjectUID=NULL	BidConditionFolderUID=118	ParentBidUID=NULL
+PTABLE BidAnnotationRects
+ROW UID=125	TypGroupUID=10	JobSiteManagerUID=	Name=-1
+ROW UID=126	Notes=x y	Sequence=abc
+ROW UID=121	BidAreaUID=10	JobSiteManagerUID=NULL	ParentBidUID=NULL	Count=2	Sequence=Area	BidAreaSelected=1
+PTABLE BidPageSettings
+END
+CASE 15
+MAXUID 121
+MAP cdn 7=525	5=600
+MAP job 11=194	9=571	 7 =352	3=123	12=421	=349
+MAP emp 3=645	4=430	11=724	 7 =213
+MAP pay =508	20=473	11=318	7=663
+BID UID=1	BidPageSelectedUID=9	Sequence=1	Notes=x y
+BTABLE BidConditionFolders
+ROW UID=21	BidConditionFolderUID=20	BidPageFolderUID= 7 	EmployeeUID=5	BidLayerUID=30	TypGroupTakeoffUID=3	Notes=2.5
+ROW UID=	BidTakeoffFromUID=7	PrManagerUID=NULL	SourceBidUID=10	OrigParentBidUID=9	Count=2
+BTABLE BidConditions
+ROW UID=abc	TranslateAreaUID=30	ParentBidUID=
+BTABLE BidConditionUser
+ROW UID=9	ParentUID=20	JobSiteManagerUID=4	PrManagerUID=8	BidAreaSelected=abc	Count=0
+ROW UID=abc	BidTypAreaUID=30	ParentUID=8	TranslateAreaUID=7	EmployeeUID=3	OrigParentBidUID=999	BidAreaSelected=-1
+ROW UID=3	BidConditionFolderUID=30	BidAreaUID=0	OrigBidProjectUID=3	BidUID=2
+PTABLE BidAnnotationRects
+ROW UID=20	EmployeeUID=11	BidPageUID=1	Sequence=abc
+ROW UID=abc	BidUID=7	SourceBidUID=8	SomethingElseUID=0	BidPageViewUID=5	Name= 3 	JobName=1
+PTABLE BidPageSettings
+ROW UID=999	CoverSheetSelItemUID=11	BidTakeoffFromUID=21	Notes=	BidAreaSelected= 3 	BidPageUID=
+EXPECT
+BID UID=122	BidPageSelectedUID=NULL	Sequence=1	Notes=x y
+BTABLE BidConditionFolders
+ROW UID=123	BidConditionFolderUID=127	BidPageFolderUID= 7 	EmployeeUID=NULL	BidLayerUID=30	TypGroupTakeoffUID=126	Notes=2.5
+ROW UID=	BidTakeoffFromUID=7	PrManagerUID=NULL	SourceBidUID=NULL	OrigParentBidUID=NULL	Count=2
+BTABLE BidConditions
+ROW UID=124	TranslateAreaUID=30	ParentBidUID=
+BTABLE BidConditionUser
+ROW UID=125	ParentUID=127	JobSiteManagerUID=430	PrManagerUID=NULL	BidAreaSelected=abc	Count=0
+ROW UID=124	BidTypAreaUID=30	ParentUID=8	TranslateAreaUID=7	EmployeeUID=645	OrigParentBidUID=NULL	BidAreaSelected=-1
+ROW UID=126	BidConditionFolderUID=30	BidAreaUID=NULL	OrigBidProjectUID=NULL	BidUID=2
+PTABLE BidAnnotationRects
+ROW UID=127	EmployeeUID=724	BidPageUID=122	Sequence=abc
+ROW UID=124	BidUID=7	SourceBidUID=NULL	SomethingElseUID=NULL	BidPageViewUID=5	Name= 3 	JobName=1
+PTABLE BidPageSettings
+ROW UID=128	CoverSheetSelItemUID=NULL	BidTakeoffFromUID=123	Notes=	BidAreaSelected= 3 	BidPageUID=
+END
+CASE 16
+MAXUID 320
+MAP cdn 12=47	 7 =696	5=26	7=283	20=615
+MAP job 1=415	11=118	5=771	8=240	3=586
+MAP emp  7 =329	3=389	9=545	2=280	7=336
+MAP pay 5=781	2=322	12=178
+BID UID=1	CoverSheetSelItemUID=0	BidLayerUID=11	BidTypAreaUID= 7 	JobSiteManagerUID=7	Notes=x y	Sequence=abc	Name=
+BTABLE BidConditionUser
+ROW UID=11	BidTakeoffFromUID=20	BidAreaUID=7	Name=	JobName=0
+ROW UID=7	BidPageViewUID=4	TypGroupUID=12	JobStatusUID=9	TypPageTakeoffUID=12	TranslateAreaUID=20	Sequence=-1	BidAreaSelected=0	Count=abc
+ROW UID=999	Count=0	Sequence=0
+BTABLE BidPages
+ROW Sequence=0
+ROW UID=NULL	ParentCommentUID=7	BidUID=10	BidPageViewUID=4	CdnTypeUID=7	JobName=2.5	Name=x y	BidAreaSelected=2.5
+PTABLE BidAnnoInk
+ROW UID=1	SomethingElseUID=4	OrigBidProjectUID=11	JobStatusUID=3
+ROW UID=3	CoverSheetSelItemUID=999	BidTakeoffToUID=5	BidTypAreaUID=0	TypGroupTakeoffUID=11
+PTABLE BidAnnotationOvals
+ROW UID=abc	BidPageFolderUID= 7 	CoverSheetSelItemUID=20	GUID=10	OCRUID=11	TypGroupTakeoffUID=10	Count=NULL	Name=	Notes=2.5
+ROW UID=2
+PTABLE BidCallOuts
+ROW UID=11	GUID=999	ParentUID=5	BidConditionFolderUID=3	TranslateAreaUID=8	SomethingElseUID=999
+ROW UID=30	OrigBidProjectUID=11	BidConditionUID=11	TypPageTakeoffUID=21	GUID=21	Name=NULL	Count=0
+ROW UID=11	JobStatusUID=21	OrigBidProjectUID=7	BidAreaUID=NULL	BidProjectUID=999	Count=Area	JobName=abc	BidAreaSelected=x y
+ROW UID=2	TypGroupUID=7	OrigParentBidUID=21	BidTakeoffFromUID=0	PayClassUID=8	BidLayerUID=20	BidZoneUID=NULL	Count=1	BidAreaSelected=2
+PTABLE BidAreaTranslations
+ROW UID=10	BidTakeoffFromUID=3	GUID=abc	Sequence=
+ROW UID=12	SourceBidUID= 7 
+ROW UID= 7 	BidPageUID=999	Notes=2.5	JobName=NULL	Sequence=Area
+PTABLE BidPageSettings
+ROW TranslateAreaUID=11	BidPageViewUID=21	OrigBidProjectUID=8	MasterPageUID=1	JobSiteManagerUID=21	JobStatusUID=	BidAreaSelected=NULL	Notes=x y	Name=abc	BidPageUID=8
+ROW UID=20	TypGroupUID=10	BidProjectUID=12	BidAreaSelected=-1	BidPageUID=5
+ROW UID=1	JobSiteManagerUID=30	BidAreaSelected=abc	Count=-1	JobName=Area	BidPageUID=7
+ROW UID=5	BidTakeoffToUID=11	ParentCommentUID=NULL	Sequence=2.5	BidAreaSelected= 3 	BidPageUID=7
+ROW UID=8	MasterPageUID=999	TranslateAreaUID=5	BidTakeoffFromUID=1	CdnTypeUID=9	EmployeeUID=10	JobName= 3 	Notes=2	BidAreaSelected=0
+ROW UID=abc	TypGroupTakeoffUID=999	JobStatusUID=10	Sequence=2	Name=NULL	JobName=Area	BidAreaSelected=1	BidPageUID=20
+ROW UID=2	MasterAreaUID=20	BidTakeoffFromUID=0	JobName=NULL	Sequence= 3 	Count=1	BidAreaSelected=-1	BidPageUID=20
+EXPECT
+BID UID=321	CoverSheetSelItemUID=NULL	BidLayerUID=322	BidTypAreaUID=332	JobSiteManagerUID=336	Notes=x y	Sequence=abc	Name=
+BTABLE BidConditionUser
+ROW UID=322	BidTakeoffFromUID=333	BidAreaUID=323	Name=	JobName=0
+ROW UID=323	BidPageViewUID=4	TypGroupUID=331	JobStatusUID=NULL	TypPageTakeoffUID=331	TranslateAreaUID=333	Sequence=-1	BidAreaSelected=0	Count=abc
+ROW UID=324	Count=0	Sequence=0
+BTABLE BidPages
+ROW Sequence=0
+ROW UID=325	ParentCommentUID=323	BidUID=330	BidPageViewUID=4	CdnTypeUID=283	JobName=2.5	Name=x y	BidAreaSelected=2.5
+PTABLE BidAnnoInk
+ROW UID=321	SomethingElseUID=4	OrigBidProjectUID=NULL	JobStatusUID=586
+ROW UID=326	CoverSheetSelItemUID=NULL	BidTakeoffToUID=334	BidTypAreaUID=NULL	TypGroupTakeoffUID=322
+PTABLE BidAnnotationOvals
+ROW UID=327	BidPageFolderUID=332	CoverSheetSelItemUID=NULL	GUID=10	OCRUID=NULL	TypGroupTakeoffUID=330	Count=NULL	Name=	Notes=2.5
+ROW UID=328
+PTABLE BidCallOuts
+ROW UID=322	GUID=999	ParentUID=334	BidConditionFolderUID=326	TranslateAreaUID=335	SomethingElseUID=999
+ROW UID=329	OrigBidProjectUID=NULL	BidConditionUID=322	TypPageTakeoffUID=21	GUID=21	Name=NULL	Count=0
+ROW UID=322	JobStatusUID=NULL	OrigBidProjectUID=NULL	BidAreaUID=325	BidProjectUID=NULL	Count=Area	JobName=abc	BidAreaSelected=x y
+ROW UID=328	TypGroupUID=323	OrigParentBidUID=NULL	BidTakeoffFromUID=NULL	PayClassUID=NULL	BidLayerUID=333	BidZoneUID=325	Count=1	BidAreaSelected=2
+PTABLE BidAreaTranslations
+ROW UID=330	BidTakeoffFromUID=326	GUID=abc	Sequence=
+ROW UID=331	SourceBidUID=NULL
+ROW UID=332	BidPageUID=324	Notes=2.5	JobName=NULL	Sequence=Area
+PTABLE BidPageSettings
+ROW TranslateAreaUID=322	BidPageViewUID=21	OrigBidProjectUID=NULL	MasterPageUID=321	JobSiteManagerUID=NULL	JobStatusUID=	BidAreaSelected=NULL	Notes=x y	Name=abc	BidPageUID=335
+ROW UID=333	TypGroupUID=330	BidProjectUID=NULL	BidAreaSelected=-1	BidPageUID=334
+ROW UID=321	JobSiteManagerUID=NULL	BidAreaSelected=abc	Count=-1	JobName=Area	BidPageUID=323
+ROW UID=335	MasterPageUID=324	TranslateAreaUID=334	BidTakeoffFromUID=321	CdnTypeUID=9	EmployeeUID=NULL	JobName= 3 	Notes=2	BidAreaSelected=0
+ROW UID=328	MasterAreaUID=333	BidTakeoffFromUID=NULL	JobName=NULL	Sequence= 3 	Count=1	BidAreaSelected=-1	BidPageUID=333
+ROW UID=334	BidTakeoffToUID=322	ParentCommentUID=325	Sequence=2.5	BidAreaSelected= 3 	BidPageUID=323
+ROW UID=327	TypGroupTakeoffUID=324	JobStatusUID=NULL	Sequence=2	Name=NULL	JobName=Area	BidAreaSelected=1	BidPageUID=333
+END
+CASE 17
+MAXUID 245
+MAP cdn 
+MAP job 20=322
+MAP emp 2=276	5=213	11=742	8=262	1=751
+MAP pay 11=657	1=185
+BID UID=1	CdnTypeUID=1	BidAreaUID=7	OrigParentBidUID=2	BidPageUID=0	BidTypAreaUID=0	Sequence=abc	JobName=1	BidAreaSelected=2.5
+BTABLE BidPlanRooms
+BTABLE BidAreas
+ROW UID=12	BidPageUID=4	EstimatorUID=3	MasterPageUID=9	CoverSheetSelItemUID=11	PrManagerUID=999	OrigBidProjectUID=0	JobName=abc	Notes=1
+BTABLE BidLayers
+ROW UID=1	EmployeeUID=	OrigBidProjectUID=12	PrManagerUID=5	Name=2	Notes=
+ROW UID=0	ParentUID=1	BidPageUID=999	GUID=0	MasterAreaUID=8
+ROW UID=9	EmployeeUID=30	OrigParentBidUID=999
+BTABLE BidConditionUser
+ROW UID=5
+PTABLE BidArrows
+ROW UID=8	TypPageTakeoffUID=2	ParentCommentUID=8	SourceBidUID=8	BidTakeoffToUID=30	BidTypAreaUID=abc
+ROW UID=2	PayClassUID=	MasterAreaUID=abc	BidPageFolderUID=1	PrManagerUID=10	OrigParentBidUID=0	Name=0	Notes= 3 	JobName=2.5
+ROW UID= 7 	Notes=-1
+PTABLE BidHighlights
+ROW CoverSheetSelItemUID=20	BidPageFolderUID= 7 
+PTABLE BidComments
+ROW UID=30	BidTakeoffToUID=8	EmployeeUID=21	BidPageSelectedUID=5	BidAreaSelected=-1	Count=x y
+ROW UID=21	ParentBidUID=20	JobName=1	Sequence=2	Notes=
+ROW OrigParentBidUID=2	OrigBidProjectUID=8	TypGroupMarkerUID=20	OCRUID= 7 	Sequence=-1	Notes=2.5	BidAreaSelected=abc
+PTABLE BidDimensions
+ROW CoverSheetSelItemUID=11	PayClassUID=8	JobSiteManagerUID=2	BidPageSelectedUID=1	Sequence=NULL
+ROW UID=9	BidUID=11	Name=	JobName=x y	Count=2.5
+ROW UID=0	CoverSheetSelItemUID=21	SourceBidUID=4	Sequence= 3 	Count=x y	Name=-1
+ROW UID= 7 	Notes=NULL
+ROW BidProjectUID=0	BidAreaSelected=1
+PTABLE BidPageSettings
+ROW UID= 7 	BidPageSelectedUID=21	SomethingElseUID=7	BidUID=abc	BidAreaSelected=1	BidPageUID=5
+ROW UID=abc	BidAreaUID=3	OrigParentBidUID=2	BidPageUID=7	ParentCommentUID=20	Notes=Area	BidAreaSelected= 3 
+ROW UID=20	TypGroupMarkerUID=12	TypPageTakeoffUID=30	ParentUID=30	EstimatorUID=2	BidAreaUID=20	Sequence=NULL	BidAreaSelected=2	BidPageUID=5
+EXPECT
+BID UID=246	CdnTypeUID=1	BidAreaUID=7	OrigParentBidUID=NULL	BidPageUID=NULL	BidTypAreaUID=NULL	Sequence=abc	JobName=1	BidAreaSelected=2.5
+BTABLE BidPlanRooms
+BTABLE BidAreas
+ROW UID=247	BidPageUID=4	EstimatorUID=NULL	MasterPageUID=248	CoverSheetSelItemUID=NULL	PrManagerUID=NULL	OrigBidProjectUID=NULL	JobName=abc	Notes=1
+BTABLE BidLayers
+ROW UID=246	EmployeeUID=	OrigBidProjectUID=NULL	PrManagerUID=213	Name=2	Notes=
+ROW UID=NULL	ParentUID=246	BidPageUID=999	GUID=NULL	MasterAreaUID=250
+ROW UID=248	EmployeeUID=NULL	OrigParentBidUID=NULL
+BTABLE BidConditionUser
+ROW UID=249
+PTABLE BidArrows
+ROW UID=250	TypPageTakeoffUID=251	ParentCommentUID=250	SourceBidUID=NULL	BidTakeoffToUID=253	BidTypAreaUID=255
+ROW UID=251	PayClassUID=	MasterAreaUID=255	BidPageFolderUID=246	PrManagerUID=NULL	OrigParentBidUID=NULL	Name=0	Notes= 3 	JobName=2.5
+ROW UID=252	Notes=-1
+PTABLE BidHighlights
+ROW CoverSheetSelItemUID=NULL	BidPageFolderUID=252
+PTABLE BidComments
+ROW UID=253	BidTakeoffToUID=250	EmployeeUID=NULL	BidPageSelectedUID=NULL	BidAreaSelected=-1	Count=x y
+ROW UID=254	ParentBidUID=NULL	JobName=1	Sequence=2	Notes=
+ROW OrigParentBidUID=NULL	OrigBidProjectUID=NULL	TypGroupMarkerUID=256	OCRUID=NULL	Sequence=-1	Notes=2.5	BidAreaSelected=abc
+PTABLE BidDimensions
+ROW CoverSheetSelItemUID=NULL	PayClassUID=NULL	JobSiteManagerUID=276	BidPageSelectedUID=NULL	Sequence=NULL
+ROW UID=248	BidUID=11	Name=	JobName=x y	Count=2.5
+ROW UID=NULL	CoverSheetSelItemUID=NULL	SourceBidUID=NULL	Sequence= 3 	Count=x y	Name=-1
+ROW UID=252	Notes=NULL
+ROW BidProjectUID=NULL	BidAreaSelected=1
+PTABLE BidPageSettings
+ROW UID=256	TypGroupMarkerUID=247	TypPageTakeoffUID=253	ParentUID=253	EstimatorUID=276	BidAreaUID=256	Sequence=NULL	BidAreaSelected=2	BidPageUID=249
+ROW UID=255	BidAreaUID=3	OrigParentBidUID=NULL	BidPageUID=7	ParentCommentUID=256	Notes=Area	BidAreaSelected= 3 
+END
+CASE 18
+MAXUID 150
+MAP cdn 7=875	3=477
+MAP job  7 =206	3=675	20=801
+MAP emp 1=479	5=807	9=319
+MAP pay 20=466	1=651	=471	10=47	12=489	7=26
+BID UID=1	BidTakeoffToUID=2	JobStatusUID=10	BidTakeoffFromUID=12	BidProjectUID=30	BidZoneUID=10
+BTABLE BidAreas
+ROW UID=9	EstimatorUID=999	PrManagerUID=12	BidTypAreaUID=9	BidAreaSelected=-1	Notes=
+ROW UID=1	MasterAreaUID=21	BidTakeoffFromUID=5	JobSiteManagerUID=0
+ROW UID=4	BidTakeoffToUID=0	BidLayerUID=10	Name=2	BidAreaSelected=2.5	JobName=2.5
+BTABLE BidPageFolders
+ROW UID=4	BidTypAreaUID=11	TypGroupTakeoffUID=20	TranslateAreaUID=11	BidTakeoffFromUID=20	Sequence=NULL	BidAreaSelected=-1	JobName=2.5
+BTABLE BidPages
+ROW UID=21	JobSiteManagerUID=7	CoverSheetSelItemUID=9	BidTakeoffFromUID=1	SourceBidUID=4	Notes=0
+ROW UID=999	TypPageTakeoffUID=10	CdnTypeUID=12	GUID=3	BidPageFolderUID=2	MasterPageUID=8
+ROW UID=0	BidPageUID=4	BidTakeoffFromUID=abc	PayClassUID=1	ParentBidUID=10	TypPageTakeoffUID=11	BidAreaUID=5	JobName= 3 
+PTABLE BidAnnoInk
+ROW UID=2	PayClassUID=999	CoverSheetSelItemUID=999	TypPageTakeoffUID=7	BidPageViewUID= 7 	GUID=11
+ROW UID=9	BidAreaUID=9	MasterPageUID=NULL	JobStatusUID=999
+ROW UID=1	BidPageSelectedUID=3	OrigParentBidUID=8	OrigBidProjectUID=21	ParentUID=7	Count=2.5	Notes=
+ROW JobSiteManagerUID=7	ParentUID=5	BidPageUID=999	BidPageSelectedUID=0	Sequence=-1	BidAreaSelected= 3 	Name=abc
+PTABLE BidAnnotationPolygons
+ROW UID=7	BidZoneUID=4	SourceBidUID=0	GUID=3	Count=2.5	Sequence=2
+ROW UID=11	BidAreaUID=20	OrigParentBidUID=8	TranslateAreaUID=999
+ROW SomethingElseUID=1	BidZoneUID=4
+ROW UID=11	BidTakeoffToUID=3	CdnTypeUID=21	EstimatorUID=4	BidPageFolderUID=3	Count=x y	Sequence=
+ROW UID=9	BidPageFolderUID=2	OCRUID=999	BidTakeoffFromUID=21	BidLayerUID=3	TypGroupUID=4	BidAreaSelected=1	Sequence=2
+PTABLE BidALines
+ROW UID=30	BidTypAreaUID=12	TypGroupUID=2	BidAreaSelected=2
+ROW TypPageTakeoffUID=21
+PTABLE BidPageSettings
+ROW UID=1	BidAreaSelected=abc	Count= 3 	Name=2
+ROW UID=3	CdnTypeUID= 7 	ParentCommentUID=3	TranslateAreaUID=12	TypPageTakeoffUID=21	SomethingElseUID=abc	JobName=2.5	BidAreaSelected=1	Notes=0	BidPageUID=
+ROW UID=30	BidTypAreaUID=1	PrManagerUID= 7 	GUID=12	BidPageSelectedUID=4	BidUID=7	CdnTypeUID=9	BidAreaSelected=1	Notes=-1	BidPageUID=0
+ROW UID=	SourceBidUID=4	BidPageSelectedUID= 7 	TranslateAreaUID=8	BidTakeoffFromUID=NULL	OCRUID=abc	SomethingElseUID=30	BidAreaSelected= 3 
+ROW UID=11	BidPageFolderUID=10	BidTakeoffToUID=4	MasterAreaUID=9	Name=0	BidAreaSelected=0
+ROW UID=11	MasterAreaUID=12	JobSiteManagerUID=11	ParentUID=20	CoverSheetSelItemUID=abc	TypGroupTakeoffUID=4	Sequence=2.5	Name=	BidAreaSelected=0	BidPageUID=5
+ROW Count= 3 	BidAreaSelected=-1	Sequence=2
+EXPECT
+BID UID=151	BidTakeoffToUID=156	JobStatusUID=NULL	BidTakeoffFromUID=12	BidProjectUID=NULL	BidZoneUID=10
+BTABLE BidAreas
+ROW UID=152	EstimatorUID=NULL	PrManagerUID=NULL	BidTypAreaUID=152	BidAreaSelected=-1	Notes=
+ROW UID=151	MasterAreaUID=154	BidTakeoffFromUID=5	JobSiteManagerUID=NULL
+ROW UID=153	BidTakeoffToUID=NULL	BidLayerUID=10	Name=2	BidAreaSelected=2.5	JobName=2.5
+BTABLE BidPageFolders
+ROW UID=153	BidTypAreaUID=158	TypGroupTakeoffUID=20	TranslateAreaUID=158	BidTakeoffFromUID=20	Sequence=NULL	BidAreaSelected=-1	JobName=2.5
+BTABLE BidPages
+ROW UID=154	JobSiteManagerUID=NULL	CoverSheetSelItemUID=NULL	BidTakeoffFromUID=151	SourceBidUID=NULL	Notes=0
+ROW UID=155	TypPageTakeoffUID=10	CdnTypeUID=12	GUID=3	BidPageFolderUID=156	MasterPageUID=8
+ROW UID=NULL	BidPageUID=153	BidTakeoffFromUID=abc	PayClassUID=651	ParentBidUID=NULL	TypPageTakeoffUID=158	BidAreaUID=5	JobName= 3 
+PTABLE BidAnnoInk
+ROW UID=156	PayClassUID=NULL	CoverSheetSelItemUID=NULL	TypPageTakeoffUID=157	BidPageViewUID= 7 	GUID=11
+ROW UID=152	BidAreaUID=152	MasterPageUID=NULL	JobStatusUID=NULL
+ROW UID=151	BidPageSelectedUID=NULL	OrigParentBidUID=NULL	OrigBidProjectUID=NULL	ParentUID=157	Count=2.5	Notes=
+ROW JobSiteManagerUID=NULL	ParentUID=5	BidPageUID=155	BidPageSelectedUID=NULL	Sequence=-1	BidAreaSelected= 3 	Name=abc
+PTABLE BidAnnotationPolygons
+ROW UID=157	BidZoneUID=153	SourceBidUID=NULL	GUID=3	Count=2.5	Sequence=2
+ROW UID=158	BidAreaUID=20	OrigParentBidUID=NULL	TranslateAreaUID=155
+ROW SomethingElseUID=1	BidZoneUID=153
+ROW UID=158	BidTakeoffToUID=160	CdnTypeUID=21	EstimatorUID=NULL	BidPageFolderUID=160	Count=x y	Sequence=
+ROW UID=152	BidPageFolderUID=156	OCRUID=NULL	BidTakeoffFromUID=154	BidLayerUID=160	TypGroupUID=153	BidAreaSelected=1	Sequence=2
+PTABLE BidALines
+ROW UID=159	BidTypAreaUID=12	TypGroupUID=156	BidAreaSelected=2
+ROW TypPageTakeoffUID=154
+PTABLE BidPageSettings
+ROW UID=151	BidAreaSelected=abc	Count= 3 	Name=2
+ROW UID=158	BidPageFolderUID=10	BidTakeoffToUID=153	MasterAreaUID=152	Name=0	BidAreaSelected=0
+ROW UID=158	MasterAreaUID=12	JobSiteManagerUID=NULL	ParentUID=20	CoverSheetSelItemUID=NULL	TypGroupTakeoffUID=153	Sequence=2.5	Name=	BidAreaSelected=0	BidPageUID=5
+ROW Count= 3 	BidAreaSelected=-1	Sequence=2
+ROW UID=	SourceBidUID=NULL	BidPageSelectedUID=NULL	TranslateAreaUID=8	BidTakeoffFromUID=NULL	OCRUID=NULL	SomethingElseUID=30	BidAreaSelected= 3 
+END
+CASE 19
+MAXUID 161
+MAP cdn 7=108
+MAP job 1=439
+MAP emp 20=172	4=328	12=116	9=571	1=357	7=634
+MAP pay 10=495	8=415	9=335	=436	4=760	11=778
+BID UID=1	OCRUID=8	EmployeeUID=1	TypGroupMarkerUID=abc	Name=2
+BTABLE BidTypAreas
+ROW UID=7	TypGroupUID=21	BidTypAreaUID=	TypPageTakeoffUID=4	EmployeeUID=5	BidAreaSelected=x y	Notes= 3 	Count=0
+ROW OrigBidProjectUID=11	SomethingElseUID=NULL	BidAreaUID=7	BidUID=abc	EmployeeUID=10	BidConditionUID=21	BidAreaSelected=-1	Count=0
+BTABLE BidConditionFolders
+BTABLE BidPageFolders
+ROW UID=NULL	TypGroupTakeoffUID=30	BidPageFolderUID=9	JobSiteManagerUID=abc	ParentUID=20	GUID=12	Sequence=2.5	Notes=2.5	Count=2
+BTABLE BidEmployees
+ROW UID=21	ParentBidUID=3	EstimatorUID=11	BidPageUID=NULL	BidPageFolderUID=	ParentUID=2	BidAreaSelected=1	Notes=-1	Count=NULL
+BTABLE BidZones
+PTABLE BidAnnotationPolygons
+ROW UID=999	Sequence=0	Notes=2
+ROW UID=5	Sequence=2	Count=0
+PTABLE BidAnnotationClouds
+ROW UID=0
+ROW UID=8	Sequence=	Name=2	Notes=NULL
+EXPECT
+BID UID=162	OCRUID=NULL	EmployeeUID=357	TypGroupMarkerUID=abc	Name=2
+BTABLE BidTypAreas
+ROW UID=163	TypGroupUID=165	BidTypAreaUID=	TypPageTakeoffUID=4	EmployeeUID=NULL	BidAreaSelected=x y	Notes= 3 	Count=0
+ROW OrigBidProjectUID=NULL	SomethingElseUID=NULL	BidAreaUID=163	BidUID=abc	EmployeeUID=NULL	BidConditionUID=165	BidAreaSelected=-1	Count=0
+BTABLE BidConditionFolders
+BTABLE BidPageFolders
+ROW UID=164	TypGroupTakeoffUID=30	BidPageFolderUID=9	JobSiteManagerUID=NULL	ParentUID=20	GUID=12	Sequence=2.5	Notes=2.5	Count=2
+BTABLE BidEmployees
+ROW UID=165	ParentBidUID=NULL	EstimatorUID=NULL	BidPageUID=164	BidPageFolderUID=	ParentUID=2	BidAreaSelected=1	Notes=-1	Count=NULL
+BTABLE BidZones
+PTABLE BidAnnotationPolygons
+ROW UID=166	Sequence=0	Notes=2
+ROW UID=167	Sequence=2	Count=0
+PTABLE BidAnnotationClouds
+ROW UID=NULL
+ROW UID=168	Sequence=	Name=2	Notes=NULL
+PTABLE BidPageSettings
+END
+CASE 20
+MAXUID 252
+MAP cdn 3=178	20=805	1=59
+MAP job 
+MAP emp =752	1=429	20=144	10=811	3=742
+MAP pay 
+BID UID=1
+BTABLE BidLayers
+BTABLE BidZones
+ROW BidPageSelectedUID=8	BidZoneUID=3	EmployeeUID=1	SourceBidUID=1	BidProjectUID=3
+ROW UID=0	OCRUID=1	BidPageViewUID=NULL
+ROW UID=NULL	JobSiteManagerUID=5	JobName=-1
+BTABLE BidPages
+ROW UID=2	BidConditionUID=21	JobSiteManagerUID=10	TypGroupTakeoffUID=9	ParentCommentUID=9	BidAreaUID=999	Name=NULL	BidAreaSelected=0	Count=abc
+ROW UID=9	PrManagerUID=	Count=
+ROW UID=abc	BidPageViewUID=1	SourceBidUID=9	BidZoneUID=7	Name=2	Sequence=Area	BidAreaSelected=1
+PTABLE BidLegends
+ROW UID=0	BidPageUID=3	TypGroupTakeoffUID=20	BidPageSelectedUID=1	BidPageViewUID=5	Name=x y	Notes=x y
+ROW UID=5	BidTakeoffToUID=9	Name=
+ROW UID=4	CoverSheetSelItemUID=10	OCRUID=12
+ROW PayClassUID=10	TypGroupUID=12	TranslateAreaUID=999	JobStatusUID=0	JobSiteManagerUID=9	CoverSheetSelItemUID=3	Count=2.5	Notes=Area
+PTABLE BidCallOuts
+ROW UID=NULL	BidUID=11	BidPageFolderUID=999	EmployeeUID=2	TypGroupTakeoffUID=1
+ROW UID=20	BidUID=4	JobName= 3 
+ROW UID=	EstimatorUID=1	BidPageFolderUID=1
+ROW BidPageSelectedUID=20	BidTakeoffFromUID=12	PrManagerUID=2	TypPageTakeoffUID=20	BidZoneUID=3	Name=NULL	JobName=2.5
+ROW UID=1
+PTABLE BidAnnotationOvals
+PTABLE BidAnnoInk
+PTABLE BidAnnotationClouds
+ROW UID=12
+ROW CdnTypeUID=21	BidConditionUID=8	BidProjectUID= 7 	TypPageTakeoffUID=10	JobName=NULL
+ROW UID=999	OrigBidProjectUID=8	ParentCommentUID=999	CoverSheetSelItemUID=	BidPageViewUID=8	BidAreaUID=20	SomethingElseUID=8	Name=x y	Sequence=x y
+ROW UID=1	EstimatorUID=8	Notes=x y	Name=2	BidAreaSelected=0
+ROW UID=8	JobSiteManagerUID=4	Count=Area	Sequence=-1	BidAreaSelected= 3 
+PTABLE BidPageSettings
+EXPECT
+BID UID=253
+BTABLE BidLayers
+BTABLE BidZones
+ROW BidPageSelectedUID=NULL	BidZoneUID=3	EmployeeUID=429	SourceBidUID=NULL	BidProjectUID=NULL
+ROW UID=NULL	OCRUID=NULL	BidPageViewUID=254
+ROW UID=254	JobSiteManagerUID=NULL	JobName=-1
+BTABLE BidPages
+ROW UID=255	BidConditionUID=21	JobSiteManagerUID=811	TypGroupTakeoffUID=256	ParentCommentUID=256	BidAreaUID=262	Name=NULL	BidAreaSelected=0	Count=abc
+ROW UID=256	PrManagerUID=	Count=
+ROW UID=257	BidPageViewUID=253	SourceBidUID=NULL	BidZoneUID=7	Name=2	Sequence=Area	BidAreaSelected=1
+PTABLE BidLegends
+ROW UID=NULL	BidPageUID=3	TypGroupTakeoffUID=260	BidPageSelectedUID=NULL	BidPageViewUID=258	Name=x y	Notes=x y
+ROW UID=258	BidTakeoffToUID=256	Name=
+ROW UID=259	CoverSheetSelItemUID=NULL	OCRUID=NULL
+ROW PayClassUID=NULL	TypGroupUID=261	TranslateAreaUID=262	JobStatusUID=NULL	JobSiteManagerUID=NULL	CoverSheetSelItemUID=NULL	Count=2.5	Notes=Area
+PTABLE BidCallOuts
+ROW UID=254	BidUID=11	BidPageFolderUID=262	EmployeeUID=NULL	TypGroupTakeoffUID=253
+ROW UID=260	BidUID=259	JobName= 3 
+ROW UID=	EstimatorUID=429	BidPageFolderUID=253
+ROW BidPageSelectedUID=NULL	BidTakeoffFromUID=261	PrManagerUID=NULL	TypPageTakeoffUID=260	BidZoneUID=3	Name=NULL	JobName=2.5
+ROW UID=253
+PTABLE BidAnnotationOvals
+PTABLE BidAnnoInk
+PTABLE BidAnnotationClouds
+ROW UID=261
+ROW CdnTypeUID=21	BidConditionUID=263	BidProjectUID=NULL	TypPageTakeoffUID=10	JobName=NULL
+ROW UID=262	OrigBidProjectUID=NULL	ParentCommentUID=262	CoverSheetSelItemUID=	BidPageViewUID=263	BidAreaUID=260	SomethingElseUID=8	Name=x y	Sequence=x y
+ROW UID=253	EstimatorUID=NULL	Notes=x y	Name=2	BidAreaSelected=0
+ROW UID=263	JobSiteManagerUID=NULL	Count=Area	Sequence=-1	BidAreaSelected= 3 
+PTABLE BidPageSettings
+END
+CASE 21
+MAXUID 475
+MAP cdn =25	4=193	20=96	2=261
+MAP job 8=223	=371
+MAP emp  7 =589	4=21	5=216	3=44	11=419
+MAP pay 11=537	3=829	20=207	7=739	9=369	=646
+BID UID=	MasterAreaUID=	BidLayerUID=2	ParentUID=30	OrigBidProjectUID=8	BidPageViewUID=9
+BTABLE BidConditionUser
+ROW UID=999	JobSiteManagerUID=21	BidTakeoffFromUID=10	PrManagerUID=30	JobStatusUID=30	Name=0	BidAreaSelected=0	Sequence= 3 
+ROW UID=21	Count=-1
+ROW UID=	BidUID=5	BidTakeoffFromUID=0	BidProjectUID=1	Sequence=x y
+BTABLE BidZones
+PTABLE BidTexts
+ROW UID=9	SourceBidUID=4	BidProjectUID=0	BidConditionUID=12	JobSiteManagerUID=9	MasterAreaUID=21	TypGroupMarkerUID=abc	Sequence=abc	Name=2
+ROW UID=9	PrManagerUID=2	BidTypAreaUID=12	PayClassUID=8	SomethingElseUID=11	BidTakeoffFromUID=2	BidLayerUID=9	Sequence=1	JobName=1	Notes=NULL
+ROW BidTakeoffFromUID=0
+PTABLE BidComments
+ROW UID=	Sequence=x y	JobName=2.5
+ROW UID=9	BidZoneUID=4	BidPageFolderUID=30	BidAreaUID= 7 	TypGroupUID=12	JobSiteManagerUID=5	JobName=-1	Count=x y	BidAreaSelected=1
+ROW UID=4	BidTakeoffToUID=3	JobSiteManagerUID=	TypPageTakeoffUID=1	SourceBidUID=	ParentCommentUID=abc	BidAreaUID=8
+PTABLE BidCallOuts
+ROW UID=0	OCRUID=999	SomethingElseUID=3	Count=Area	BidAreaSelected=2.5
+ROW UID=NULL	BidConditionFolderUID= 7 	BidAreaUID=12	EmployeeUID=	TypGroupMarkerUID=30	TranslateAreaUID=10	BidPageFolderUID=NULL	Count=Area	JobName=2
+ROW UID=7	BidLayerUID=10	Count=2.5	Name=2.5
+ROW UID=11	BidUID=999	BidPageSelectedUID=7	Count=2.5
+ROW UID=10	BidProjectUID=20	EstimatorUID=10	TypGroupUID=30
+PTABLE BidALines
+PTABLE BidPageSettings
+ROW UID=3	BidAreaUID=12	BidPageSelectedUID=8	BidUID= 7 	BidConditionUID=21	TypGroupMarkerUID=12	Name=x y	BidAreaSelected=2	BidPageUID=7
+ROW UID= 7 	BidAreaSelected=0	BidPageUID=NULL
+EXPECT
+BID UID=	MasterAreaUID=	BidLayerUID=2	ParentUID=30	OrigBidProjectUID=NULL	BidPageViewUID=478
+BTABLE BidConditionUser
+ROW UID=476	JobSiteManagerUID=NULL	BidTakeoffFromUID=483	PrManagerUID=NULL	JobStatusUID=NULL	Name=0	BidAreaSelected=0	Sequence= 3 
+ROW UID=477	Count=-1
+ROW UID=	BidUID=5	BidTakeoffFromUID=NULL	BidProjectUID=NULL	Sequence=x y
+BTABLE BidZones
+PTABLE BidTexts
+ROW UID=478	SourceBidUID=NULL	BidProjectUID=NULL	BidConditionUID=12	JobSiteManagerUID=NULL	MasterAreaUID=477	TypGroupMarkerUID=abc	Sequence=abc	Name=2
+ROW UID=478	PrManagerUID=NULL	BidTypAreaUID=12	PayClassUID=NULL	SomethingElseUID=11	BidTakeoffFromUID=2	BidLayerUID=478	Sequence=1	JobName=1	Notes=NULL
+ROW BidTakeoffFromUID=NULL
+PTABLE BidComments
+ROW UID=	Sequence=x y	JobName=2.5
+ROW UID=478	BidZoneUID=479	BidPageFolderUID=30	BidAreaUID=485	TypGroupUID=12	JobSiteManagerUID=216	JobName=-1	Count=x y	BidAreaSelected=1
+ROW UID=479	BidTakeoffToUID=484	JobSiteManagerUID=	TypPageTakeoffUID=1	SourceBidUID=	ParentCommentUID=abc	BidAreaUID=8
+PTABLE BidCallOuts
+ROW UID=NULL	OCRUID=NULL	SomethingElseUID=3	Count=Area	BidAreaSelected=2.5
+ROW UID=480	BidConditionFolderUID=485	BidAreaUID=12	EmployeeUID=	TypGroupMarkerUID=30	TranslateAreaUID=483	BidPageFolderUID=480	Count=Area	JobName=2
+ROW UID=481	BidLayerUID=483	Count=2.5	Name=2.5
+ROW UID=482	BidUID=476	BidPageSelectedUID=NULL	Count=2.5
+ROW UID=483	BidProjectUID=NULL	EstimatorUID=NULL	TypGroupUID=30
+PTABLE BidALines
+PTABLE BidPageSettings
+ROW UID=485	BidAreaSelected=0	BidPageUID=480
+ROW UID=484	BidAreaUID=12	BidPageSelectedUID=NULL	BidUID=485	BidConditionUID=477	TypGroupMarkerUID=12	Name=x y	BidAreaSelected=2	BidPageUID=481
+END
+CASE 22
+MAXUID 421
+MAP cdn =236	7=424
+MAP job 7=785
+MAP emp 8=60	4=476	7=762	11=555	12=715	5=231
+MAP pay 
+BID UID=1	PrManagerUID=4	OrigParentBidUID=0	TypGroupUID=7	MasterAreaUID=abc	BidPageFolderUID=20	BidPageUID=30
+BTABLE BidConditionFolders
+BTABLE BidSettings
+BTABLE BidEmployees
+ROW UID=NULL	BidPageUID=5	TypGroupMarkerUID=	EstimatorUID= 7 	TypGroupTakeoffUID=7	EmployeeUID=8	Count=-1
+ROW UID=abc	BidConditionFolderUID=11	PayClassUID=abc	SourceBidUID=8	Count=	Name=abc
+BTABLE BidTypGroupViews
+ROW UID=2	OrigParentBidUID=11	TypGroupUID=10	MasterAreaUID=9	BidPageSelectedUID=abc	JobName=Area
+ROW UID=abc	BidAreaUID=1	BidPageFolderUID=21	PayClassUID=7
+ROW UID=12	SourceBidUID=30	BidTypAreaUID=3	BidPageViewUID=abc	Count=-1	Sequence=-1
+BTABLE BidPages
+ROW UID=10
+BTABLE BidNamedViews
+ROW UID=10	PayClassUID=21	JobSiteManagerUID=5	BidLayerUID=4	JobName=0	Name=abc	Count=-1
+ROW UID=21	BidAreaSelected=
+ROW UID=abc	Count=Area	Notes=NULL
+BTABLE BidHotLinks
+PTABLE BidAnnotationPolygons
+ROW UID=10	BidConditionUID=9	ParentCommentUID=3	OCRUID=0	JobSiteManagerUID=0	BidPageUID=0	JobName=Area	Sequence=
+ROW UID=abc	EstimatorUID=5	BidPageSelectedUID=7	BidAreaSelected=NULL
+ROW UID=4	BidLayerUID=abc	MasterPageUID=2	BidTakeoffFromUID=2	BidPageViewUID=3	OCRUID=4
+PTABLE BidArrows
+ROW UID=8	SomethingElseUID=21	TypGroupMarkerUID=NULL	BidTakeoffFromUID=0	ParentBidUID=	ParentCommentUID=2	BidUID=11	BidAreaSelected=-1	Sequence=2
+PTABLE BidAnnotationOvals
+PTABLE BidALines
+ROW UID=10	TypGroupUID=0	MasterPageUID=9	SomethingElseUID=10	TranslateAreaUID=abc	JobSiteManagerUID=8	ParentCommentUID=21
+ROW UID= 7 	BidConditionUID=10	BidTakeoffToUID=21	TypGroupMarkerUID=NULL	SourceBidUID=30	BidPageFolderUID=2	BidProjectUID=	Count=2
+ROW UID=9	BidPageViewUID=3	PrManagerUID=3	BidLayerUID=4	OrigBidProjectUID=4
+ROW UID=3	CdnTypeUID=3	JobName=NULL	Name=2	Count=-1
+PTABLE BidTakeoffs
+EXPECT
+BID UID=422	PrManagerUID=476	OrigParentBidUID=NULL	TypGroupUID=7	MasterAreaUID=424	BidPageFolderUID=20	BidPageUID=30
+BTABLE BidConditionFolders
+BTABLE BidSettings
+BTABLE BidEmployees
+ROW UID=423	BidPageUID=5	TypGroupMarkerUID=	EstimatorUID=NULL	TypGroupTakeoffUID=7	EmployeeUID=60	Count=-1
+ROW UID=424	BidConditionFolderUID=11	PayClassUID=NULL	SourceBidUID=NULL	Count=	Name=abc
+BTABLE BidTypGroupViews
+ROW UID=425	OrigParentBidUID=NULL	TypGroupUID=427	MasterAreaUID=432	BidPageSelectedUID=NULL	JobName=Area
+ROW UID=424	BidAreaUID=422	BidPageFolderUID=428	PayClassUID=NULL
+ROW UID=426	SourceBidUID=NULL	BidTypAreaUID=433	BidPageViewUID=424	Count=-1	Sequence=-1
+BTABLE BidPages
+ROW UID=427
+BTABLE BidNamedViews
+ROW UID=427	PayClassUID=NULL	JobSiteManagerUID=231	BidLayerUID=429	JobName=0	Name=abc	Count=-1
+ROW UID=428	BidAreaSelected=
+ROW UID=424	Count=Area	Notes=NULL
+BTABLE BidHotLinks
+PTABLE BidAnnotationPolygons
+ROW UID=427	BidConditionUID=432	ParentCommentUID=433	OCRUID=NULL	JobSiteManagerUID=NULL	BidPageUID=NULL	JobName=Area	Sequence=
+ROW UID=424	EstimatorUID=231	BidPageSelectedUID=NULL	BidAreaSelected=NULL
+ROW UID=429	BidLayerUID=424	MasterPageUID=425	BidTakeoffFromUID=425	BidPageViewUID=433	OCRUID=NULL
+PTABLE BidArrows
+ROW UID=430	SomethingElseUID=21	TypGroupMarkerUID=423	BidTakeoffFromUID=NULL	ParentBidUID=	ParentCommentUID=425	BidUID=11	BidAreaSelected=-1	Sequence=2
+PTABLE BidAnnotationOvals
+PTABLE BidALines
+ROW UID=427	TypGroupUID=NULL	MasterPageUID=432	SomethingElseUID=10	TranslateAreaUID=424	JobSiteManagerUID=60	ParentCommentUID=428
+ROW UID=431	BidConditionUID=427	BidTakeoffToUID=428	TypGroupMarkerUID=423	SourceBidUID=NULL	BidPageFolderUID=425	BidProjectUID=	Count=2
+ROW UID=432	BidPageViewUID=433	PrManagerUID=NULL	BidLayerUID=429	OrigBidProjectUID=NULL
+ROW UID=433	CdnTypeUID=3	JobName=NULL	Name=2	Count=-1
+PTABLE BidTakeoffs
+PTABLE BidPageSettings
+END
+CASE 23
+MAXUID 194
+MAP cdn 20=528	4=222	9=460	10=860	 7 =221
+MAP job 1=100	20=496	3=867
+MAP emp 7=68	8=626	5=59	9=500	10=27	11=79
+MAP pay 3=366	12=475	5=408
+BID UID=1	ParentUID=11	SourceBidUID=11	CoverSheetSelItemUID=20	BidConditionUID=11	BidAreaUID=10	JobName=1
+BTABLE BidTypAreas
+BTABLE UserMasterConditions
+ROW UID=10	Notes=2.5
+ROW UID=0
+ROW UID=999	TypGroupTakeoffUID=0	CoverSheetSelItemUID=4	JobSiteManagerUID=abc
+PTABLE BidArrows
+ROW UID=5	BidLayerUID=5	ParentBidUID=2	BidUID=5	BidPageSelectedUID=10	BidPageUID=2	Notes=NULL
+ROW UID=1	OrigParentBidUID=21	PayClassUID=NULL	MasterAreaUID=11	JobSiteManagerUID=0	JobName=0	Sequence=x y
+PTABLE BidAreaTranslations
+ROW UID=9	BidConditionUID=4
+PTABLE BidPageSettings
+ROW UID=2	BidTakeoffFromUID=3	Notes=NULL	BidAreaSelected=1	BidPageUID=8
+ROW UID=9	Sequence= 3 	BidAreaSelected=1	Count=2.5	BidPageUID=7
+ROW UID=9	BidConditionFolderUID=11	BidAreaSelected= 3 
+ROW UID=0	TypPageTakeoffUID=12	OCRUID=4	Sequence=1	BidAreaSelected=1	BidPageUID=0
+ROW UID=2	CoverSheetSelItemUID=2	SomethingElseUID=12	JobSiteManagerUID=4	BidPageFolderUID=3	BidLayerUID= 7 	CdnTypeUID=8	BidAreaSelected= 3 	BidPageUID=20
+ROW UID=999	ParentCommentUID=12	Name=1	BidAreaSelected=2	BidPageUID=5
+ROW UID=	BidPageSelectedUID=9	CoverSheetSelItemUID=2	TranslateAreaUID=NULL	BidAreaSelected= 3 
+EXPECT
+BID UID=195	ParentUID=11	SourceBidUID=NULL	CoverSheetSelItemUID=NULL	BidConditionUID=11	BidAreaUID=196	JobName=1
+BTABLE BidTypAreas
+BTABLE UserMasterConditions
+ROW UID=196	Notes=2.5
+ROW UID=NULL
+ROW UID=197	TypGroupTakeoffUID=NULL	CoverSheetSelItemUID=NULL	JobSiteManagerUID=NULL
+PTABLE BidArrows
+ROW UID=198	BidLayerUID=198	ParentBidUID=NULL	BidUID=198	BidPageSelectedUID=NULL	BidPageUID=200	Notes=NULL
+ROW UID=195	OrigParentBidUID=NULL	PayClassUID=NULL	MasterAreaUID=11	JobSiteManagerUID=NULL	JobName=0	Sequence=x y
+PTABLE BidAreaTranslations
+ROW UID=199	BidConditionUID=4
+PTABLE BidPageSettings
+ROW UID=200	BidTakeoffFromUID=3	Notes=NULL	BidAreaSelected=1	BidPageUID=8
+ROW UID=199	Sequence= 3 	BidAreaSelected=1	Count=2.5	BidPageUID=7
+ROW UID=199	BidConditionFolderUID=11	BidAreaSelected= 3 
+ROW UID=200	CoverSheetSelItemUID=NULL	SomethingElseUID=12	JobSiteManagerUID=NULL	BidPageFolderUID=3	BidLayerUID= 7 	CdnTypeUID=8	BidAreaSelected= 3 	BidPageUID=20
+ROW UID=197	ParentCommentUID=12	Name=1	BidAreaSelected=2	BidPageUID=198
+END
+CASE 24
+MAXUID 355
+MAP cdn 2=718	 7 =57	20=157	10=464	5=767	7=181
+MAP job 11=488	20=890	2=72	10=424	 7 =688
+MAP emp 1=145	11=591	8=305	9=207	3=63	=869
+MAP pay 20=833
+BID UID=1	ParentUID=21	PayClassUID=2	BidUID=7	EstimatorUID=21	SourceBidUID=NULL	TypGroupUID=30	Count=0	Notes=abc
+BTABLE BidAreas
+ROW UID=999	TypGroupMarkerUID=11	ParentCommentUID=1
+BTABLE BidTypAreas
+ROW UID=11	CoverSheetSelItemUID=12	BidLayerUID=7	CdnTypeUID=999	BidConditionFolderUID=8	BidPageFolderUID=5	Count=1	BidAreaSelected=abc
+BTABLE BidPageFolders
+ROW UID=10	ParentUID=abc	BidTakeoffFromUID=30	BidPageUID=3	TranslateAreaUID=3
+ROW UID=7	TranslateAreaUID=2	OrigBidProjectUID=NULL	Name=2
+BTABLE BidTypAreaCounts
+ROW UID=12	BidConditionFolderUID=21	BidPageViewUID=4	BidTakeoffToUID=30	BidTypAreaUID=abc	SourceBidUID=0	Name=2	Count=0	Sequence=-1
+ROW UID=1	GUID=10	PrManagerUID=2	BidTakeoffFromUID=5	BidPageSelectedUID=7	Sequence=abc
+BTABLE OCRProps
+ROW UID=4	BidPageUID=30	TranslateAreaUID=8	Notes=-1
+PTABLE BidAreaTranslations
+ROW UID=4	ParentCommentUID=3	OrigBidProjectUID=999	BidPageViewUID=20	BidAreaSelected=	Sequence=abc
+PTABLE BidAnnoInk
+ROW UID=9	Count=NULL	Notes=-1	BidAreaSelected=Area
+ROW UID=4	BidTakeoffToUID=	BidConditionFolderUID=30	EstimatorUID=10	JobName=1	Notes=1
+PTABLE BidAnnotationPolygons
+ROW UID=
+PTABLE BidLegends
+ROW UID=7	TypGroupUID=10	JobStatusUID= 7 	BidUID=21	TypPageTakeoffUID=12	BidAreaSelected=2	Notes=2.5
+PTABLE BidCallOuts
+ROW UID=2	SomethingElseUID=30	GUID=4	BidPageUID=0	CoverSheetSelItemUID=3	EmployeeUID=4	CdnTypeUID=9	Sequence=NULL	Count=1
+EXPECT
+BID UID=356	ParentUID=21	PayClassUID=NULL	BidUID=360	EstimatorUID=NULL	SourceBidUID=NULL	TypGroupUID=30	Count=0	Notes=abc
+BTABLE BidAreas
+ROW UID=357	TypGroupMarkerUID=358	ParentCommentUID=356
+BTABLE BidTypAreas
+ROW UID=358	CoverSheetSelItemUID=NULL	BidLayerUID=360	CdnTypeUID=999	BidConditionFolderUID=8	BidPageFolderUID=5	Count=1	BidAreaSelected=abc
+BTABLE BidPageFolders
+ROW UID=359	ParentUID=abc	BidTakeoffFromUID=30	BidPageUID=3	TranslateAreaUID=3
+ROW UID=360	TranslateAreaUID=364	OrigBidProjectUID=NULL	Name=2
+BTABLE BidTypAreaCounts
+ROW UID=361	BidConditionFolderUID=21	BidPageViewUID=362	BidTakeoffToUID=30	BidTypAreaUID=abc	SourceBidUID=NULL	Name=2	Count=0	Sequence=-1
+ROW UID=356	GUID=10	PrManagerUID=NULL	BidTakeoffFromUID=5	BidPageSelectedUID=NULL	Sequence=abc
+BTABLE OCRProps
+ROW UID=362	BidPageUID=30	TranslateAreaUID=8	Notes=-1
+PTABLE BidAreaTranslations
+ROW UID=362	ParentCommentUID=3	OrigBidProjectUID=NULL	BidPageViewUID=20	BidAreaSelected=	Sequence=abc
+PTABLE BidAnnoInk
+ROW UID=363	Count=NULL	Notes=-1	BidAreaSelected=Area
+ROW UID=362	BidTakeoffToUID=	BidConditionFolderUID=30	EstimatorUID=NULL	JobName=1	Notes=1
+PTABLE BidAnnotationPolygons
+ROW UID=
+PTABLE BidLegends
+ROW UID=360	TypGroupUID=359	JobStatusUID=688	BidUID=21	TypPageTakeoffUID=361	BidAreaSelected=2	Notes=2.5
+PTABLE BidCallOuts
+ROW UID=364	SomethingElseUID=30	GUID=4	BidPageUID=NULL	CoverSheetSelItemUID=NULL	EmployeeUID=NULL	CdnTypeUID=9	Sequence=NULL	Count=1
+PTABLE BidPageSettings
+END
+CASE 25
+MAXUID 141
+MAP cdn 8=161
+MAP job =529	12=874	9=547	20=695
+MAP emp 9=697	5=787	1=731	11=37	10=353	4=546
+MAP pay 10=668	4=827	20=150	2=394
+BID UID=	CdnTypeUID=0	JobName=1	Name=NULL	BidAreaSelected=2.5
+BTABLE BidPlanRooms
+ROW UID=11	PayClassUID=30	JobStatusUID=21	JobSiteManagerUID=999	SomethingElseUID=5	Count=abc	Name=1
+ROW UID=NULL	GUID=0	BidPageSelectedUID=10	BidPageFolderUID=10	BidPageUID=21	MasterPageUID=999	Notes=x y	Count=NULL
+ROW UID=	SomethingElseUID=10	SourceBidUID=10	BidLayerUID=7	BidUID=20
+BTABLE BidZones
+ROW UID= 7 	BidPageSelectedUID=7	PrManagerUID=2	JobName=NULL
+BTABLE BidNamedViews
+ROW UID=2	OCRUID=2	TypGroupTakeoffUID=20	JobName=abc
+ROW BidProjectUID=5	Sequence=-1	JobName=
+ROW UID=999	EstimatorUID=20	BidTypAreaUID=30	CoverSheetSelItemUID=10	BidConditionFolderUID=11	MasterAreaUID=10	BidPageUID=5	JobName=0	Name=-1	Sequence=2.5
+BTABLE BidHotLinks
+PTABLE BidALines
+ROW UID=0	BidProjectUID=4	JobName=Area	Sequence=2.5	Name=1
+ROW UID=2	BidLayerUID=9	CoverSheetSelItemUID= 7 	SomethingElseUID=8
+PTABLE BidPageSettings
+ROW UID=3	BidConditionFolderUID=8	SourceBidUID=999	Notes=x y	Count=	BidAreaSelected=2
+EXPECT
+BID UID=	CdnTypeUID=NULL	JobName=1	Name=NULL	BidAreaSelected=2.5
+BTABLE BidPlanRooms
+ROW UID=142	PayClassUID=NULL	JobStatusUID=NULL	JobSiteManagerUID=NULL	SomethingElseUID=5	Count=abc	Name=1
+ROW UID=143	GUID=NULL	BidPageSelectedUID=NULL	BidPageFolderUID=10	BidPageUID=21	MasterPageUID=146	Notes=x y	Count=NULL
+ROW UID=	SomethingElseUID=10	SourceBidUID=NULL	BidLayerUID=7	BidUID=20
+BTABLE BidZones
+ROW UID=144	BidPageSelectedUID=NULL	PrManagerUID=NULL	JobName=NULL
+BTABLE BidNamedViews
+ROW UID=145	OCRUID=NULL	TypGroupTakeoffUID=20	JobName=abc
+ROW BidProjectUID=NULL	Sequence=-1	JobName=
+ROW UID=146	EstimatorUID=NULL	BidTypAreaUID=30	CoverSheetSelItemUID=NULL	BidConditionFolderUID=142	MasterAreaUID=10	BidPageUID=5	JobName=0	Name=-1	Sequence=2.5
+BTABLE BidHotLinks
+PTABLE BidALines
+ROW UID=NULL	BidProjectUID=NULL	JobName=Area	Sequence=2.5	Name=1
+ROW UID=145	BidLayerUID=9	CoverSheetSelItemUID=NULL	SomethingElseUID=8
+PTABLE BidPageSettings
+ROW UID=147	BidConditionFolderUID=8	SourceBidUID=NULL	Notes=x y	Count=	BidAreaSelected=2
+END
+CASE 26
+MAXUID 221
+MAP cdn 8=718	20=328	=851	5=850
+MAP job 
+MAP emp 3=280	=134	9=180	20=825
+MAP pay 
+BID UID=1	BidZoneUID=0	BidTakeoffFromUID=5	ParentUID= 7 	ParentCommentUID=NULL	BidPageViewUID=21	SourceBidUID=NULL
+BTABLE BidPlanRooms
+BTABLE BidTypAreas
+ROW JobSiteManagerUID=20	MasterPageUID=0	ParentBidUID=5	BidTakeoffToUID=	Sequence=NULL	Name=Area	BidAreaSelected=Area
+ROW UID= 7 	SourceBidUID=7	TypGroupUID=12	BidPageViewUID=9	Sequence=abc
+ROW UID=11	BidPageViewUID= 7 	Notes=2	Sequence=
+BTABLE BidConditionFolders
+BTABLE BidEmployees
+BTABLE BidLayers
+ROW UID=12	ParentBidUID=12	PrManagerUID=999	Count=1	Name= 3 
+BTABLE BidConditions
+ROW UID=1	BidProjectUID=	BidAreaUID=12	CoverSheetSelItemUID=	EstimatorUID=11	BidTypAreaUID=999	TypGroupTakeoffUID=1	Notes=1
+ROW UID=	TypGroupUID=8	JobSiteManagerUID=4	SourceBidUID=8	BidTakeoffFromUID=abc	BidPageViewUID=20	JobName=Area	Count=1
+PTABLE BidPageSettings
+ROW UID=	BidTypAreaUID=20	CoverSheetSelItemUID=0	ParentCommentUID=12	BidAreaSelected=1	BidPageUID=21
+ROW UID=0	BidConditionFolderUID=2	GUID=1	EstimatorUID=1	BidAreaSelected=0	BidPageUID=7
+ROW UID=9	BidAreaSelected=abc
+EXPECT
+BID UID=222	BidZoneUID=NULL	BidTakeoffFromUID=5	ParentUID=223	ParentCommentUID=NULL	BidPageViewUID=21	SourceBidUID=NULL
+BTABLE BidPlanRooms
+BTABLE BidTypAreas
+ROW JobSiteManagerUID=825	MasterPageUID=NULL	ParentBidUID=NULL	BidTakeoffToUID=	Sequence=NULL	Name=Area	BidAreaSelected=Area
+ROW UID=223	SourceBidUID=NULL	TypGroupUID=225	BidPageViewUID=226	Sequence=abc
+ROW UID=224	BidPageViewUID=223	Notes=2	Sequence=
+BTABLE BidConditionFolders
+BTABLE BidEmployees
+BTABLE BidLayers
+ROW UID=225	ParentBidUID=NULL	PrManagerUID=NULL	Count=1	Name= 3 
+BTABLE BidConditions
+ROW UID=222	BidProjectUID=	BidAreaUID=225	CoverSheetSelItemUID=	EstimatorUID=NULL	BidTypAreaUID=999	TypGroupTakeoffUID=222	Notes=1
+ROW UID=	TypGroupUID=8	JobSiteManagerUID=NULL	SourceBidUID=NULL	BidTakeoffFromUID=abc	BidPageViewUID=20	JobName=Area	Count=1
+PTABLE BidPageSettings
+ROW UID=NULL	BidConditionFolderUID=2	GUID=1	EstimatorUID=NULL	BidAreaSelected=0	BidPageUID=7
+ROW UID=226	BidAreaSelected=abc
+ROW UID=	BidTypAreaUID=20	CoverSheetSelItemUID=NULL	ParentCommentUID=225	BidAreaSelected=1	BidPageUID=21
+END
+CASE 27
+MAXUID 534
+MAP cdn 20=732
+MAP job 20=873	 7 =563	=758
+MAP emp =346	8=680	5=564	7=109	4=793	 7 =769
+MAP pay 9=369
+BID PrManagerUID=5	MasterPageUID=8	PayClassUID=7	CdnTypeUID=2	BidPageSelectedUID=12	Count=abc	Name=NULL	Notes=1	UID=0
+BTABLE BidConditionFolders
+ROW UID=NULL	BidUID=2
+ROW UID=12	BidPageUID=10	EstimatorUID=20	JobSiteManagerUID=8	BidConditionFolderUID=21	JobName=x y	Sequence=x y
+BTABLE BidLayers
+ROW UID=21	Sequence= 3 	Name=NULL	BidAreaSelected=NULL
+ROW UID=999
+ROW UID=20	EmployeeUID= 7 	BidAreaSelected=-1	Notes= 3 
+BTABLE BidPages
+ROW UID=10	JobStatusUID=abc	PayClassUID=21	TypGroupTakeoffUID=12	BidZoneUID=4	GUID=4	JobSiteManagerUID=NULL
+ROW UID=30	BidPageFolderUID=8	ParentBidUID=1	OrigBidProjectUID=0	TypPageTakeoffUID=9	BidTakeoffFromUID=10	JobName=-1	Name=abc
+BTABLE BidHotLinks
+PTABLE BidLegends
+ROW UID=4	OCRUID=11	GUID=11	BidPageSelectedUID= 7 	TypGroupTakeoffUID=12	Count=NULL
+ROW UID=8	MasterPageUID=0	BidPageFolderUID=NULL	SourceBidUID=NULL	JobStatusUID=7	Name=NULL
+ROW CdnTypeUID=0	BidAreaUID=21	BidZoneUID=30
+ROW UID=9	MasterPageUID=20	CoverSheetSelItemUID=9
+ROW UID=4	BidZoneUID=3	BidConditionFolderUID=4	JobName=2	BidAreaSelected=abc
+PTABLE BidMarkedPages
+ROW UID=20	SourceBidUID=999	CdnTypeUID=	OrigBidProjectUID=10	OCRUID=NULL	JobSiteManagerUID=NULL	BidTakeoffToUID=NULL	BidAreaSelected=abc	Notes=0	JobName=-1
+ROW UID=11	BidPageUID=12	EstimatorUID=	BidPageFolderUID=21	ParentCommentUID=	JobSiteManagerUID=30	OrigBidProjectUID=21	Sequence=-1	Count=1
+ROW UID=3	BidAreaSelected=Area
+ROW UID=NULL	BidConditionFolderUID=10	Count=1	Name=2
+PTABLE BidTakeoffs
+ROW UID=0	SomethingElseUID=3	OCRUID=2	OrigBidProjectUID=1	PrManagerUID=7	Notes=2.5	BidAreaSelected=Area	Sequence= 3 
+ROW UID=2	BidTypAreaUID=7	ParentBidUID=7	BidConditionUID= 7 	BidAreaSelected=abc
+ROW UID=4	BidLayerUID= 7 	BidAreaUID=5	CoverSheetSelItemUID=8	BidTakeoffFromUID=1	Name=-1
+ROW UID=	PayClassUID=999	TypGroupMarkerUID=3	ParentCommentUID=1	BidAreaUID=11	BidProjectUID=20	SourceBidUID=3
+PTABLE BidAnnoInk
+ROW UID=3	OCRUID=12	BidUID=1	BidProjectUID=4	CoverSheetSelItemUID=12	ParentCommentUID=8	JobName=	Count=2.5
+ROW EstimatorUID=0	BidTypAreaUID=999	BidZoneUID=7	BidPageSelectedUID=7	TypGroupUID=20	PayClassUID=9	Count=0
+ROW UID=NULL	BidTakeoffToUID=8	TypGroupTakeoffUID=30	MasterAreaUID=9	BidTypAreaUID=1	Sequence=-1	Notes=2.5	Name=2
+PTABLE BidPageSettings
+ROW UID=30	SomethingElseUID=4	MasterPageUID=30	BidPageFolderUID=NULL	ParentBidUID=20	BidConditionUID=9	Name=Area	Count=x y	BidAreaSelected=1	BidPageUID=NULL
+ROW UID=4	TypGroupMarkerUID=3	ParentBidUID=5	TypGroupTakeoffUID=7	TypGroupUID=3	BidTakeoffFromUID=10	JobName=1	Count=NULL	Notes= 3 	BidAreaSelected=1	BidPageUID=21
+ROW UID=abc	GUID=abc	MasterAreaUID= 7 	JobStatusUID=	PrManagerUID=1	BidAreaSelected= 3 	Name=2.5	BidPageUID=21
+ROW UID=21	GUID=abc	TypGroupUID=20	BidTypAreaUID=11	BidConditionUID=	BidConditionFolderUID=21	BidZoneUID=4	Sequence=2	BidAreaSelected=-1	BidPageUID=0
+ROW UID=30	PrManagerUID=999	MasterPageUID=20	Notes=1	JobName=	BidAreaSelected=1	BidPageUID=5
+ROW UID=11	BidPageSelectedUID=10	BidConditionFolderUID=12	ParentCommentUID=3	BidTypAreaUID=999	Count=2.5	BidAreaSelected=0
+ROW UID=21	BidTakeoffFromUID=7	BidConditionUID=12	Notes=Area	Count=2	BidAreaSelected=	BidPageUID=
+ROW Sequence= 3 	BidAreaSelected=2	BidPageUID=0
+EXPECT
+BID PrManagerUID=564	MasterPageUID=543	PayClassUID=NULL	CdnTypeUID=2	BidPageSelectedUID=NULL	Count=abc	Name=NULL	Notes=1	UID=NULL
+BTABLE BidConditionFolders
+ROW UID=535	BidUID=547
+ROW UID=536	BidPageUID=540	EstimatorUID=NULL	JobSiteManagerUID=680	BidConditionFolderUID=537	JobName=x y	Sequence=x y
+BTABLE BidLayers
+ROW UID=537	Sequence= 3 	Name=NULL	BidAreaSelected=NULL
+ROW UID=538
+ROW UID=539	EmployeeUID=769	BidAreaSelected=-1	Notes= 3 
+BTABLE BidPages
+ROW UID=540	JobStatusUID=NULL	PayClassUID=NULL	TypGroupTakeoffUID=536	BidZoneUID=542	GUID=4	JobSiteManagerUID=NULL
+ROW UID=541	BidPageFolderUID=543	ParentBidUID=NULL	OrigBidProjectUID=NULL	TypPageTakeoffUID=544	BidTakeoffFromUID=540	JobName=-1	Name=abc
+BTABLE BidHotLinks
+PTABLE BidLegends
+ROW UID=542	OCRUID=NULL	GUID=11	BidPageSelectedUID=NULL	TypGroupTakeoffUID=536	Count=NULL
+ROW UID=543	MasterPageUID=NULL	BidPageFolderUID=535	SourceBidUID=NULL	JobStatusUID=NULL	Name=NULL
+ROW CdnTypeUID=NULL	BidAreaUID=537	BidZoneUID=541
+ROW UID=544	MasterPageUID=539	CoverSheetSelItemUID=NULL
+ROW UID=542	BidZoneUID=546	BidConditionFolderUID=542	JobName=2	BidAreaSelected=abc
+PTABLE BidMarkedPages
+ROW UID=539	SourceBidUID=NULL	CdnTypeUID=	OrigBidProjectUID=NULL	OCRUID=NULL	JobSiteManagerUID=NULL	BidTakeoffToUID=535	BidAreaSelected=abc	Notes=0	JobName=-1
+ROW UID=545	BidPageUID=536	EstimatorUID=	BidPageFolderUID=537	ParentCommentUID=	JobSiteManagerUID=NULL	OrigBidProjectUID=NULL	Sequence=-1	Count=1
+ROW UID=546	BidAreaSelected=Area
+ROW UID=535	BidConditionFolderUID=540	Count=1	Name=2
+PTABLE BidTakeoffs
+ROW UID=NULL	SomethingElseUID=3	OCRUID=NULL	OrigBidProjectUID=NULL	PrManagerUID=109	Notes=2.5	BidAreaSelected=Area	Sequence= 3 
+ROW UID=547	BidTypAreaUID=7	ParentBidUID=NULL	BidConditionUID= 7 	BidAreaSelected=abc
+ROW UID=542	BidLayerUID= 7 	BidAreaUID=5	CoverSheetSelItemUID=NULL	BidTakeoffFromUID=1	Name=-1
+ROW UID=	PayClassUID=NULL	TypGroupMarkerUID=546	ParentCommentUID=1	BidAreaUID=545	BidProjectUID=NULL	SourceBidUID=NULL
+PTABLE BidAnnoInk
+ROW UID=546	OCRUID=NULL	BidUID=1	BidProjectUID=NULL	CoverSheetSelItemUID=NULL	ParentCommentUID=543	JobName=	Count=2.5
+ROW EstimatorUID=NULL	BidTypAreaUID=538	BidZoneUID=7	BidPageSelectedUID=NULL	TypGroupUID=539	PayClassUID=369	Count=0
+ROW UID=535	BidTakeoffToUID=543	TypGroupTakeoffUID=541	MasterAreaUID=544	BidTypAreaUID=1	Sequence=-1	Notes=2.5	Name=2
+PTABLE BidPageSettings
+ROW UID=537	GUID=abc	TypGroupUID=539	BidTypAreaUID=545	BidConditionUID=	BidConditionFolderUID=537	BidZoneUID=542	Sequence=2	BidAreaSelected=-1	BidPageUID=NULL
+ROW UID=545	BidPageSelectedUID=540	BidConditionFolderUID=536	ParentCommentUID=546	BidTypAreaUID=538	Count=2.5	BidAreaSelected=0
+ROW UID=537	BidTakeoffFromUID=7	BidConditionUID=536	Notes=Area	Count=2	BidAreaSelected=	BidPageUID=
+ROW UID=541	SomethingElseUID=4	MasterPageUID=541	BidPageFolderUID=535	ParentBidUID=NULL	BidConditionUID=544	Name=Area	Count=x y	BidAreaSelected=1	BidPageUID=535
+ROW UID=548	GUID=abc	MasterAreaUID= 7 	JobStatusUID=	PrManagerUID=NULL	BidAreaSelected= 3 	Name=2.5	BidPageUID=537
+ROW UID=541	PrManagerUID=NULL	MasterPageUID=539	Notes=1	JobName=	BidAreaSelected=1	BidPageUID=5
+ROW Sequence= 3 	BidAreaSelected=2	BidPageUID=NULL
+END
+CASE 28
+MAXUID 302
+MAP cdn 1=816	20=316	5=519
+MAP job 7=441	2=61	9=793
+MAP emp 
+MAP pay 3=540	1=537
+BID UID=0	BidTakeoffToUID=11	Sequence=abc	Count=2.5	JobName= 3 
+BTABLE OCRProps
+BTABLE BidHotLinks
+ROW UID=1	OrigParentBidUID=2	TypGroupMarkerUID=5	Sequence=1	JobName=abc	Count= 3 
+ROW UID=7	BidPageSelectedUID=30	BidPageViewUID=abc	CdnTypeUID=8
+ROW UID=11	BidProjectUID=3	ParentBidUID=5	BidPageFolderUID=abc	JobName=x y
+PTABLE BidALines
+ROW CoverSheetSelItemUID=2	GUID=NULL	BidTakeoffToUID=2	BidPageSelectedUID=0	CdnTypeUID= 7 	BidPageFolderUID=9	Sequence=2	Notes=NULL	BidAreaSelected=Area
+ROW UID=30	BidTakeoffToUID=12
+ROW MasterAreaUID=abc	Sequence=1	BidAreaSelected=NULL
+ROW UID=3	BidLayerUID=2	GUID=abc	JobName=2	Notes=NULL	Count=x y
+ROW UID=2	Sequence=1
+PTABLE BidAnnotationClouds
+ROW UID=5	TypGroupMarkerUID=9	BidConditionFolderUID=20	Notes=Area	Count=1
+ROW UID=12	SourceBidUID=9	ParentBidUID=3	TypGroupMarkerUID=8	JobName= 3 
+ROW UID=9	Notes=-1
+PTABLE BidAnnotationRects
+ROW UID=999	BidTakeoffFromUID=8	BidConditionUID=999	BidPageUID=8	ParentUID=4	BidUID=4
+EXPECT
+BID UID=NULL	BidTakeoffToUID=305	Sequence=abc	Count=2.5	JobName= 3 
+BTABLE OCRProps
+BTABLE BidHotLinks
+ROW UID=303	OrigParentBidUID=NULL	TypGroupMarkerUID=309	Sequence=1	JobName=abc	Count= 3 
+ROW UID=304	BidPageSelectedUID=NULL	BidPageViewUID=abc	CdnTypeUID=8
+ROW UID=305	BidProjectUID=NULL	ParentBidUID=NULL	BidPageFolderUID=abc	JobName=x y
+PTABLE BidALines
+ROW CoverSheetSelItemUID=NULL	GUID=NULL	BidTakeoffToUID=308	BidPageSelectedUID=NULL	CdnTypeUID= 7 	BidPageFolderUID=311	Sequence=2	Notes=NULL	BidAreaSelected=Area
+ROW UID=306	BidTakeoffToUID=310
+ROW MasterAreaUID=abc	Sequence=1	BidAreaSelected=NULL
+ROW UID=307	BidLayerUID=308	GUID=abc	JobName=2	Notes=NULL	Count=x y
+ROW UID=308	Sequence=1
+PTABLE BidAnnotationClouds
+ROW UID=309	TypGroupMarkerUID=311	BidConditionFolderUID=20	Notes=Area	Count=1
+ROW UID=310	SourceBidUID=NULL	ParentBidUID=NULL	TypGroupMarkerUID=8	JobName= 3 
+ROW UID=311	Notes=-1
+PTABLE BidAnnotationRects
+ROW UID=312	BidTakeoffFromUID=8	BidConditionUID=312	BidPageUID=8	ParentUID=4	BidUID=4
+PTABLE BidPageSettings
+END
+CASE 29
+MAXUID 586
+MAP cdn 20=397
+MAP job 12=771	3=849	1=796	10=136
+MAP emp 4=213	12=319	20=712	=71	5=250	 7 =346
+MAP pay 5=534	11=340	 7 =379
+BID UID=	BidConditionFolderUID=	Name=0	JobName=x y
+BTABLE BidAreas
+ROW UID=5	EmployeeUID=20	Notes=NULL	Count=0
+ROW UID=30	ParentBidUID=4	TypGroupUID=0	BidProjectUID=10	Notes=1	Sequence= 3 
+BTABLE BidZones
+BTABLE OCRProps
+PTABLE BidPageSettings
+ROW UID=30	SourceBidUID=4	SomethingElseUID=20	TranslateAreaUID=20	BidAreaSelected= 3 	Name=Area	Notes=-1
+ROW UID=30	BidPageUID=0	Name=1	BidAreaSelected=	Count=Area
+ROW UID=9	MasterPageUID=NULL	CoverSheetSelItemUID=999	BidPageFolderUID=20	PrManagerUID=20	Count=x y	BidAreaSelected= 3 	BidPageUID=20
+ROW UID=0	BidPageFolderUID=10	ParentUID=30	CoverSheetSelItemUID=999	TranslateAreaUID=20	BidAreaUID=20	JobName=x y	BidAreaSelected=2	BidPageUID=NULL
+ROW UID=2	JobSiteManagerUID=30	ParentUID=3	PrManagerUID=7	BidConditionUID=7	JobName=	Sequence= 3 	BidAreaSelected=-1	BidPageUID=8
+ROW UID=	TypGroupMarkerUID=21	BidZoneUID=5	Sequence=1	BidAreaSelected=1	BidPageUID=20
+EXPECT
+BID UID=	BidConditionFolderUID=	Name=0	JobName=x y
+BTABLE BidAreas
+ROW UID=587	EmployeeUID=712	Notes=NULL	Count=0
+ROW UID=588	ParentBidUID=NULL	TypGroupUID=NULL	BidProjectUID=NULL	Notes=1	Sequence= 3 
+BTABLE BidZones
+BTABLE OCRProps
+PTABLE BidPageSettings
+ROW UID=588	BidPageUID=NULL	Name=1	BidAreaSelected=	Count=Area
+ROW UID=590	JobSiteManagerUID=NULL	ParentUID=3	PrManagerUID=NULL	BidConditionUID=7	JobName=	Sequence= 3 	BidAreaSelected=-1	BidPageUID=8
+ROW UID=588	SourceBidUID=NULL	SomethingElseUID=20	TranslateAreaUID=20	BidAreaSelected= 3 	Name=Area	Notes=-1
+ROW UID=589	MasterPageUID=NULL	CoverSheetSelItemUID=NULL	BidPageFolderUID=20	PrManagerUID=712	Count=x y	BidAreaSelected= 3 	BidPageUID=20
+END
+CASE 30
+MAXUID 61
+MAP cdn 20=731	12=459
+MAP job 12=277	2=586	9=518	20=103
+MAP emp  7 =291	4=889	12=795	9=820	5=541	=694
+MAP pay 1=735	5=593	=745
+BID UID=	BidAreaUID=11	SomethingElseUID=20	ParentBidUID=11	MasterPageUID=1	BidTakeoffToUID=8	TypGroupTakeoffUID=10
+BTABLE BidConditionFolders
+BTABLE BidLayers
+BTABLE UserMasterConditions
+ROW UID=10	BidTakeoffFromUID=10	Notes=x y	Count=x y	Name=Area
+ROW TypGroupUID=	BidPageViewUID=8	MasterAreaUID=999	OrigParentBidUID=20	JobName=Area	Sequence=x y	Notes=x y
+ROW TranslateAreaUID=NULL	CdnTypeUID=5	BidTakeoffToUID=9	BidAreaSelected=	Name=2.5	Sequence=0
+BTABLE BidConditionUser
+BTABLE BidZones
+ROW UID=12	CoverSheetSelItemUID=8	ParentBidUID=NULL	Name=
+ROW UID=10	ParentUID=21	BidPageUID=1
+ROW UID=0	BidZoneUID=9	SourceBidUID=9	BidConditionUID=11
+PTABLE BidTakeoffs
+PTABLE BidTexts
+ROW UID=4	OrigBidProjectUID=10	EmployeeUID=12	ParentBidUID= 7 	CdnTypeUID=20	JobSiteManagerUID=0	JobName=abc
+ROW UID=3	SomethingElseUID=20	EstimatorUID=5	GUID=5	Count=	Notes=x y	Sequence=
+ROW UID=30	PayClassUID=30	SomethingElseUID=0	OrigBidProjectUID=abc	JobSiteManagerUID=0	TypGroupTakeoffUID=4	TranslateAreaUID=11
+ROW UID=abc	TypPageTakeoffUID=12	BidUID=4	Notes=1	BidAreaSelected= 3 	JobName=NULL
+PTABLE BidAreaTranslations
+PTABLE BidAnnoInk
+ROW UID=abc	PayClassUID=0	BidLayerUID=7	BidConditionFolderUID=20	BidAreaSelected=NULL	Notes=0	JobName= 3 
+ROW UID=21	OCRUID=	Notes=-1	BidAreaSelected=abc	Name=Area
+ROW BidPageFolderUID=	BidPageUID=30	Sequence=Area
+ROW UID=20	BidAreaSelected=2	Sequence=2.5	JobName=NULL
+PTABLE BidPageSettings
+ROW UID=11	BidTakeoffToUID=11	BidPageSelectedUID=NULL	OrigParentBidUID=20	JobName=2.5	Sequence=	BidAreaSelected=2	BidPageUID=5
+ROW UID=11	BidAreaSelected=2	BidPageUID=NULL
+ROW UID=abc	Notes=1	BidAreaSelected=0	BidPageUID=5
+ROW UID=	MasterPageUID=10	ParentBidUID=21	BidTakeoffFromUID=2	PayClassUID= 7 	TypGroupTakeoffUID=NULL	BidAreaSelected=
+ROW UID=21	BidPageSelectedUID=0	BidAreaSelected=abc	Notes=0	Name=Area	BidPageUID=NULL
+ROW UID=20	GUID=11	TypPageTakeoffUID=8	Name=1	Count=2.5	BidAreaSelected=Area	BidPageUID=NULL
+ROW UID=999	ParentUID=11	BidTakeoffToUID=11	PayClassUID=30	JobStatusUID=8	Notes=2	BidAreaSelected=abc	BidPageUID=21
+EXPECT
+BID UID=	BidAreaUID=70	SomethingElseUID=20	ParentBidUID=NULL	MasterPageUID=1	BidTakeoffToUID=8	TypGroupTakeoffUID=62
+BTABLE BidConditionFolders
+BTABLE BidLayers
+BTABLE UserMasterConditions
+ROW UID=62	BidTakeoffFromUID=62	Notes=x y	Count=x y	Name=Area
+ROW TypGroupUID=	BidPageViewUID=8	MasterAreaUID=71	OrigParentBidUID=NULL	JobName=Area	Sequence=x y	Notes=x y
+ROW TranslateAreaUID=NULL	CdnTypeUID=5	BidTakeoffToUID=9	BidAreaSelected=	Name=2.5	Sequence=0
+BTABLE BidConditionUser
+BTABLE BidZones
+ROW UID=63	CoverSheetSelItemUID=NULL	ParentBidUID=NULL	Name=
+ROW UID=62	ParentUID=68	BidPageUID=1
+ROW UID=NULL	BidZoneUID=9	SourceBidUID=NULL	BidConditionUID=70
+PTABLE BidTakeoffs
+PTABLE BidTexts
+ROW UID=64	OrigBidProjectUID=NULL	EmployeeUID=795	ParentBidUID=NULL	CdnTypeUID=731	JobSiteManagerUID=NULL	JobName=abc
+ROW UID=65	SomethingElseUID=20	EstimatorUID=541	GUID=5	Count=	Notes=x y	Sequence=
+ROW UID=66	PayClassUID=NULL	SomethingElseUID=NULL	OrigBidProjectUID=NULL	JobSiteManagerUID=NULL	TypGroupTakeoffUID=64	TranslateAreaUID=70
+ROW UID=67	TypPageTakeoffUID=63	BidUID=64	Notes=1	BidAreaSelected= 3 	JobName=NULL
+PTABLE BidAreaTranslations
+PTABLE BidAnnoInk
+ROW UID=67	PayClassUID=NULL	BidLayerUID=7	BidConditionFolderUID=69	BidAreaSelected=NULL	Notes=0	JobName= 3 
+ROW UID=68	OCRUID=	Notes=-1	BidAreaSelected=abc	Name=Area
+ROW BidPageFolderUID=	BidPageUID=66	Sequence=Area
+ROW UID=69	BidAreaSelected=2	Sequence=2.5	JobName=NULL
+PTABLE BidPageSettings
+ROW UID=67	Notes=1	BidAreaSelected=0	BidPageUID=5
+ROW UID=	MasterPageUID=62	ParentBidUID=NULL	BidTakeoffFromUID=2	PayClassUID=NULL	TypGroupTakeoffUID=NULL	BidAreaSelected=
+ROW UID=68	BidPageSelectedUID=NULL	BidAreaSelected=abc	Notes=0	Name=Area	BidPageUID=NULL
+ROW UID=69	GUID=11	TypPageTakeoffUID=8	Name=1	Count=2.5	BidAreaSelected=Area	BidPageUID=NULL
+ROW UID=71	ParentUID=70	BidTakeoffToUID=70	PayClassUID=NULL	JobStatusUID=NULL	Notes=2	BidAreaSelected=abc	BidPageUID=68
+ROW UID=70	BidTakeoffToUID=70	BidPageSelectedUID=NULL	OrigParentBidUID=NULL	JobName=2.5	Sequence=	BidAreaSelected=2	BidPageUID=5
+ROW UID=70	BidAreaSelected=2	BidPageUID=NULL
+END
+CASE 31
+MAXUID 503
+MAP cdn 20=77	2=335	4=412	11=191	 7 =419
+MAP job 8=219	 7 =793	10=699	5=774
+MAP emp 3=521	1=593	9=567	 7 =787	5=826
+MAP pay 20=827
+BID UID=1	ParentUID=12	BidZoneUID=999	BidPageSelectedUID=30	BidProjectUID=21	JobName=abc
+PTABLE BidAnnotationOvals
+ROW UID=abc	EstimatorUID=10	TypGroupUID=5	JobStatusUID=12	MasterAreaUID=0	OrigParentBidUID=4	TranslateAreaUID=abc
+ROW UID=10	Sequence=0
+ROW UID=8	Sequence=	Count= 3 	BidAreaSelected=x y
+ROW UID=5	TypPageTakeoffUID= 7 	BidTypAreaUID=11	JobSiteManagerUID=abc	OrigBidProjectUID=10	TypGroupTakeoffUID=abc	CdnTypeUID=0
+ROW UID=7	JobName=NULL	Sequence=abc	Count=Area
+PTABLE BidAnnotationClouds
+ROW UID=999	JobStatusUID=0	TranslateAreaUID=2	BidPageUID=10	TypGroupMarkerUID=	EmployeeUID=30
+ROW UID=2	TypGroupTakeoffUID=2	BidAreaSelected=Area	Name=-1	JobName=NULL
+ROW UID=1	Name=abc
+PTABLE BidTexts
+ROW UID=30	BidPageViewUID=999	SourceBidUID=8	EstimatorUID=20	TypGroupUID=21	JobName= 3 	Sequence=abc	BidAreaSelected=x y
+ROW UID=12	ParentBidUID=10	PayClassUID=4	BidTakeoffToUID=12	BidConditionUID=2	BidLayerUID=11	OCRUID=11
+ROW UID=5	MasterAreaUID=8	BidUID=2
+ROW UID=20	CoverSheetSelItemUID=12	ParentUID=	Sequence=	Notes=abc	BidAreaSelected=abc
+PTABLE BidAnnotationRects
+ROW UID=8	BidConditionFolderUID=	BidAreaUID=7	TypPageTakeoffUID=11	ParentCommentUID=8	BidConditionUID=11	CdnTypeUID=20	JobName=1
+PTABLE BidAreaTranslations
+ROW UID=999	OrigBidProjectUID=	BidPageFolderUID=999	BidAreaUID=10	CoverSheetSelItemUID=30	BidPageViewUID=5	Count=2	Notes=-1	BidAreaSelected=NULL
+ROW UID=2	OrigBidProjectUID=10	JobSiteManagerUID=21	SomethingElseUID=abc	BidUID=3	ParentBidUID=999	Sequence=-1	Name=2.5
+PTABLE BidPageSettings
+ROW BidUID=12	TypGroupUID=20	BidTypAreaUID=10	OCRUID=NULL	PayClassUID=30	CdnTypeUID=11	Sequence=abc	Notes=Area	Count=NULL	BidAreaSelected=-1
+ROW UID=abc	Notes=2.5	BidAreaSelected=2	BidPageUID=20
+EXPECT
+BID UID=504	ParentUID=513	BidZoneUID=510	BidPageSelectedUID=NULL	BidProjectUID=NULL	JobName=abc
+PTABLE BidAnnotationOvals
+ROW UID=505	EstimatorUID=NULL	TypGroupUID=508	JobStatusUID=NULL	MasterAreaUID=NULL	OrigParentBidUID=NULL	TranslateAreaUID=505
+ROW UID=506	Sequence=0
+ROW UID=507	Sequence=	Count= 3 	BidAreaSelected=x y
+ROW UID=508	TypPageTakeoffUID= 7 	BidTypAreaUID=11	JobSiteManagerUID=NULL	OrigBidProjectUID=NULL	TypGroupTakeoffUID=505	CdnTypeUID=NULL
+ROW UID=509	JobName=NULL	Sequence=abc	Count=Area
+PTABLE BidAnnotationClouds
+ROW UID=510	JobStatusUID=NULL	TranslateAreaUID=511	BidPageUID=506	TypGroupMarkerUID=	EmployeeUID=NULL
+ROW UID=511	TypGroupTakeoffUID=511	BidAreaSelected=Area	Name=-1	JobName=NULL
+ROW UID=504	Name=abc
+PTABLE BidTexts
+ROW UID=512	BidPageViewUID=510	SourceBidUID=NULL	EstimatorUID=NULL	TypGroupUID=21	JobName= 3 	Sequence=abc	BidAreaSelected=x y
+ROW UID=513	ParentBidUID=NULL	PayClassUID=NULL	BidTakeoffToUID=513	BidConditionUID=511	BidLayerUID=11	OCRUID=NULL
+ROW UID=508	MasterAreaUID=507	BidUID=511
+ROW UID=514	CoverSheetSelItemUID=NULL	ParentUID=	Sequence=	Notes=abc	BidAreaSelected=abc
+PTABLE BidAnnotationRects
+ROW UID=507	BidConditionFolderUID=	BidAreaUID=509	TypPageTakeoffUID=11	ParentCommentUID=507	BidConditionUID=11	CdnTypeUID=77	JobName=1
+PTABLE BidAreaTranslations
+ROW UID=510	OrigBidProjectUID=	BidPageFolderUID=510	BidAreaUID=506	CoverSheetSelItemUID=NULL	BidPageViewUID=508	Count=2	Notes=-1	BidAreaSelected=NULL
+ROW UID=511	OrigBidProjectUID=NULL	JobSiteManagerUID=NULL	SomethingElseUID=abc	BidUID=3	ParentBidUID=NULL	Sequence=-1	Name=2.5
+PTABLE BidPageSettings
+ROW BidUID=513	TypGroupUID=514	BidTypAreaUID=506	OCRUID=NULL	PayClassUID=NULL	CdnTypeUID=191	Sequence=abc	Notes=Area	Count=NULL	BidAreaSelected=-1
+ROW UID=505	Notes=2.5	BidAreaSelected=2	BidPageUID=514
+END
+CASE 32
+MAXUID 279
+MAP cdn 7=525
+MAP job 7=810	12=696	11=183	 7 =73
+MAP emp 8=42
+MAP pay 12=708	20=59	1=262	5=377	 7 =560
+BID UID=0	ParentUID=30	TypGroupUID=21	MasterPageUID=	BidUID= 7 	OrigParentBidUID=21	Count=NULL	Sequence=2.5	Name=1
+BTABLE BidConditions
+ROW UID=0	BidConditionUID=11	EstimatorUID=1	MasterPageUID=9	Name=abc	Sequence= 3 
+ROW UID=999	ParentBidUID=30	BidPageFolderUID=2	JobName=NULL	Notes=x y
+BTABLE OCRProps
+ROW UID=10	OrigBidProjectUID=30	BidLayerUID=30	Count=1
+ROW UID=9	BidUID=abc	MasterPageUID=abc	ParentCommentUID=999	TranslateAreaUID=12	MasterAreaUID=21	Notes=0	JobName=-1
+ROW UID=30	OCRUID=30	PayClassUID=3	Notes=Area
+PTABLE BidDimensions
+ROW UID=7	BidPageSelectedUID=7	BidZoneUID=1	EmployeeUID=9	EstimatorUID=999	CoverSheetSelItemUID=4	BidUID=10	JobName=-1	Notes=0	Count=-1
+ROW UID=10	ParentBidUID=10	BidTakeoffFromUID=abc	BidPageSelectedUID=	BidTakeoffToUID=10	BidAreaSelected=0	Notes=1
+PTABLE BidPageSettings
+ROW UID=12	BidConditionUID=8	BidTypAreaUID=abc	BidAreaSelected=1	BidPageUID=NULL
+ROW UID=11	BidConditionUID=9	MasterAreaUID=9	TranslateAreaUID=7	CdnTypeUID=11	PrManagerUID=0	BidAreaSelected=1	BidPageUID=5
+ROW UID=2	Sequence=	Count=x y	Name=2	BidAreaSelected=	BidPageUID=5
+ROW UID=12	OCRUID=3	BidLayerUID=7	Count=2	BidAreaSelected=-1
+ROW UID=3	BidPageSelectedUID=1	BidConditionUID=12	Name=2	BidAreaSelected=0	Sequence=Area	BidPageUID=
+ROW UID=0	BidPageViewUID=4	MasterAreaUID=20	TypGroupUID=999	ParentCommentUID= 7 	BidAreaSelected=1	BidPageUID=
+PTABLE BidTexts
+ROW UID=11	Notes=Area	Name=1	Sequence=
+ROW 
+ROW UID=999	ParentBidUID=12	BidUID=8	EmployeeUID=
+ROW UID=NULL	JobStatusUID=2	SomethingElseUID=7	MasterAreaUID=9	BidConditionFolderUID=9	PrManagerUID=NULL	BidPageViewUID=20	Sequence=-1	Name=1	JobName=-1
+ROW UID=3	BidAreaSelected= 3 	JobName=abc	Count=NULL
+EXPECT
+BID UID=NULL	ParentUID=283	TypGroupUID=21	MasterPageUID=	BidUID= 7 	OrigParentBidUID=NULL	Count=NULL	Sequence=2.5	Name=1
+BTABLE BidConditions
+ROW UID=NULL	BidConditionUID=286	EstimatorUID=NULL	MasterPageUID=282	Name=abc	Sequence= 3 
+ROW UID=280	ParentBidUID=NULL	BidPageFolderUID=287	JobName=NULL	Notes=x y
+BTABLE OCRProps
+ROW UID=281	OrigBidProjectUID=NULL	BidLayerUID=283	Count=1
+ROW UID=282	BidUID=abc	MasterPageUID=abc	ParentCommentUID=280	TranslateAreaUID=285	MasterAreaUID=21	Notes=0	JobName=-1
+ROW UID=283	OCRUID=NULL	PayClassUID=NULL	Notes=Area
+PTABLE BidDimensions
+ROW UID=284	BidPageSelectedUID=NULL	BidZoneUID=1	EmployeeUID=NULL	EstimatorUID=NULL	CoverSheetSelItemUID=NULL	BidUID=281	JobName=-1	Notes=0	Count=-1
+ROW UID=281	ParentBidUID=NULL	BidTakeoffFromUID=abc	BidPageSelectedUID=NULL	BidTakeoffToUID=281	BidAreaSelected=0	Notes=1
+PTABLE BidPageSettings
+ROW UID=287	Sequence=	Count=x y	Name=2	BidAreaSelected=	BidPageUID=5
+ROW UID=285	OCRUID=NULL	BidLayerUID=284	Count=2	BidAreaSelected=-1
+ROW UID=288	BidPageSelectedUID=NULL	BidConditionUID=285	Name=2	BidAreaSelected=0	Sequence=Area	BidPageUID=
+ROW UID=285	BidConditionUID=8	BidTypAreaUID=abc	BidAreaSelected=1	BidPageUID=289
+ROW UID=286	BidConditionUID=282	MasterAreaUID=282	TranslateAreaUID=284	CdnTypeUID=11	PrManagerUID=NULL	BidAreaSelected=1	BidPageUID=5
+ROW UID=NULL	BidPageViewUID=4	MasterAreaUID=20	TypGroupUID=280	ParentCommentUID= 7 	BidAreaSelected=1	BidPageUID=
+PTABLE BidTexts
+ROW UID=286	Notes=Area	Name=1	Sequence=
+ROW 
+ROW UID=280	ParentBidUID=NULL	BidUID=8	EmployeeUID=
+ROW UID=289	JobStatusUID=NULL	SomethingElseUID=7	MasterAreaUID=282	BidConditionFolderUID=282	PrManagerUID=NULL	BidPageViewUID=20	Sequence=-1	Name=1	JobName=-1
+ROW UID=288	BidAreaSelected= 3 	JobName=abc	Count=NULL
+END
+CASE 33
+MAXUID 87
+MAP cdn 3=756	12=168	20=634	4=575
+MAP job 8=742	20=182	10=650	1=298	2=179
+MAP emp 5=850	12=513	10=506	=289	9=765
+MAP pay 4=757	7=637
+BID UID=1	BidAreaUID=3	TranslateAreaUID=21	CoverSheetSelItemUID=30	Notes=1
+BTABLE BidTypAreas
+BTABLE BidConditions
+ROW UID= 7 	ParentUID=7	Name=
+PTABLE BidComments
+ROW UID=9	OCRUID=20	GUID=9	BidPageViewUID=11	BidZoneUID= 7 	PrManagerUID=8	JobName=abc	Notes=	Name=Area
+ROW UID=3	TypGroupUID=8	ParentCommentUID=999	BidAreaUID=12	MasterAreaUID=12	EmployeeUID=8	GUID=4	Count=x y	BidAreaSelected=Area	Notes=2
+ROW UID=999	BidAreaUID=NULL	EstimatorUID=9	TypPageTakeoffUID=8	BidTakeoffFromUID=NULL
+ROW UID=5	CdnTypeUID=20	BidPageFolderUID=30	Name=2	Sequence=abc	Notes=2
+ROW UID=9	BidZoneUID=1	Count=0
+PTABLE BidMarkedPages
+ROW UID=30	ParentBidUID=30	MasterPageUID=7	BidPageViewUID=20	BidLayerUID=2	BidPageFolderUID=30	BidPageSelectedUID=0	Name=Area	Count=	Sequence=0
+ROW UID= 7 	TypGroupMarkerUID=11	CdnTypeUID=5	ParentUID=3	ParentBidUID=12	BidPageSelectedUID=3	BidAreaSelected=x y
+PTABLE BidArrows
+ROW UID=3	TranslateAreaUID= 7 	BidProjectUID=21	CoverSheetSelItemUID=3	BidConditionUID=10	ParentCommentUID=1	CdnTypeUID=3	BidAreaSelected=x y
+ROW UID=9	BidTakeoffToUID=2	BidConditionFolderUID=abc	BidPageSelectedUID=999
+ROW UID=5	PrManagerUID=7	TranslateAreaUID=30	OCRUID=4	MasterAreaUID=	BidZoneUID=7	Name=NULL	Count=2
+EXPECT
+BID UID=88	BidAreaUID=91	TranslateAreaUID=21	CoverSheetSelItemUID=NULL	Notes=1
+BTABLE BidTypAreas
+BTABLE BidConditions
+ROW UID=89	ParentUID=7	Name=
+PTABLE BidComments
+ROW UID=90	OCRUID=NULL	GUID=9	BidPageViewUID=11	BidZoneUID=89	PrManagerUID=NULL	JobName=abc	Notes=	Name=Area
+ROW UID=91	TypGroupUID=8	ParentCommentUID=92	BidAreaUID=12	MasterAreaUID=12	EmployeeUID=NULL	GUID=4	Count=x y	BidAreaSelected=Area	Notes=2
+ROW UID=92	BidAreaUID=NULL	EstimatorUID=765	TypPageTakeoffUID=8	BidTakeoffFromUID=NULL
+ROW UID=93	CdnTypeUID=634	BidPageFolderUID=94	Name=2	Sequence=abc	Notes=2
+ROW UID=90	BidZoneUID=88	Count=0
+PTABLE BidMarkedPages
+ROW UID=94	ParentBidUID=NULL	MasterPageUID=7	BidPageViewUID=20	BidLayerUID=2	BidPageFolderUID=94	BidPageSelectedUID=NULL	Name=Area	Count=	Sequence=0
+ROW UID=89	TypGroupMarkerUID=11	CdnTypeUID=5	ParentUID=91	ParentBidUID=NULL	BidPageSelectedUID=NULL	BidAreaSelected=x y
+PTABLE BidArrows
+ROW UID=91	TranslateAreaUID=89	BidProjectUID=NULL	CoverSheetSelItemUID=NULL	BidConditionUID=10	ParentCommentUID=88	CdnTypeUID=756	BidAreaSelected=x y
+ROW UID=90	BidTakeoffToUID=2	BidConditionFolderUID=abc	BidPageSelectedUID=NULL
+ROW UID=93	PrManagerUID=NULL	TranslateAreaUID=94	OCRUID=NULL	MasterAreaUID=	BidZoneUID=7	Name=NULL	Count=2
+PTABLE BidPageSettings
+END
+CASE 34
+MAXUID 344
+MAP cdn =30	7=712	2=326	10=145	5=314
+MAP job 8=692	2=236	 7 =232	4=698
+MAP emp 5=773
+MAP pay 3=84	9=587	1=343
+BID UID=5	BidZoneUID=1	SomethingElseUID=21	JobStatusUID=abc
+BTABLE BidTypAreas
+BTABLE BidPageFolders
+ROW UID=5	BidTypAreaUID=21	TypGroupMarkerUID=5	ParentUID=2	ParentBidUID=21	BidUID=7	Count=abc	BidAreaSelected=x y
+ROW UID=8	ParentUID=8	PrManagerUID=21	ParentBidUID= 7 	TypPageTakeoffUID=4	ParentCommentUID=4
+BTABLE BidEmployees
+BTABLE BidConditions
+BTABLE UserMasterConditions
+ROW UID=3	TranslateAreaUID= 7 	BidConditionFolderUID=9	ParentBidUID=20	OrigParentBidUID=0	BidUID=12	CoverSheetSelItemUID=20	Notes=2.5
+ROW UID=2	GUID=7	TypGroupUID=11	SourceBidUID=4	Name=x y
+ROW UID=	BidAreaSelected=-1	Notes=Area	Sequence=-1
+BTABLE BidNamedViews
+ROW UID=10	Notes=-1
+ROW UID=20	TypGroupTakeoffUID=	BidPageFolderUID=5	PayClassUID=	OrigParentBidUID=	SourceBidUID=4	Name=2.5	Notes=-1
+PTABLE BidAnnotationOvals
+ROW UID=21	TypPageTakeoffUID=7	BidConditionFolderUID=9	BidAreaUID=	BidTypAreaUID=21	BidAreaSelected=Area	Name=2
+ROW UID=11	BidPageViewUID=1	OCRUID= 7 	CdnTypeUID=999	OrigBidProjectUID=9	Sequence=2	Count=-1
+ROW UID=11	JobName=1
+PTABLE BidMarkedPages
+ROW UID=10	BidPageViewUID=9	PayClassUID=10	JobSiteManagerUID=0	Sequence=Area
+ROW UID=5
+ROW UID=7	CdnTypeUID=11	JobName=1	Sequence=abc	Notes=-1
+PTABLE BidPageSettings
+ROW UID=11	Count=0	Sequence=x y	BidAreaSelected=abc	BidPageUID=
+ROW UID=20	MasterAreaUID=0	BidPageSelectedUID= 7 	BidLayerUID=12	TypGroupUID=1	BidTypAreaUID=12	TypGroupMarkerUID= 7 	BidAreaSelected=abc	BidPageUID=5
+ROW UID= 7 	BidPageUID=0	TypGroupMarkerUID=11	Sequence=1	Count= 3 	BidAreaSelected=1
+ROW UID=8	CoverSheetSelItemUID=8	Count=2.5	Notes=NULL	Sequence=	BidAreaSelected=abc
+ROW UID=30	GUID=12	BidProjectUID=999	Sequence=-1	BidAreaSelected=0	BidPageUID=20
+ROW BidUID= 7 	BidAreaUID=0	ParentBidUID=12	BidAreaSelected=0	Count=1	JobName=2.5	BidPageUID=21
+ROW UID=12	BidTypAreaUID=9	TranslateAreaUID=30	OrigBidProjectUID=3	BidPageSelectedUID= 7 	TypGroupUID=0	JobStatusUID=4	Name=1	BidAreaSelected=2	BidPageUID=20
+EXPECT
+BID UID=345	BidZoneUID=1	SomethingElseUID=21	JobStatusUID=NULL
+BTABLE BidTypAreas
+BTABLE BidPageFolders
+ROW UID=345	BidTypAreaUID=351	TypGroupMarkerUID=345	ParentUID=348	ParentBidUID=NULL	BidUID=353	Count=abc	BidAreaSelected=x y
+ROW UID=346	ParentUID=346	PrManagerUID=NULL	ParentBidUID=NULL	TypPageTakeoffUID=4	ParentCommentUID=4
+BTABLE BidEmployees
+BTABLE BidConditions
+BTABLE UserMasterConditions
+ROW UID=347	TranslateAreaUID=354	BidConditionFolderUID=9	ParentBidUID=NULL	OrigParentBidUID=NULL	BidUID=356	CoverSheetSelItemUID=NULL	Notes=2.5
+ROW UID=348	GUID=7	TypGroupUID=352	SourceBidUID=NULL	Name=x y
+ROW UID=	BidAreaSelected=-1	Notes=Area	Sequence=-1
+BTABLE BidNamedViews
+ROW UID=349	Notes=-1
+ROW UID=350	TypGroupTakeoffUID=	BidPageFolderUID=345	PayClassUID=	OrigParentBidUID=	SourceBidUID=NULL	Name=2.5	Notes=-1
+PTABLE BidAnnotationOvals
+ROW UID=351	TypPageTakeoffUID=353	BidConditionFolderUID=9	BidAreaUID=	BidTypAreaUID=351	BidAreaSelected=Area	Name=2
+ROW UID=352	BidPageViewUID=1	OCRUID=NULL	CdnTypeUID=999	OrigBidProjectUID=NULL	Sequence=2	Count=-1
+ROW UID=352	JobName=1
+PTABLE BidMarkedPages
+ROW UID=349	BidPageViewUID=9	PayClassUID=NULL	JobSiteManagerUID=NULL	Sequence=Area
+ROW UID=345
+ROW UID=353	CdnTypeUID=11	JobName=1	Sequence=abc	Notes=-1
+PTABLE BidPageSettings
+ROW UID=352	Count=0	Sequence=x y	BidAreaSelected=abc	BidPageUID=
+ROW UID=350	MasterAreaUID=NULL	BidPageSelectedUID=NULL	BidLayerUID=356	TypGroupUID=1	BidTypAreaUID=356	TypGroupMarkerUID=354	BidAreaSelected=abc	BidPageUID=345
+ROW UID=346	CoverSheetSelItemUID=NULL	Count=2.5	Notes=NULL	Sequence=	BidAreaSelected=abc
+ROW UID=355	GUID=12	BidProjectUID=NULL	Sequence=-1	BidAreaSelected=0	BidPageUID=350
+ROW BidUID=354	BidAreaUID=NULL	ParentBidUID=NULL	BidAreaSelected=0	Count=1	JobName=2.5	BidPageUID=351
+ROW UID=354	BidPageUID=NULL	TypGroupMarkerUID=352	Sequence=1	Count= 3 	BidAreaSelected=1
+ROW UID=356	BidTypAreaUID=9	TranslateAreaUID=355	OrigBidProjectUID=NULL	BidPageSelectedUID=NULL	TypGroupUID=NULL	JobStatusUID=698	Name=1	BidAreaSelected=2	BidPageUID=350
+END
+CASE 35
+MAXUID 148
+MAP cdn 11=503	1=641	5=724	 7 =761
+MAP job 12=825
+MAP emp 11=223	20=59	 7 =353
+MAP pay 8=46	10=291	=584	20=89	 7 =900	9=697
+BID UID=1	OrigBidProjectUID=7	EmployeeUID=NULL	SourceBidUID=11
+PTABLE BidAnnotationClouds
+PTABLE BidDimensions
+PTABLE BidLegends
+ROW UID=12	BidConditionUID= 7 	CdnTypeUID=3	Notes=x y
+ROW UID=2	BidUID=	OrigBidProjectUID=30	MasterAreaUID=	PrManagerUID=4	JobStatusUID=1	PayClassUID=7	BidAreaSelected=2	Name= 3 	Count= 3 
+ROW UID=10	JobSiteManagerUID=NULL	BidPageFolderUID=12	BidPageSelectedUID=8	BidTakeoffFromUID=5	BidAreaSelected=-1
+ROW UID=NULL	BidZoneUID=9	TranslateAreaUID=5	BidPageFolderUID=7	BidAreaSelected=x y	Sequence=abc
+ROW UID=4	CdnTypeUID=12	OrigBidProjectUID=10	Notes=2.5
+PTABLE BidComments
+ROW UID=30	BidTakeoffFromUID=999	BidAreaUID=20	OrigBidProjectUID=NULL	Sequence=NULL
+ROW UID=7	ParentCommentUID=1	TypGroupUID=2	BidZoneUID=8	JobStatusUID=abc	BidPageFolderUID=7	BidConditionFolderUID=11
+ROW UID=7	BidPageFolderUID=NULL	GUID=NULL	MasterPageUID=1	BidConditionFolderUID=999	ParentBidUID=3	BidTypAreaUID=1	Name=Area	BidAreaSelected=abc
+PTABLE BidAnnoInk
+ROW UID=11	EmployeeUID=12	BidAreaUID=9	JobSiteManagerUID=9	TypGroupMarkerUID=1	SourceBidUID=4	BidTakeoffFromUID=1	BidAreaSelected=NULL
+PTABLE BidPageSettings
+EXPECT
+BID UID=149	OrigBidProjectUID=NULL	EmployeeUID=NULL	SourceBidUID=NULL
+PTABLE BidAnnotationClouds
+PTABLE BidDimensions
+PTABLE BidLegends
+ROW UID=150	BidConditionUID= 7 	CdnTypeUID=3	Notes=x y
+ROW UID=151	BidUID=	OrigBidProjectUID=NULL	MasterAreaUID=	PrManagerUID=NULL	JobStatusUID=NULL	PayClassUID=NULL	BidAreaSelected=2	Name= 3 	Count= 3 
+ROW UID=152	JobSiteManagerUID=NULL	BidPageFolderUID=150	BidPageSelectedUID=NULL	BidTakeoffFromUID=5	BidAreaSelected=-1
+ROW UID=153	BidZoneUID=9	TranslateAreaUID=5	BidPageFolderUID=156	BidAreaSelected=x y	Sequence=abc
+ROW UID=154	CdnTypeUID=12	OrigBidProjectUID=NULL	Notes=2.5
+PTABLE BidComments
+ROW UID=155	BidTakeoffFromUID=999	BidAreaUID=20	OrigBidProjectUID=NULL	Sequence=NULL
+ROW UID=156	ParentCommentUID=149	TypGroupUID=151	BidZoneUID=8	JobStatusUID=NULL	BidPageFolderUID=156	BidConditionFolderUID=157
+ROW UID=156	BidPageFolderUID=153	GUID=NULL	MasterPageUID=149	BidConditionFolderUID=999	ParentBidUID=NULL	BidTypAreaUID=149	Name=Area	BidAreaSelected=abc
+PTABLE BidAnnoInk
+ROW UID=157	EmployeeUID=NULL	BidAreaUID=9	JobSiteManagerUID=NULL	TypGroupMarkerUID=149	SourceBidUID=NULL	BidTakeoffFromUID=149	BidAreaSelected=NULL
+PTABLE BidPageSettings
+END
+CASE 36
+MAXUID 227
+MAP cdn =478	2=428	10=583
+MAP job  7 =223	20=144
+MAP emp 3=159	=406	2=536	 7 =56
+MAP pay 9=370	11=691	8=452	4=351	1=438
+BID UID=1	GUID=NULL	EstimatorUID=NULL	BidTakeoffToUID=20	BidTakeoffFromUID=30	Notes=2	Name=abc	Sequence=x y
+BTABLE BidHotLinks
+PTABLE BidArrows
+ROW UID=0	BidUID=3	BidPageViewUID=30	BidPageUID=7	PayClassUID=0	TypGroupTakeoffUID=2	OrigBidProjectUID=21
+ROW UID=NULL	JobStatusUID=4	Count=0	BidAreaSelected=x y	Notes=NULL
+ROW UID=30	BidTakeoffToUID=1	OCRUID=3	OrigParentBidUID=9	JobStatusUID=	TypGroupMarkerUID= 7 	BidLayerUID=5	BidAreaSelected=0
+ROW UID=abc	TypPageTakeoffUID=0	SourceBidUID=20	ParentUID=7	BidProjectUID=2	TranslateAreaUID=1	BidAreaSelected= 3 
+ROW UID=8	BidConditionFolderUID=5	ParentCommentUID=	BidConditionUID=8
+PTABLE BidALines
+ROW UID=NULL	BidAreaSelected=1
+ROW UID=4	JobSiteManagerUID=999	SourceBidUID=NULL	BidZoneUID= 7 	TypPageTakeoffUID=2	SomethingElseUID=20	Count=Area	Name=-1	BidAreaSelected=1
+ROW UID= 7 	BidPageViewUID=NULL	OrigParentBidUID=2	CdnTypeUID=1	SomethingElseUID=11	BidZoneUID=11	OCRUID=0	Name=x y	Sequence=	JobName=NULL
+ROW UID=
+ROW UID=	BidTakeoffToUID=5	TypGroupUID=10	BidTypAreaUID=0	BidPageSelectedUID=4	GUID=7
+PTABLE BidPageSettings
+ROW UID=20	ParentBidUID=8	TypPageTakeoffUID=11	EmployeeUID=9	OrigParentBidUID=2	JobName=2.5	Sequence=NULL	Name= 3 	BidAreaSelected= 3 	BidPageUID=NULL
+ROW UID=3	OrigBidProjectUID=12	BidProjectUID=0	PayClassUID=20	BidPageSelectedUID=9	SomethingElseUID= 7 	ParentUID=0	Name=0	Count= 3 	BidAreaSelected=-1	BidPageUID=NULL
+ROW UID=0	ParentUID=21	EmployeeUID=30	TypGroupMarkerUID=abc	BidConditionUID=20	PrManagerUID=999	OrigParentBidUID=	BidPageUID=8
+ROW UID=12	SomethingElseUID= 7 	BidZoneUID=4	BidPageUID=0	PayClassUID=3	OrigBidProjectUID= 7 	BidAreaSelected=2
+ROW UID= 7 	BidProjectUID=5	BidConditionUID=9	BidAreaUID=abc	BidAreaSelected=1	BidPageUID=0
+ROW UID=NULL	MasterPageUID= 7 	BidTakeoffFromUID=1	CoverSheetSelItemUID=10	JobStatusUID=9	SomethingElseUID=5	BidAreaSelected=1	BidPageUID=0
+ROW UID=4	EmployeeUID=4	GUID=12	Name=1	Sequence=2.5	Count=-1	BidAreaSelected=abc	BidPageUID=21
+ROW UID=	BidPageSelectedUID=12	Name=0	Count=2.5	BidAreaSelected=	BidPageUID=21
+EXPECT
+BID UID=228	GUID=NULL	EstimatorUID=NULL	BidTakeoffToUID=235	BidTakeoffFromUID=230	Notes=2	Name=abc	Sequence=x y
+BTABLE BidHotLinks
+PTABLE BidArrows
+ROW UID=NULL	BidUID=236	BidPageViewUID=230	BidPageUID=7	PayClassUID=NULL	TypGroupTakeoffUID=2	OrigBidProjectUID=NULL
+ROW UID=229	JobStatusUID=NULL	Count=0	BidAreaSelected=x y	Notes=NULL
+ROW UID=230	BidTakeoffToUID=228	OCRUID=NULL	OrigParentBidUID=NULL	JobStatusUID=	TypGroupMarkerUID=234	BidLayerUID=5	BidAreaSelected=0
+ROW UID=231	TypPageTakeoffUID=NULL	SourceBidUID=NULL	ParentUID=7	BidProjectUID=NULL	TranslateAreaUID=228	BidAreaSelected= 3 
+ROW UID=232	BidConditionFolderUID=5	ParentCommentUID=	BidConditionUID=232
+PTABLE BidALines
+ROW UID=229	BidAreaSelected=1
+ROW UID=233	JobSiteManagerUID=NULL	SourceBidUID=NULL	BidZoneUID=234	TypPageTakeoffUID=2	SomethingElseUID=20	Count=Area	Name=-1	BidAreaSelected=1
+ROW UID=234	BidPageViewUID=229	OrigParentBidUID=NULL	CdnTypeUID=1	SomethingElseUID=11	BidZoneUID=11	OCRUID=NULL	Name=x y	Sequence=	JobName=NULL
+ROW UID=
+ROW UID=	BidTakeoffToUID=5	TypGroupUID=10	BidTypAreaUID=NULL	BidPageSelectedUID=NULL	GUID=7
+PTABLE BidPageSettings
+ROW UID=236	OrigBidProjectUID=NULL	BidProjectUID=NULL	PayClassUID=NULL	BidPageSelectedUID=NULL	SomethingElseUID= 7 	ParentUID=NULL	Name=0	Count= 3 	BidAreaSelected=-1	BidPageUID=229
+ROW UID=NULL	ParentUID=21	EmployeeUID=NULL	TypGroupMarkerUID=231	BidConditionUID=235	PrManagerUID=NULL	OrigParentBidUID=	BidPageUID=232
+ROW UID=233	EmployeeUID=NULL	GUID=12	Name=1	Sequence=2.5	Count=-1	BidAreaSelected=abc	BidPageUID=21
+ROW UID=	BidPageSelectedUID=NULL	Name=0	Count=2.5	BidAreaSelected=	BidPageUID=21
+ROW UID=235	ParentBidUID=NULL	TypPageTakeoffUID=11	EmployeeUID=NULL	OrigParentBidUID=NULL	JobName=2.5	Sequence=NULL	Name= 3 	BidAreaSelected= 3 	BidPageUID=229
+ROW UID=237	SomethingElseUID= 7 	BidZoneUID=233	BidPageUID=NULL	PayClassUID=NULL	OrigBidProjectUID=NULL	BidAreaSelected=2
+END
+CASE 37
+MAXUID 468
+MAP cdn 3=61
+MAP job 1=700	2=359	10=228
+MAP emp 20=397	 7 =30
+MAP pay 7=39	 7 =420
+BID UID=	BidConditionFolderUID=2	TranslateAreaUID=21	GUID=10	MasterAreaUID=10	JobName=1	Name=Area	BidAreaSelected=
+BTABLE BidAreas
+ROW BidTypAreaUID=	BidConditionFolderUID=11	OrigBidProjectUID=3	BidLayerUID=12	BidPageFolderUID=10	ParentUID=30	Notes=-1	Count=	Sequence=2
+ROW UID=3	Sequence=0	JobName=0
+ROW UID=10	BidPageViewUID=5	CoverSheetSelItemUID=8	BidPageFolderUID=999	BidAreaSelected=2.5
+BTABLE BidConditionFolders
+ROW UID=999	BidConditionFolderUID=10	BidConditionUID=12	CoverSheetSelItemUID=10	BidProjectUID=9	MasterPageUID=21	EmployeeUID=20
+ROW BidUID=7	ParentBidUID=7	BidTakeoffFromUID=11	SourceBidUID=12	CoverSheetSelItemUID=21	GUID=	Notes=NULL	Name=x y
+BTABLE BidLayers
+ROW UID=3	TypPageTakeoffUID=4	BidAreaUID=30	BidTakeoffFromUID=999	CdnTypeUID=5	BidZoneUID=abc
+ROW UID=NULL	BidPageSelectedUID= 7 	TypGroupTakeoffUID=21	Name=1
+BTABLE BidTypAreaCounts
+ROW UID=21	BidTypAreaUID=0	JobName= 3 	Notes=-1
+ROW UID=12	BidAreaUID=11	OrigParentBidUID= 7 	CoverSheetSelItemUID=3	ParentUID=30	JobSiteManagerUID=3	OCRUID=3	JobName=	Count=x y	BidAreaSelected=abc
+ROW JobStatusUID=11	BidZoneUID=11	BidAreaSelected=1
+BTABLE UserMasterConditions
+ROW UID=12	Name=Area	Sequence=1
+ROW UID=NULL	MasterPageUID=10	BidConditionFolderUID=21	JobSiteManagerUID=9	ParentBidUID=11	EmployeeUID=5	OCRUID=1	Notes=0	JobName=NULL
+BTABLE BidConditionUser
+ROW UID=3	JobSiteManagerUID=5
+BTABLE OCRProps
+ROW UID=0	BidPageFolderUID=5	BidProjectUID=30	BidConditionUID=NULL	Name= 3 	Sequence=2.5	BidAreaSelected=2.5
+ROW UID=	SourceBidUID=4	TranslateAreaUID=7	BidPageViewUID=3	TypGroupUID=21	BidUID= 7 	ParentUID=1
+ROW UID=9	SourceBidUID=7	Sequence=-1	JobName=x y	BidAreaSelected= 3 
+PTABLE BidDimensions
+PTABLE BidAreaTranslations
+ROW UID=8	BidProjectUID=1	BidPageViewUID=999	MasterPageUID=10	Sequence= 3 
+ROW UID=21	BidLayerUID=12	BidTakeoffToUID=999	PayClassUID=11	JobStatusUID=	OrigBidProjectUID=7	CdnTypeUID=NULL
+ROW UID=999	BidPageSelectedUID=999	CoverSheetSelItemUID=11	OrigBidProjectUID= 7 
+ROW UID=21	CdnTypeUID=0	TypPageTakeoffUID=	TypGroupTakeoffUID=21	BidAreaSelected=2.5
+PTABLE BidAnnoInk
+ROW UID=11	BidUID=abc	BidTypAreaUID=2	Count=2.5
+ROW UID=3	JobSiteManagerUID=20	TranslateAreaUID=2	ParentBidUID=10	Sequence=	Name=
+ROW UID=0	TypGroupMarkerUID=1	EstimatorUID=30	Notes=0
+ROW UID= 7 	JobSiteManagerUID=11	MasterPageUID=5	ParentUID=999	TranslateAreaUID=0	OrigBidProjectUID=5	OrigParentBidUID=21	Name=
+ROW UID=1	TypGroupTakeoffUID=21	ParentBidUID=12	BidAreaUID=3	Notes=0	Name=Area
+EXPECT
+BID UID=	BidConditionFolderUID=2	TranslateAreaUID=473	GUID=10	MasterAreaUID=470	JobName=1	Name=Area	BidAreaSelected=
+BTABLE BidAreas
+ROW BidTypAreaUID=	BidConditionFolderUID=477	OrigBidProjectUID=NULL	BidLayerUID=474	BidPageFolderUID=470	ParentUID=30	Notes=-1	Count=	Sequence=2
+ROW UID=469	Sequence=0	JobName=0
+ROW UID=470	BidPageViewUID=5	CoverSheetSelItemUID=NULL	BidPageFolderUID=471	BidAreaSelected=2.5
+BTABLE BidConditionFolders
+ROW UID=471	BidConditionFolderUID=470	BidConditionUID=474	CoverSheetSelItemUID=NULL	BidProjectUID=NULL	MasterPageUID=473	EmployeeUID=397
+ROW BidUID=7	ParentBidUID=NULL	BidTakeoffFromUID=477	SourceBidUID=NULL	CoverSheetSelItemUID=NULL	GUID=	Notes=NULL	Name=x y
+BTABLE BidLayers
+ROW UID=469	TypPageTakeoffUID=4	BidAreaUID=30	BidTakeoffFromUID=471	CdnTypeUID=5	BidZoneUID=abc
+ROW UID=472	BidPageSelectedUID=NULL	TypGroupTakeoffUID=473	Name=1
+BTABLE BidTypAreaCounts
+ROW UID=473	BidTypAreaUID=NULL	JobName= 3 	Notes=-1
+ROW UID=474	BidAreaUID=477	OrigParentBidUID=NULL	CoverSheetSelItemUID=NULL	ParentUID=30	JobSiteManagerUID=NULL	OCRUID=NULL	JobName=	Count=x y	BidAreaSelected=abc
+ROW JobStatusUID=NULL	BidZoneUID=477	BidAreaSelected=1
+BTABLE UserMasterConditions
+ROW UID=474	Name=Area	Sequence=1
+ROW UID=472	MasterPageUID=470	BidConditionFolderUID=473	JobSiteManagerUID=NULL	ParentBidUID=NULL	EmployeeUID=NULL	OCRUID=NULL	Notes=0	JobName=NULL
+BTABLE BidConditionUser
+ROW UID=469	JobSiteManagerUID=NULL
+BTABLE OCRProps
+ROW UID=NULL	BidPageFolderUID=5	BidProjectUID=NULL	BidConditionUID=472	Name= 3 	Sequence=2.5	BidAreaSelected=2.5
+ROW UID=	SourceBidUID=NULL	TranslateAreaUID=7	BidPageViewUID=469	TypGroupUID=473	BidUID=478	ParentUID=479
+ROW UID=475	SourceBidUID=NULL	Sequence=-1	JobName=x y	BidAreaSelected= 3 
+PTABLE BidDimensions
+PTABLE BidAreaTranslations
+ROW UID=476	BidProjectUID=NULL	BidPageViewUID=471	MasterPageUID=470	Sequence= 3 
+ROW UID=473	BidLayerUID=474	BidTakeoffToUID=471	PayClassUID=NULL	JobStatusUID=	OrigBidProjectUID=NULL	CdnTypeUID=NULL
+ROW UID=471	BidPageSelectedUID=NULL	CoverSheetSelItemUID=NULL	OrigBidProjectUID=NULL
+ROW UID=473	CdnTypeUID=NULL	TypPageTakeoffUID=	TypGroupTakeoffUID=473	BidAreaSelected=2.5
+PTABLE BidAnnoInk
+ROW UID=477	BidUID=abc	BidTypAreaUID=2	Count=2.5
+ROW UID=469	JobSiteManagerUID=397	TranslateAreaUID=2	ParentBidUID=NULL	Sequence=	Name=
+ROW UID=NULL	TypGroupMarkerUID=479	EstimatorUID=NULL	Notes=0
+ROW UID=478	JobSiteManagerUID=NULL	MasterPageUID=5	ParentUID=471	TranslateAreaUID=NULL	OrigBidProjectUID=NULL	OrigParentBidUID=NULL	Name=
+ROW UID=479	TypGroupTakeoffUID=473	ParentBidUID=NULL	BidAreaUID=469	Notes=0	Name=Area
+PTABLE BidPageSettings
+END
+CASE 38
+MAXUID 59
+MAP cdn 20=158	1=404	7=437	12=292	=183	5=699
+MAP job 20=461	7=193	3=871	5=619	11=779	9=210
+MAP emp 
+MAP pay 10=526	20=188	5=690	7=86	3=735	=357
+BID UID=5	TypPageTakeoffUID=4	Notes=abc	Name=x y	JobName=2
+BTABLE BidPlanRooms
+BTABLE BidPageFolders
+BTABLE BidSettings
+ROW UID=5	Notes=2.5	Count=x y
+BTABLE BidConditions
+BTABLE BidZones
+ROW UID=12	OrigParentBidUID=999	BidConditionFolderUID=1	TypGroupMarkerUID=11	BidTakeoffToUID=NULL	Count=2	Name=2
+ROW UID=0	ParentUID=3	MasterAreaUID=1	ParentBidUID=2	Notes= 3 
+BTABLE OCRProps
+BTABLE BidPages
+ROW UID=0	TypPageTakeoffUID=abc	BidTakeoffToUID=21
+PTABLE BidLegends
+ROW UID=	EstimatorUID=7	Sequence=-1	Name=x y
+PTABLE BidPageSettings
+ROW UID=5	Notes=1	BidAreaSelected=	BidPageUID=
+EXPECT
+BID UID=60	TypPageTakeoffUID=4	Notes=abc	Name=x y	JobName=2
+BTABLE BidPlanRooms
+BTABLE BidPageFolders
+BTABLE BidSettings
+ROW UID=60	Notes=2.5	Count=x y
+BTABLE BidConditions
+BTABLE BidZones
+ROW UID=61	OrigParentBidUID=NULL	BidConditionFolderUID=1	TypGroupMarkerUID=11	BidTakeoffToUID=NULL	Count=2	Name=2
+ROW UID=NULL	ParentUID=3	MasterAreaUID=1	ParentBidUID=NULL	Notes= 3 
+BTABLE OCRProps
+BTABLE BidPages
+ROW UID=NULL	TypPageTakeoffUID=abc	BidTakeoffToUID=21
+PTABLE BidLegends
+ROW UID=	EstimatorUID=NULL	Sequence=-1	Name=x y
+PTABLE BidPageSettings
+ROW UID=60	Notes=1	BidAreaSelected=	BidPageUID=
+END
+CASE 39
+MAXUID 265
+MAP cdn 5=690	12=564	11=753	4=437	8=94	10=331
+MAP job 10=633	7=116	3=518	4=40
+MAP emp 2=529	=403	11=79
+MAP pay 12=48	2=247
+BID UID=1	BidUID=	Sequence= 3 	BidAreaSelected=-1
+BTABLE BidPlanRooms
+PTABLE BidTexts
+PTABLE BidPageSettings
+ROW JobName=2	Notes=Area	BidAreaSelected=abc	BidPageUID=5
+ROW UID=3	BidTakeoffToUID=4	BidLayerUID=7	BidPageUID= 7 	TypPageTakeoffUID=1	BidTypAreaUID=9	EstimatorUID=2	JobName=	Notes=-1	BidAreaSelected=
+ROW UID=0	SomethingElseUID=30	BidTakeoffFromUID=999	Count= 3 	Name=abc	BidPageUID=0
+EXPECT
+BID UID=266	BidUID=	Sequence= 3 	BidAreaSelected=-1
+BTABLE BidPlanRooms
+PTABLE BidTexts
+PTABLE BidPageSettings
+ROW JobName=2	Notes=Area	BidAreaSelected=abc	BidPageUID=5
+ROW UID=267	BidTakeoffToUID=4	BidLayerUID=7	BidPageUID= 7 	TypPageTakeoffUID=266	BidTypAreaUID=9	EstimatorUID=529	JobName=	Notes=-1	BidAreaSelected=
+ROW UID=NULL	SomethingElseUID=30	BidTakeoffFromUID=999	Count= 3 	Name=abc	BidPageUID=NULL
+END

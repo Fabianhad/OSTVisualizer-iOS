@@ -76,8 +76,7 @@ namespace ost_store
         stmt.bind_text(i++, cdn.condition_folder_uid);
         stmt.bind_text(i++, cdn.uid); // WHERE UID = ?
 
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
     bool shift_condition_ref_nos(const std::string &db_path,
@@ -99,8 +98,7 @@ namespace ost_store
         stmt.bind_text(1, bid_uid);
         stmt.bind_int(2, from_ref_no);
         stmt.bind_text(3, exclude_uid);
-        stmt.step();
-        return true;
+        return stmt.run();
     }
 
     std::string duplicate_condition(const std::string &db_path,
@@ -111,58 +109,84 @@ namespace ost_store
         if (!db.open(db_path))
             return "";
 
-        ost_db::Statement uid_stmt = db.prepare(
-            "SELECT COALESCE(MAX(UID), 0) + 1 FROM BidConditions");
+        // Every read below is finished (scoped) before the transaction starts, and every statement that touches
+        // _dup_cond is finished before that table is dropped: a still-running statement would make DROP TABLE fail.
         int new_uid = 1;
-        if (uid_stmt.valid() && uid_stmt.step())
-            new_uid = uid_stmt.column_int(0);
-
-        ost_db::Statement ref_stmt = db.prepare(
-            "SELECT COALESCE(MAX(RefNo), 0) + 1 FROM BidConditions WHERE BidUID = ?");
-        int new_ref = 1;
-        if (ref_stmt.valid())
         {
+            ost_db::Statement uid_stmt = db.prepare(
+                "SELECT COALESCE(MAX(UID), 0) + 1 FROM BidConditions");
+            if (!uid_stmt.valid())
+                return "";
+            const ost_db::StepResult uid_result = uid_stmt.step_result();
+            if (uid_result == ost_db::StepResult::Error)
+                return "";
+            if (uid_result == ost_db::StepResult::Row)
+                new_uid = uid_stmt.column_int(0);
+        }
+
+        int new_ref = 1;
+        {
+            ost_db::Statement ref_stmt = db.prepare(
+                "SELECT COALESCE(MAX(RefNo), 0) + 1 FROM BidConditions WHERE BidUID = ?");
+            if (!ref_stmt.valid())
+                return "";
             ref_stmt.bind_text(1, bid_uid);
-            if (ref_stmt.step())
+            const ost_db::StepResult ref_result = ref_stmt.step_result();
+            if (ref_result == ost_db::StepResult::Error)
+                return "";
+            if (ref_result == ost_db::StepResult::Row)
                 new_ref = ref_stmt.column_int(0);
         }
 
         if (!db.begin_transaction())
             return "";
 
-        db.exec("DROP TABLE IF EXISTS _dup_cond");
-        ost_db::Statement copy = db.prepare(
-            "CREATE TEMP TABLE _dup_cond AS "
-            "SELECT * FROM BidConditions WHERE UID = ?");
-        if (!copy.valid())
-        {
-            db.exec("ROLLBACK");
-            return "";
-        }
-        copy.bind_text(1, condition_uid);
-        copy.step();
-
-        ost_db::Statement chk = db.prepare("SELECT COUNT(*) FROM _dup_cond");
-        if (!chk.valid() || !chk.step() || chk.column_int(0) == 0)
+        // Any failure from here on drops the scratch table (best effort) and rolls the transaction back.
+        auto fail = [&db]() -> std::string
         {
             db.exec("DROP TABLE IF EXISTS _dup_cond");
             db.exec("ROLLBACK");
             return "";
+        };
+
+        if (!db.exec("DROP TABLE IF EXISTS _dup_cond"))
+            return fail();
+
+        {
+            ost_db::Statement copy = db.prepare(
+                "CREATE TEMP TABLE _dup_cond AS "
+                "SELECT * FROM BidConditions WHERE UID = ?");
+            if (!copy.valid())
+                return fail();
+            copy.bind_text(1, condition_uid);
+            if (!copy.run())
+                return fail();
         }
 
-        ost_db::Statement upd = db.prepare(
-            "UPDATE _dup_cond SET UID = ?, RefNo = ?");
-        if (upd.valid())
         {
+            ost_db::Statement chk = db.prepare("SELECT COUNT(*) FROM _dup_cond");
+            if (!chk.valid() || !chk.step() || chk.column_int(0) == 0)
+                return fail();
+        }
+
+        {
+            ost_db::Statement upd = db.prepare(
+                "UPDATE _dup_cond SET UID = ?, RefNo = ?");
+            if (!upd.valid())
+                return fail();
             upd.bind_int(1, new_uid);
             upd.bind_int(2, new_ref);
-            upd.step();
+            if (!upd.run())
+                return fail();
         }
 
-        db.exec("INSERT INTO BidConditions SELECT * FROM _dup_cond");
-        db.exec("DROP TABLE IF EXISTS _dup_cond");
+        if (!db.exec("INSERT INTO BidConditions SELECT * FROM _dup_cond"))
+            return fail();
+        if (!db.exec("DROP TABLE IF EXISTS _dup_cond"))
+            return fail();
 
-        db.commit();
+        if (!db.commit())
+            return "";
 
         return std::to_string(new_uid);
     }
@@ -175,87 +199,97 @@ namespace ost_store
         if (!db.open(db_path))
             return false;
 
-        db.begin_transaction();
+        if (!db.begin_transaction())
+            return false;
+
+        auto fail = [&db]() -> bool
+        {
+            db.rollback();
+            return false;
+        };
+
+        // One cleanup DELETE. Any failure fails the whole delete (and rolls it back), except for a best-effort
+        // cleanup: Windows only logs a failing ConditionSetStyles cleanup and the delete goes on
+        // (condition_operations.py _delete_condition_cascade_chunk). A failure that already rolled the transaction
+        // back by itself (I/O error, RAISE(ROLLBACK)) still fails the delete.
+        auto run_cleanup = [&](const std::string &sql, bool bind_bid, bool best_effort) -> bool
+        {
+            ost_db::Statement stmt = db.prepare(sql);
+            if (!stmt.valid())
+                return best_effort;
+            stmt.bind_text(1, condition_uid);
+            if (bind_bid)
+                stmt.bind_text(2, bid_uid);
+            if (stmt.run())
+                return true;
+            return best_effort && db.in_transaction();
+        };
+
+        // Windows leaves a dependent table alone when the schema lacks the table or the column the cleanup matches on
+        // (schema.optional_table_missing / schema.column_exists guards).
+        auto has_column = [&db](const char *table, const char *column) -> bool
+        {
+            return db.table_exists(table) && db.column_exists(table, column);
+        };
 
         const char *takeoff_children[] = {
             "BidDimensions", "BidALines", "BidArrows"};
         for (const char *table : takeoff_children)
         {
+            if (!has_column(table, "BidTakeoffFromUID"))
+                continue;
             std::string sql =
                 "DELETE FROM [" + std::string(table) +
                 "] WHERE BidTakeoffFromUID IN "
                 "(SELECT UID FROM BidTakeoffs "
                 "WHERE BidConditionUID = ? AND BidUID = ?)";
-            ost_db::Statement stmt = db.prepare(sql);
-            if (stmt.valid())
-            {
-                stmt.bind_text(1, condition_uid);
-                stmt.bind_text(2, bid_uid);
-                stmt.step();
-            }
+            if (!run_cleanup(sql, true, false))
+                return fail();
         }
 
+        if (has_column("BidPercents", "BidTakeoffUID"))
         {
-            ost_db::Statement stmt = db.prepare(
-                "DELETE FROM BidPercents WHERE BidTakeoffUID IN "
-                "(SELECT UID FROM BidTakeoffs "
-                "WHERE BidConditionUID = ? AND BidUID = ?)");
-            if (stmt.valid())
-            {
-                stmt.bind_text(1, condition_uid);
-                stmt.bind_text(2, bid_uid);
-                stmt.step();
-            }
+            if (!run_cleanup(
+                    "DELETE FROM BidPercents WHERE BidTakeoffUID IN "
+                    "(SELECT UID FROM BidTakeoffs "
+                    "WHERE BidConditionUID = ? AND BidUID = ?)",
+                    true, false))
+                return fail();
         }
 
+        // BidTakeoffs is optional as a table, but once it exists it must carry the columns the delete matches on.
+        if (db.table_exists("BidTakeoffs"))
         {
-            ost_db::Statement del_tk = db.prepare(
-                "DELETE FROM BidTakeoffs "
-                "WHERE BidConditionUID = ? AND BidUID = ?");
-            if (del_tk.valid())
-            {
-                del_tk.bind_text(1, condition_uid);
-                del_tk.bind_text(2, bid_uid);
-                del_tk.step();
-            }
+            if (!run_cleanup(
+                    "DELETE FROM BidTakeoffs "
+                    "WHERE BidConditionUID = ? AND BidUID = ?",
+                    true, false))
+                return fail();
         }
 
+        if (has_column("BidLaborActivity", "BidConditionUID"))
         {
-            ost_db::Statement del_la = db.prepare(
-                "DELETE FROM BidLaborActivity "
-                "WHERE BidConditionUID = ? AND BidUID = ?");
-            if (del_la.valid())
-            {
-                del_la.bind_text(1, condition_uid);
-                del_la.bind_text(2, bid_uid);
-                del_la.step();
-            }
+            if (!run_cleanup(
+                    "DELETE FROM BidLaborActivity "
+                    "WHERE BidConditionUID = ? AND BidUID = ?",
+                    true, false))
+                return fail();
         }
 
+        if (has_column("ConditionSetStyles", "ConditionStyleUID"))
         {
-            ost_db::Statement del_styles = db.prepare(
-                "DELETE FROM ConditionSetStyles "
-                "WHERE ConditionStyleUID = ?");
-            if (!del_styles.valid())
-            {
-                db.exec("ROLLBACK");
-                return false;
-            }
-            del_styles.bind_text(1, condition_uid);
-            del_styles.step();
+            if (!run_cleanup(
+                    "DELETE FROM ConditionSetStyles "
+                    "WHERE ConditionStyleUID = ?",
+                    false, true))
+                return fail();
         }
 
-        ost_db::Statement del_cdn = db.prepare(
-            "DELETE FROM BidConditions "
-            "WHERE UID = ? AND BidUID = ?");
-        if (!del_cdn.valid())
-        {
-            db.exec("ROLLBACK");
-            return false;
-        }
-        del_cdn.bind_text(1, condition_uid);
-        del_cdn.bind_text(2, bid_uid);
-        del_cdn.step();
+        if (!run_cleanup(
+                "DELETE FROM BidConditions "
+                "WHERE UID = ? AND BidUID = ?",
+                true, false))
+            return fail();
 
         return db.commit();
     }
@@ -284,9 +318,16 @@ namespace ost_store
         if (!db.open(db_path))
             return false;
 
-        set_pref(db, "color_mode", config.color_mode);
-        set_pref(db, "grayscale_enabled", config.grayscale_enabled ? "1" : "0");
-        return true;
+        // Both preferences are one operation: when either write fails neither is kept.
+        if (!db.begin_transaction())
+            return false;
+        if (!set_pref(db, "color_mode", config.color_mode) ||
+            !set_pref(db, "grayscale_enabled", config.grayscale_enabled ? "1" : "0"))
+        {
+            db.rollback();
+            return false;
+        }
+        return db.commit();
     }
 
 }

@@ -5,74 +5,53 @@
 namespace ost_import
 {
 
+    // Windows schema_contract.OST_XML_TO_DATABASE_COLUMN: the XML spells the column CopyTimestamp, the database
+    // CopyTimeStamp (ost_importer._database_row). Applied to every row, including the Bid and page rows.
     static Row attrs_to_row(const pugi::xml_node &node)
     {
         Row row;
         for (auto &attr : node.attributes())
-            row[attr.name()] = attr.value();
+        {
+            const std::string name = attr.name();
+            row[name == "CopyTimestamp" ? std::string("CopyTimeStamp") : name] = attr.value();
+        }
         return row;
+    }
+
+    // Windows ost_importer._matches_section_child: the singular tag of the section, or the section name minus its
+    // trailing "s" (so both PayClass and PayClasse are PayClasses rows; the container's own name is not).
+    static bool matches_section_child(const std::string &section, const std::string &tag)
+    {
+        if (tag == ost_schema::singular(section))
+            return true;
+        return !section.empty() && section.back() == 's' && tag == section.substr(0, section.size() - 1);
     }
 
     static void collect_section(const pugi::xml_node &parent,
                                 const char *section_name,
                                 TableMap &target)
     {
-        std::string singular = ost_schema::singular(section_name);
         pugi::xml_node container = parent.child(section_name);
         RowList rows;
         if (container)
         {
             for (auto &child : container.children())
             {
-                if (child.name() == singular)
+                if (matches_section_child(section_name, child.name()))
                     rows.push_back(attrs_to_row(child));
             }
         }
         target[section_name] = std::move(rows);
     }
 
-    static std::string sanitize_ost_xml(const char *data, size_t length)
-    {
-        std::string xml(data, length);
-        bool in_attr = false;
-        char attr_quote = 0;
-
-        for (size_t i = 0; i < xml.size(); i++)
-        {
-            char c = xml[i];
-            if (!in_attr)
-            {
-                if (c == '=' && i + 1 < xml.size() && (xml[i + 1] == '"' || xml[i + 1] == '\''))
-                {
-                    in_attr = true;
-                    attr_quote = xml[i + 1];
-                    i++;
-                }
-            }
-            else
-            {
-                if (c == '\\' && i + 1 < xml.size() && xml[i + 1] == attr_quote)
-                {
-                    xml[i] = '/';
-                }
-                else if (c == attr_quote)
-                {
-                    in_attr = false;
-                }
-            }
-        }
-        return xml;
-    }
-
     OstRawData parse_ost_xml(const char *data, size_t length)
     {
         OstRawData result;
 
-        std::string sanitized = sanitize_ost_xml(data, length);
-
+        // Attribute values are taken byte-exact as the XML parser returns them, like ElementTree in the Windows
+        // importer (ost_importer._parse_ost_xml parses the file as is; there is no pre-processing pass).
         pugi::xml_document doc;
-        pugi::xml_parse_result parse_res = doc.load_buffer(
-            sanitized.c_str(), sanitized.size());
+        pugi::xml_parse_result parse_res = doc.load_buffer(data, length);
         if (!parse_res)
             return result;
 
@@ -102,13 +81,12 @@ namespace ost_import
 
                 for (const char *section : ost_schema::PAGE_SECTIONS)
                 {
-                    std::string singular = ost_schema::singular(section);
                     pugi::xml_node container = page_elem.child(section);
                     if (container)
                     {
                         for (auto &child : container.children())
                         {
-                            if (child.name() == singular)
+                            if (matches_section_child(section, child.name()))
                                 result.page_tables[section].push_back(attrs_to_row(child));
                         }
                     }
