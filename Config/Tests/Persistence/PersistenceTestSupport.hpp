@@ -10,17 +10,33 @@
 #include "Persistence/OstDatabase.hpp"
 #include "Persistence/ProjectStore/ProjectStore.hpp"
 
+#include <cstdio>
+#include <random>
 #include <string>
 #include <vector>
 
 namespace ost_ptest
 {
+    // The temp dir is shared by every test run on the machine (and by concurrent runs of the same area from another build):
+    // each process puts its database files under a token of its own, so two runs never delete or rewrite each other's file.
+    inline const std::string &run_token()
+    {
+        static const std::string token = []
+        {
+            std::random_device device;
+            char buffer[16];
+            std::snprintf(buffer, sizeof buffer, "%08x", static_cast<unsigned>(device()));
+            return std::string(buffer);
+        }();
+        return token;
+    }
+
     class TempDb
     {
     public:
         // with_schema=true runs ost_store::create_schema (all tables, the 'Deleted Bids' project with UID 1, default layers).
         explicit TempDb(const std::string &name, bool with_schema = true)
-            : _path(ost_test::temp_path("persistence_" + name + ".db"))
+            : _path(ost_test::temp_path("persistence_" + run_token() + "_" + name + ".db"))
         {
             remove_files();
             if (with_schema)

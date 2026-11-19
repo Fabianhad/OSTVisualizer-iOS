@@ -6,11 +6,12 @@
 //
 // Component files in Components/:
 //   ProjectStore+Load.cpp       — load_project
-//   ProjectStore+Import.cpp     — import_project, is_bid_imported
+//   ProjectStore+Import.cpp     — import_project
 //   ProjectStore+Folders.cpp    — load_hierarchy, folder CRUD
 //   ProjectStore+Takeoffs.cpp   — takeoff CRUD, layer visibility
 //   ProjectStore+Conditions.cpp — condition CRUD, render config
 #include "ProjectStore.hpp"
+#include "ProjectStore_Integrity.hpp"
 #include "../OstDatabase.hpp"
 #include "../OstSchema.hpp"
 #include "../../Domain/PositionParser.hpp"
@@ -23,99 +24,35 @@
 
 namespace ost_store
 {
-    static const char *DELETED_BIDS_PROJECT_NAME = "Deleted Bids";
-    static const char *PREFERRED_DELETED_BIDS_PROJECT_UID = "1";
+    static const char *DELETED_BIDS_PROJECT_NAME = ost_domain::DELETED_BIDS_FOLDER_NAME;
+    static const char *DELETED_BIDS_PROJECT_UID = ost_domain::DELETED_BIDS_FOLDER_UID;
 
-    // Returns the UID of the canonical 'Deleted Bids' project, creating it (and merging duplicates) when needed.
+    // Returns the UID of the system project 'Deleted Bids' ("1"), creating the row when the database has none.
+    // Windows (project_constants.py): the system project is the BidProjects row with UID 1, whatever its name; nothing is looked up,
+    // renamed, merged or deleted by name. database_creator.py puts (UID 1, 'Deleted Bids') into every new database.
     // Returns "" when any statement failed: the caller's open transaction must then be rolled back.
     static std::string resolve_deleted_bids_project_uid(ost_db::OstDatabase &db)
     {
-        std::vector<std::string> deleted_uids;
-        {
-            ost_db::Statement stmt = db.prepare(
-                "SELECT UID FROM BidProjects WHERE Name = ? ORDER BY UID");
-            if (!stmt.valid())
-                return "";
-            stmt.bind_text(1, DELETED_BIDS_PROJECT_NAME);
-            while (stmt.step())
-                deleted_uids.push_back(stmt.column_text(0));
-            if (stmt.failed())
-                return "";
-        }
+        ost_db::Statement existing = db.prepare(
+            "SELECT 1 FROM BidProjects WHERE UID = ?");
+        if (!existing.valid())
+            return "";
+        existing.bind_text(1, DELETED_BIDS_PROJECT_UID);
+        const ost_db::StepResult existing_result = existing.step_result();
+        if (existing_result == ost_db::StepResult::Error)
+            return "";
+        if (existing_result == ost_db::StepResult::Row)
+            return DELETED_BIDS_PROJECT_UID;
 
-        std::string canonical_uid;
-        for (const std::string &uid : deleted_uids)
-        {
-            if (uid == PREFERRED_DELETED_BIDS_PROJECT_UID)
-            {
-                canonical_uid = uid;
-                break;
-            }
-        }
-        if (canonical_uid.empty() && !deleted_uids.empty())
-            canonical_uid = deleted_uids.front();
-
-        if (canonical_uid.empty())
-        {
-            bool preferred_available = true;
-            ost_db::Statement existing = db.prepare(
-                "SELECT UID FROM BidProjects WHERE UID = ?");
-            if (!existing.valid())
-                return "";
-            existing.bind_text(1, PREFERRED_DELETED_BIDS_PROJECT_UID);
-            const ost_db::StepResult existing_result = existing.step_result();
-            if (existing_result == ost_db::StepResult::Error)
-                return "";
-            preferred_available = (existing_result == ost_db::StepResult::Done);
-
-            if (preferred_available)
-            {
-                canonical_uid = PREFERRED_DELETED_BIDS_PROJECT_UID;
-            }
-            else
-            {
-                ost_db::Statement max_stmt = db.prepare(
-                    "SELECT COALESCE(MAX(UID), 0) + 1 FROM BidProjects");
-                if (!max_stmt.valid() || !max_stmt.step())
-                    return "";
-                canonical_uid = std::to_string(max_stmt.column_int(0));
-            }
-
-            ost_db::Statement insert = db.prepare(
-                "INSERT INTO BidProjects (UID, Name) VALUES (?, ?)");
-            if (!insert.valid())
-                return "";
-            insert.bind_text(1, canonical_uid);
-            insert.bind_text(2, DELETED_BIDS_PROJECT_NAME);
-            if (!insert.run())
-                return "";
-            return canonical_uid;
-        }
-
-        for (const std::string &uid : deleted_uids)
-        {
-            if (uid == canonical_uid)
-                continue;
-
-            ost_db::Statement move_bids = db.prepare(
-                "UPDATE Bids SET BidProjectUID = ? WHERE BidProjectUID = ?");
-            if (!move_bids.valid())
-                return "";
-            move_bids.bind_text(1, canonical_uid);
-            move_bids.bind_text(2, uid);
-            if (!move_bids.run())
-                return "";
-
-            ost_db::Statement delete_folder = db.prepare(
-                "DELETE FROM BidProjects WHERE UID = ?");
-            if (!delete_folder.valid())
-                return "";
-            delete_folder.bind_text(1, uid);
-            if (!delete_folder.run())
-                return "";
-        }
-
-        return canonical_uid;
+        ost_db::Statement insert = db.prepare(
+            "INSERT INTO BidProjects (UID, Name) VALUES (?, ?)");
+        if (!insert.valid())
+            return "";
+        insert.bind_text(1, DELETED_BIDS_PROJECT_UID);
+        insert.bind_text(2, DELETED_BIDS_PROJECT_NAME);
+        if (!insert.run())
+            return "";
+        return DELETED_BIDS_PROJECT_UID;
     }
 
     static bool bid_is_in_deleted_bids(ost_db::OstDatabase &db,
@@ -139,13 +76,14 @@ namespace ost_store
     }
 
     // The Windows extract_z_value_from_name raises ValueError for an unreadable fraction (zero denominator, e.g.
-    // "Wall @B 1/0\""); the Windows MDB reader (bid_data_reader.py) catches it, logs a warning and stores (0.0, False).
+    // "Wall @B 1/0\""); the Windows MDB reader (bid_data_reader.py) catches it, logs a warning and stores (0.0, False). That is
+    // ost_domain::derive_elevation_from_name, the derivation the loader shares with condition_to_save (COND-ELEV-01): what the app
+    // keeps in memory after a Save of the dialog equals what this loader reads back.
     std::pair<double, bool> extract_z_value(const std::string &name)
     {
         double z_inches = 0.0;
         bool is_top = false;
-        if (!ost_domain::extract_z_value_from_name(name, z_inches, is_top))
-            return {0.0, false};
+        ost_domain::derive_elevation_from_name(name, z_inches, is_top);
         return {z_inches, is_top};
     }
 
@@ -306,6 +244,10 @@ namespace ost_store
 
     bool delete_project(const std::string &db_path, const std::string &bid_uid)
     {
+        long long bid = 0;
+        if (!integrity::parse_uid(bid_uid, bid))
+            return false;
+
         ost_db::OstDatabase db;
         if (!db.open(db_path))
             return false;
@@ -320,36 +262,54 @@ namespace ost_store
             return false;
         }
 
-        ost_db::Statement current = db.prepare(
-            "SELECT BidProjectUID FROM Bids WHERE UID = ?");
-        if (!current.valid())
+        // The folder the bid is in. Windows only knows the projects of the hierarchy (project_data_service.find_project_uid_for_bid), so a
+        // BidProjectUID that is NULL, 0 or a UID without a BidProjects row (a dangling reference) is NO project: the bid is an orphan
+        // ("" here). A bid that does not exist fails (move_bids_to_project requires every bid to exist).
+        std::string current_project_uid;
         {
-            db.rollback();
-            return false;
+            ost_db::Statement current = db.prepare(
+                "SELECT project.UID FROM Bids AS bid "
+                "LEFT JOIN BidProjects AS project ON project.UID = bid.BidProjectUID "
+                "WHERE bid.UID = ?");
+            if (!current.valid())
+            {
+                db.rollback();
+                return false;
+            }
+            current.bind_int64(1, bid);
+            if (current.step_result() != ost_db::StepResult::Row)
+            {
+                db.rollback();
+                return false;
+            }
+            if (current.column_type(0) != ost_db::Statement::TypeNull)
+                current_project_uid = current.column_text(0);
         }
-        current.bind_text(1, bid_uid);
-        if (!current.step())
-        {
-            db.rollback();
-            return false;
-        }
-        const std::string current_project_uid = current.column_text(0);
         if (current_project_uid == deleted_project_uid)
             return db.commit();
 
+        // project_write_handler._delete_bids -> move_bids_to_project(bid, trash, orig_project_uid = its folder or None): the restore
+        // reference OrigBidProjectUID is written only when the bid IS in a folder (BRW-10: never a dangling uid); for an orphan the
+        // writer does not touch the column, so a stored value survives (BRW-11, decided).
+        const bool has_origin = !current_project_uid.empty();
         ost_db::Statement stmt = db.prepare(
-            "UPDATE Bids SET BidProjectUID = ?, OrigBidProjectUID = ? WHERE UID = ?");
+            has_origin ? "UPDATE Bids SET BidProjectUID = ?, OrigBidProjectUID = ? WHERE UID = ?"
+                       : "UPDATE Bids SET BidProjectUID = ? WHERE UID = ?");
         if (!stmt.valid())
         {
             db.rollback();
             return false;
         }
         stmt.bind_text(1, deleted_project_uid);
-        if (current_project_uid.empty())
-            stmt.bind_null(2);
-        else
+        if (has_origin)
+        {
             stmt.bind_text(2, current_project_uid);
-        stmt.bind_text(3, bid_uid);
+            stmt.bind_int64(3, bid);
+        }
+        else
+        {
+            stmt.bind_int64(2, bid);
+        }
         if (!stmt.run())
         {
             db.rollback();
@@ -359,8 +319,240 @@ namespace ost_store
         return db.commit();
     }
 
+    bool restore_bid(const std::string &db_path, const std::string &bid_uid)
+    {
+        long long bid = 0;
+        if (!integrity::parse_uid(bid_uid, bid))
+            return false;
+
+        ost_db::OstDatabase db;
+        if (!db.open(db_path))
+            return false;
+
+        if (!db.begin_transaction())
+            return false;
+
+        // project_write_handler.restore_bids: the bid goes back to its OrigBidProjectUID (BRW-09); no original (NULL / 0) -> orphan_bids
+        // (BidProjectUID = NULL). OrigBidProjectUID itself is not changed. A bid that does not exist has no original either, and
+        // orphaning an absent bid is a success that changes nothing.
+        // Kept by user decision 2026-11-19 (BRW-09, see PORTING_BLOCKERS.md): when OrigBidProjectUID names a folder that no longer
+        // exists, Windows move_bids_to_project requires the project and fails the whole restore (nothing changes, "Restore Error").
+        // That can only be foreign data (delete_folder clears the reference); iOS restores the bid unassigned, what its Restore
+        // action always did.
+        long long target = 0;
+        bool has_target = false;
+        {
+            ost_db::Statement origin = db.prepare(
+                "SELECT project.UID FROM Bids AS bid "
+                "INNER JOIN BidProjects AS project ON project.UID = bid.OrigBidProjectUID "
+                "WHERE bid.UID = ?");
+            if (!origin.valid())
+            {
+                db.rollback();
+                return false;
+            }
+            origin.bind_int64(1, bid);
+            const ost_db::StepResult found = origin.step_result();
+            if (found == ost_db::StepResult::Error)
+            {
+                db.rollback();
+                return false;
+            }
+            if (found == ost_db::StepResult::Row)
+            {
+                target = origin.column_int64(0);
+                has_target = true;
+            }
+        }
+
+        ost_db::Statement stmt = db.prepare(
+            has_target ? "UPDATE Bids SET BidProjectUID = ? WHERE UID = ?"
+                       : "UPDATE Bids SET BidProjectUID = NULL WHERE UID = ?");
+        if (!stmt.valid())
+        {
+            db.rollback();
+            return false;
+        }
+        if (has_target)
+        {
+            stmt.bind_int64(1, target);
+            stmt.bind_int64(2, bid);
+        }
+        else
+        {
+            stmt.bind_int64(1, bid);
+        }
+        if (!stmt.run())
+        {
+            db.rollback();
+            return false;
+        }
+
+        return db.commit();
+    }
+
+    namespace
+    {
+        // The Windows delete_bids cascade for ONE bid (bid_operations.py _delete_bids_cascade_chunk), step by step in the same
+        // order and with the same guards: a step whose table or column the schema lacks is skipped (optional_table_missing /
+        // column_exists), like the Windows writer does for a database that does not carry every optional table. Every statement
+        // takes the bid uid as its only parameter; a statement that fails fails the cascade (the caller rolls the transaction back).
+        class BidCascade
+        {
+        public:
+            BidCascade(ost_db::OstDatabase &db, long long bid_uid) : _db(db), _bid(bid_uid) {}
+
+            bool run()
+            {
+                // BidPercents of the bid's takeoffs (also reachable through no page and no bid column).
+                if (has_column("BidPercents", "BidTakeoffUID") && has_column("BidTakeoffs", "UID") &&
+                    has_column("BidTakeoffs", "BidUID"))
+                {
+                    if (!execute("DELETE FROM [BidPercents] WHERE [BidTakeoffUID] IN "
+                                 "(SELECT [UID] FROM [BidTakeoffs] WHERE [BidUID] = ?)"))
+                        return false;
+                }
+                // Another bid's selected page that lies in the deleted bid is cleared before the pages go.
+                if (has_column("BidSettings", "BidPageSelectedUID") && has_column("BidPages", "UID") &&
+                    has_column("BidPages", "BidUID"))
+                {
+                    if (!execute("UPDATE [BidSettings] SET [BidPageSelectedUID] = NULL WHERE [BidPageSelectedUID] IN "
+                                 "(SELECT [UID] FROM [BidPages] WHERE [BidUID] = ?)"))
+                        return false;
+                }
+                // Annotations that start or end at a takeoff of the bid.
+                for (const char *table : {"BidDimensions", "BidALines", "BidArrows"})
+                    if (!delete_takeoff_links(table))
+                        return false;
+                // Page scoped tables: through the bid's pages AND by their own BidUID (PAGE_DELETE_CHILD_TABLES).
+                for (const char *table : {"BidDimensions", "BidALines", "BidArrows", "BidHighlights", "BidTexts", "BidCallOuts",
+                                          "BidAnnotationRects", "BidAnnotationOvals", "BidAnnotationPolygons", "BidAnnotationClouds",
+                                          "BidAnnoInk", "BidLegends", "BidComments", "BidPageSettings", "BidAreaTranslations",
+                                          "BidMarkedPages", "BidPercents", "BidTakeoffTotals", "BidLaborCostCodeTotals",
+                                          "BidTypicalGroupTotals", "BidTypGroupViews", "Boost", "DPCCalcFilter"})
+                {
+                    if (!delete_through_pages(table) || !delete_by_bid(table))
+                        return false;
+                }
+                for (const char *table : {"BidLaborActivity", "BidTakeoffTotals", "BidLaborCostCodeTotals", "BidTypicalGroupTotals",
+                                          "AffectDPCTypGroupViews", "BidTypGroupViews", "Boost", "DPCCalcFilter", "BidDPCSubscribers",
+                                          "BidNotes", "BidTransactionsHistory", "STSTransactionHistory", "BidConditionUser",
+                                          "BidPlanRooms"})
+                {
+                    if (!delete_by_bid(table))
+                        return false;
+                }
+                // Rows that hang off a labor code, a time card state, an employee, an area or a typical area of the bid.
+                if (!delete_through_parent("BidPercents", "BidLaborCostCodeUID", "BidLaborCostCodes") ||
+                    !delete_through_parent("BidPercents", "BidTimeCardStateUID", "BidTimeCardStates"))
+                    return false;
+                if (!delete_through_parent("BidTimeCards", "BidEmployeeUID", "BidEmployees") ||
+                    !delete_through_parent("BidTimeCards", "BidAreaUID", "BidAreas") ||
+                    !delete_through_parent("BidTimeCards", "BidTypicalAreaUID", "BidTypAreas") ||
+                    !delete_through_parent("BidTimeCards", "BidLaborCostCodeUID", "BidLaborCostCodes") ||
+                    !delete_through_parent("BidTimeCards", "BidTimeCardStateUID", "BidTimeCardStates"))
+                    return false;
+                if (!delete_through_parent("BidTypAreaCounts", "BidAreaUID", "BidAreas") ||
+                    !delete_through_parent("BidPageSettings", "BidAreaUID", "BidAreas") ||
+                    !delete_through_parent("BidTypAreaCounts", "BidTypAreaUID", "BidTypAreas") ||
+                    !delete_through_parent("BidPageSettings", "BidTypAreaUID", "BidTypAreas"))
+                    return false;
+                if (has_column("ConditionSetStyles", "ConditionStyleUID") && has_column("BidConditions", "UID") &&
+                    has_column("BidConditions", "BidUID"))
+                {
+                    if (!execute("DELETE FROM [ConditionSetStyles] WHERE [ConditionStyleUID] IN "
+                                 "(SELECT [UID] FROM [BidConditions] WHERE [BidUID] = ?)"))
+                        return false;
+                }
+                // The takeoffs: by BidUID (also the ones without a page); a BidTakeoffs without BidUID goes through the pages.
+                if (_db.table_exists("BidTakeoffs"))
+                {
+                    if (_db.column_exists("BidTakeoffs", "BidUID"))
+                    {
+                        if (!execute("DELETE FROM [BidTakeoffs] WHERE [BidUID] = ?"))
+                            return false;
+                    }
+                    else if (!delete_through_pages("BidTakeoffs"))
+                        return false;
+                }
+                for (const char *table : {"BidHotLinks", "BidNamedViews", "BidSettings", "BidLaborCostCodes", "BidTimeCardStates",
+                                          "BidEmployees", "BidConditions", "BidZones", "BidConditionFolders", "BidLayers", "BidAreas",
+                                          "BidTypAreas", "BidPages", "BidPageFolders"})
+                {
+                    if (!delete_by_bid(table))
+                        return false;
+                }
+                return execute("DELETE FROM [Bids] WHERE [UID] = ?");
+            }
+
+        private:
+            bool has_column(const char *table, const char *column)
+            {
+                return _db.table_exists(table) && _db.column_exists(table, column);
+            }
+
+            bool execute(const std::string &sql)
+            {
+                ost_db::Statement stmt = _db.prepare(sql);
+                if (!stmt.valid())
+                    return false;
+                stmt.bind_int64(1, _bid);
+                return stmt.run();
+            }
+
+            // _del_bid: DELETE FROM table WHERE BidUID = bid
+            bool delete_by_bid(const char *table)
+            {
+                if (!has_column(table, "BidUID"))
+                    return true;
+                return execute(std::string("DELETE FROM [") + table + "] WHERE [BidUID] = ?");
+            }
+
+            // _del_page: DELETE FROM table WHERE BidPageUID IN (pages of the bid)
+            bool delete_through_pages(const char *table)
+            {
+                if (!has_column(table, "BidPageUID") || !has_column("BidPages", "UID") || !has_column("BidPages", "BidUID"))
+                    return true;
+                return execute(std::string("DELETE FROM [") + table +
+                               "] WHERE [BidPageUID] IN (SELECT [UID] FROM [BidPages] WHERE [BidUID] = ?)");
+            }
+
+            // _del_takeoff_link: DELETE FROM table WHERE BidTakeoffFromUID / BidTakeoffToUID IN (takeoffs of the bid)
+            bool delete_takeoff_links(const char *table)
+            {
+                if (!_db.table_exists(table) || !has_column("BidTakeoffs", "UID") || !has_column("BidTakeoffs", "BidUID"))
+                    return true;
+                for (const char *column : {"BidTakeoffFromUID", "BidTakeoffToUID"})
+                {
+                    if (!_db.column_exists(table, column))
+                        continue;
+                    if (!execute(std::string("DELETE FROM [") + table + "] WHERE [" + column +
+                                 "] IN (SELECT [UID] FROM [BidTakeoffs] WHERE [BidUID] = ?)"))
+                        return false;
+                }
+                return true;
+            }
+
+            // _del_child_by_bid_parent: DELETE FROM child WHERE fk IN (parents of the bid)
+            bool delete_through_parent(const char *child, const char *foreign_key, const char *parent)
+            {
+                if (!has_column(child, foreign_key) || !has_column(parent, "UID") || !has_column(parent, "BidUID"))
+                    return true;
+                return execute(std::string("DELETE FROM [") + child + "] WHERE [" + foreign_key + "] IN (SELECT [UID] FROM [" +
+                               parent + "] WHERE [BidUID] = ?)");
+            }
+
+            ost_db::OstDatabase &_db;
+            long long _bid;
+        };
+    } // namespace
+
     bool permanently_delete_project(const std::string &db_path, const std::string &bid_uid)
     {
+        long long bid = 0;
+        if (!integrity::parse_uid(bid_uid, bid))
+            return false;
+
         ost_db::OstDatabase db;
         if (!db.open(db_path))
             return false;
@@ -376,122 +568,9 @@ namespace ost_store
             return false;
         }
 
-        auto exec_bid = [&](const std::string &sql) -> bool
-        {
-            ost_db::Statement stmt = db.prepare(sql);
-            if (!stmt.valid())
-                return false;
-            stmt.bind_text(1, bid_uid);
-            return stmt.run();
-        };
-
-        // Match the desktop MDB delete_bids cascade, including the tables that
-        // do not carry BidUID directly and must be cleaned via page/takeoff/area
-        // or condition subqueries to avoid leaving orphans behind.
-        if (!exec_bid(
-                "DELETE FROM BidPercents WHERE BidTakeoffUID IN "
-                "(SELECT UID FROM BidTakeoffs WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidDimensions WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidALines WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidArrows WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidHighlights WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidTexts WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidCallOuts WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidAnnotationRects WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidAnnotationOvals WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidAnnotationPolygons WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidAnnotationClouds WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidAnnoInk WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidLegends WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidPageSettings WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidAreaTranslations WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidMarkedPages WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidComments WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid("DELETE FROM BidLaborActivity WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidTakeoffTotals WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidLaborCostCodeTotals WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidTypicalGroupTotals WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM AffectDPCTypGroupViews WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidTypGroupViews WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM Boost WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM DPCCalcFilter WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidDPCSubscribers WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidNotes WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidTransactionsHistory WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM STSTransactionHistory WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidConditionUser WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidPlanRooms WHERE BidUID = ?") ||
-            !exec_bid(
-                "DELETE FROM BidTimeCards WHERE BidEmployeeUID IN "
-                "(SELECT UID FROM BidEmployees WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidTypAreaCounts WHERE BidAreaUID IN "
-                "(SELECT UID FROM BidAreas WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM ConditionSetStyles WHERE ConditionStyleUID IN "
-                "(SELECT UID FROM BidConditions WHERE BidUID = ?)") ||
-            !exec_bid(
-                "DELETE FROM BidTakeoffs WHERE BidPageUID IN "
-                "(SELECT UID FROM BidPages WHERE BidUID = ?)") ||
-            !exec_bid("DELETE FROM BidHotLinks WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidNamedViews WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidSettings WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidLaborCostCodes WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidTimeCardStates WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidEmployees WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidConditions WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidZones WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidConditionFolders WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidLayers WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidAreas WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidTypAreas WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidPages WHERE BidUID = ?") ||
-            !exec_bid("DELETE FROM BidPageFolders WHERE BidUID = ?"))
-        {
-            db.rollback();
-            return false;
-        }
-
-        ost_db::Statement stmt = db.prepare("DELETE FROM Bids WHERE UID = ?");
-        if (!stmt.valid())
-        {
-            db.rollback();
-            return false;
-        }
-        stmt.bind_text(1, bid_uid);
-        if (!stmt.run())
+        // Match the desktop MDB delete_bids cascade exactly (BidCascade): the tables that carry no BidUID are cleaned through
+        // the bid's pages, takeoffs, areas, labor codes and so on, and every page scoped table also by its own BidUID.
+        if (!BidCascade(db, bid).run())
         {
             db.rollback();
             return false;

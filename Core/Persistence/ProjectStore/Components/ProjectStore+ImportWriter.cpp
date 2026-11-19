@@ -58,9 +58,20 @@ namespace ost_store
                 value = stmt.column_int64(idx);
                 return true;
             case ost_db::Statement::TypeFloat:
+            {
+                // int(float): truncates toward zero; nan/inf raise and a float beyond 64 bits is a big integer that
+                // SQLite cannot store (the Windows import fails either way). The cast of an out-of-range double is
+                // undefined, so the range is checked first.
+                const double real = stmt.column_double(idx);
+                if (!(real >= -9223372036854775808.0 && real < 9223372036854775808.0))
+                {
+                    error = "int() of a float outside the 64-bit range (" + what + ")";
+                    return false;
+                }
                 has_value = true;
-                value = static_cast<long long>(stmt.column_double(idx));
+                value = static_cast<long long>(real);
                 return true;
+            }
             case ost_db::Statement::TypeText:
             {
                 const std::string text = stmt.column_text(idx);
@@ -126,6 +137,34 @@ namespace ost_store
             order.push_back("BidHotLinks");
             return order;
         }
+
+        bool is_leap_year(long long year)
+        {
+            return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+        }
+
+        // Windows _convert_access_value for a DATETIME column: parts = value.split(); exactly 6 parts ->
+        // datetime.datetime(int(parts[0]), ..., int(parts[5])); true when that datetime exists (year 1..9999, month 1..12, day
+        // of the month, hour 0..23, minute 0..59, second 0..59), false when Windows returns None (not six parts, a part that is
+        // not an integer, a date that does not exist: ValueError) and also for an integer outside the C int range. There Windows
+        // raises OverflowError, which it does not catch, so its import fails; its own suite marks that as a characterisation and
+        // an open owner question (test_an_absurd_datetime_text_raises_overflow_characterisation), so iOS follows the user's
+        // decision "NULL when invalid" instead (IMP-20, general rule). Such a value never passes the range checks below anyway.
+        bool is_valid_datetime(const std::string &value)
+        {
+            const std::vector<std::string> parts = text_rules::py_split(value);
+            if (parts.size() != 6)
+                return false;
+            long long n[6] = {0, 0, 0, 0, 0, 0};
+            for (size_t i = 0; i < 6; ++i)
+                if (text_rules::py_parse_int(parts[i], n[i]) != text_rules::NumberParse::Ok)
+                    return false; // not an integer, or one of more than 64 bits
+            static const int days_in_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+            if (n[0] < 1 || n[0] > 9999 || n[1] < 1 || n[1] > 12)
+                return false;
+            const long long days = days_in_month[n[1] - 1] + ((n[1] == 2 && is_leap_year(n[0])) ? 1 : 0);
+            return n[2] >= 1 && n[2] <= days && n[3] >= 0 && n[3] <= 23 && n[4] >= 0 && n[4] <= 59 && n[5] >= 0 && n[5] <= 59;
+        }
     }
 
     bool ImportTableInfo::has_column(const std::string &name) const
@@ -135,7 +174,7 @@ namespace ost_store
         return std::find(columns.begin(), columns.end(), name) != columns.end();
     }
 
-    bool import_convert_value(const std::string &value, const std::string &type_name, ImportValue &out)
+    bool import_convert_value(const std::string &value, const std::string &type_name, ImportValue &out, std::string *failure)
     {
         out = ImportValue();
         if (value == "NULL")
@@ -146,8 +185,27 @@ namespace ost_store
             out.integer = (value == "True" || value == "true" || value == "-1" || value == "1") ? -1 : 0;
             return true;
         }
-        if (is_numeric_type(type_name) && type_name.find("longbinary") == std::string::npos &&
-            type_name.find("memo") == std::string::npos && type_name != "datetime")
+        if (type_name == "datetime")
+        {
+            // IMP-20 (the user's decision): a valid six part date keeps its raw text, everything else is NULL.
+            if (is_valid_datetime(value))
+            {
+                out.kind = ImportValue::Text;
+                out.text = value;
+            }
+            return true;
+        }
+        if (type_name.find("longbinary") != std::string::npos || type_name.find("memo") != std::string::npos)
+        {
+            // Windows: '' -> NULL, text -> its UTF-8 bytes (kept as text here; the latin-1 name encoding of BidTexts /
+            // BidCallOuts is not ported, see IMP-20). Checked before the numeric types: "longbinary" contains "long".
+            if (value.empty())
+                return true;
+            out.kind = ImportValue::Text;
+            out.text = value;
+            return true;
+        }
+        if (is_numeric_type(type_name))
         {
             if (value.empty())
                 return true;
@@ -175,6 +233,8 @@ namespace ost_store
                 out.integer = parsed;
                 return true;
             case text_rules::NumberParse::Overflow:
+                if (failure)
+                    *failure = "Python int too large to convert to SQLite INTEGER";
                 return false;
             default:
                 return true; // ValueError reads as NULL
@@ -197,8 +257,12 @@ namespace ost_store
             const std::string name = stmt.column_text(0);
             info.columns.push_back(name);
             info.column_set.insert(name);
-            info.types[name] = ost_schema::is_yesno_column(table, name) ? std::string("yesno")
-                                                                       : text_rules::py_lower(stmt.column_text(1));
+            // The Windows column type (the iOS DDL flattened YESNO / DATETIME / IMAGE): the ODBC driver reports them as
+            // yesno, datetime and longbinary; any other column is judged by its declared type.
+            info.types[name] = ost_schema::is_yesno_column(table, name)      ? std::string("yesno")
+                               : ost_schema::is_datetime_column(table, name) ? std::string("datetime")
+                               : ost_schema::is_image_column(table, name)    ? std::string("longbinary")
+                                                                             : text_rules::py_lower(stmt.column_text(1));
             info.primary_key[name] = stmt.column_int(2) > 0;
         }
         if (stmt.failed())
@@ -267,9 +331,10 @@ namespace ost_store
         {
             auto type = info.types.find(filtered[i]->first);
             ImportValue value;
-            if (!import_convert_value(filtered[i]->second, type == info.types.end() ? std::string() : type->second, value))
+            std::string conversion_failure;
+            if (!import_convert_value(filtered[i]->second, type == info.types.end() ? std::string() : type->second, value, &conversion_failure))
             {
-                error = failure_prefix + "Python int too large to convert to SQLite INTEGER";
+                error = failure_prefix + conversion_failure;
                 return false;
             }
             const int idx = static_cast<int>(i) + 1;

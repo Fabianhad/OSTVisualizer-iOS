@@ -251,3 +251,79 @@ TEST(ImportOracle, NumberParsingMatchesPythonOnRandomStrings)
     }
     CHECK_EQ(checked, 500);
 }
+
+// int(text) and float(text) on NON-ASCII input. CPython turns every Unicode whitespace into ' ' and every Unicode decimal digit
+// into its ASCII digit before it parses (so "٣", "１２" and "7　" are numbers), keeps every character below
+// 127 as it is (so \x1c..\x1f, which str.strip() removes, are NOT whitespace for int()), and rejects everything else.
+// Fixtures/import_number_oracle.txt: scratchpad/import-pass1/gen_number_oracle.py on CPython 3.11.4 (Unicode 14.0.0),
+// every one of the 650 Unicode decimal digits above ASCII plus whitespace/lookalike/ASCII mixes.
+TEST(ImportOracle, NumberParsingMatchesPythonOnUnicodeInput)
+{
+    std::string content;
+    REQUIRE(ost_test::read_file(ost_test::fixture_path("import_number_oracle.txt"), content));
+    int checked = 0;
+    for (const std::string &line : lines_of(content))
+    {
+        if (line.empty() || line[0] == '#')
+            continue;
+        const std::vector<std::string> cols = split(line, '\t');
+        REQUIRE_EQ(cols.size(), 5u);
+        const std::string input = unhex(cols[0]);
+        SCOPED_CONTEXT("number case " + cols[0]);
+        long long int_value = 0;
+        const ost_import::text_rules::NumberParse status = ost_import::text_rules::py_parse_int(input, int_value);
+        if (cols[1] == "ok")
+        {
+            CHECK(status == ost_import::text_rules::NumberParse::Ok);
+            CHECK_EQ(int_value, std::stoll(cols[2]));
+        }
+        else if (cols[1] == "overflow")
+        {
+            CHECK(status == ost_import::text_rules::NumberParse::Overflow);
+        }
+        else
+        {
+            CHECK(status == ost_import::text_rules::NumberParse::Invalid);
+        }
+        if (cols[3] != "skip")
+        {
+            double float_value = 0.0;
+            const bool ok = ost_import::text_rules::py_parse_float(input, float_value);
+            CHECK_EQ(ok, cols[3] == "ok");
+            if (ok && cols[3] == "ok")
+                CHECK_EQ(float_value, std::strtod(cols[4].c_str(), nullptr));
+        }
+        ++checked;
+    }
+    CHECK_EQ(checked, 2087);
+}
+
+// CPython 3.11 refuses int(text) for a string of more than 4300 digits (sys.int_info.default_max_str_digits, the
+// CVE-2020-10735 limit): a ValueError, which the Windows code reads as "unparsable" (import_operations._convert_access_value
+// stores NULL, page_area_selection._integer_or_zero gives 0) instead of a huge integer that would fail the INSERT.
+// Underscores do not count, leading zeros do. Expected values computed with the Windows interpreter (venv, CPython 3.11.4):
+// int('9' * 4300) is a (too large for SQLite) integer, int('0' * 4300) == 0, while int('9' * 4301), int('0' * 4301),
+// int('0' * 5000 + '5'), int('-' + '9' * 4301) and int('1_' * 4300 + '1') (4301 digits) raise ValueError;
+// int('1_' * 4299 + '1') (4300 digits) is a large integer.
+TEST(ImportOracle, IntegerTextWithMoreThan4300DigitsIsInvalidLikeInCPython)
+{
+    using ost_import::text_rules::NumberParse;
+    using ost_import::text_rules::py_parse_int;
+    long long value = -1;
+    CHECK(py_parse_int(std::string(4300, '9'), value) == NumberParse::Overflow);
+    CHECK(py_parse_int(std::string(4301, '9'), value) == NumberParse::Invalid);
+    CHECK(py_parse_int("-" + std::string(4301, '9'), value) == NumberParse::Invalid);
+    CHECK(py_parse_int(" " + std::string(4301, '9') + " ", value) == NumberParse::Invalid);
+    value = -1;
+    CHECK(py_parse_int(std::string(4300, '0'), value) == NumberParse::Ok);
+    CHECK_EQ(value, 0LL);
+    CHECK(py_parse_int(std::string(4301, '0'), value) == NumberParse::Invalid);
+    CHECK(py_parse_int(std::string(5000, '0') + "5", value) == NumberParse::Invalid);
+    std::string underscored;
+    for (int i = 0; i < 4299; ++i)
+        underscored += "1_";
+    underscored += "1"; // 4300 digits
+    CHECK(py_parse_int(underscored, value) == NumberParse::Overflow);
+    underscored += "_1"; // 4301 digits
+    CHECK(py_parse_int(underscored, value) == NumberParse::Invalid);
+}

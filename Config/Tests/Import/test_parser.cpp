@@ -259,3 +259,15 @@ TEST(ImportParser, BidIsLookedUpAsADirectChildOfTheRootOnly)
     REQUIRE(!other_root.empty());
     CHECK_STR_EQ(other_root.bid_row.at("JobName"), std::string("J"));
 }
+
+// Windows: ElementTree finds a <Bid> element even when it has no attributes (bid_row == {}); only a MISSING Bid element raises
+// ValueError('No Bid element found in OST file'). iOS used to treat "Bid without attributes" as "no Bid" because emptiness was
+// judged by bid_row alone.
+TEST(ImportParser, ABidElementWithoutAttributesIsStillABid)
+{
+    const OstRawData raw = parse_ost_xml("<XML_ROOT><Bid/></XML_ROOT>");
+    CHECK_FALSE(raw.empty());
+    CHECK(raw.bid_row.empty());
+    CHECK_EQ(raw.bid_tables.size(), 18u);
+    CHECK(parse_ost_xml("<XML_ROOT><Other/></XML_ROOT>").empty());
+}

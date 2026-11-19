@@ -72,16 +72,16 @@ TEST(StoreErrors, DeleteProjectControlMovesTheBidToDeletedBids)
     CHECK_EQ(db.text("SELECT BidProjectUID || '/' || OrigBidProjectUID FROM Bids WHERE UID = 11"), "1/2");
 }
 
-// The merge of duplicate 'Deleted Bids' projects runs inside the delete transaction: a failure there fails the delete
-// and the moved bids go back (resolve_deleted_bids_project_uid ignored both step results).
-TEST(StoreErrors, DeleteProjectRollsBackWhenMergingDuplicateDeletedBidsProjectsFails)
+// The system folder 'Deleted Bids' (UID 1) is created inside the delete transaction when the database has none (the name-based merge of
+// duplicate 'Deleted Bids' projects that used to run here is gone, BRW-02): a failure there fails the delete and nothing is written
+// (resolve_deleted_bids_project_uid ignored the step results).
+TEST(StoreErrors, DeleteProjectFailsWhenTheMissingSystemFolderCannotBeCreated)
 {
-    TempDb db("delete_project_merge_blocked");
+    TempDb db("delete_project_trash_blocked");
     REQUIRE(db.schema_ok());
     db.seed_world();
-    db.must("INSERT INTO BidProjects (UID, Name) VALUES (7, 'Deleted Bids')");
-    db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (12, 7, 'In duplicate', 12)");
-    db.block("BidProjects", "DELETE");
+    db.must("DELETE FROM BidProjects WHERE UID = 1");
+    db.block("BidProjects", "INSERT");
     const std::string before = db.snapshot(TempDb::world_tables());
 
     CHECK_FALSE(ost_store::delete_project(db.path(), "11"));
@@ -237,40 +237,59 @@ TEST(StoreErrors, RemoveBidFromFolderControlOrphansTheBid)
     CHECK_EQ(db.count("SELECT COUNT(*) FROM Bids WHERE UID = 11 AND BidProjectUID IS NULL"), 1);
 }
 
-// delete_folder runs two statements in one transaction; a failure of the second must undo the first.
-TEST(StoreErrors, DeleteFolderRollsBackTheUnassignWhenTheFolderDeleteFails)
+// delete_folder runs three statements in one transaction; a failure of a later one must undo the earlier ones. Only an EMPTY folder is
+// deleted (BRW-08), so these use the empty folder 3 and a bid that remembers it (OrigBidProjectUID = 3, cleared by the delete, BRW-05).
+TEST(StoreErrors, DeleteFolderRollsBackTheReferenceClearingWhenTheFolderDeleteFails)
 {
     TempDb db("delete_folder_blocked_delete");
     REQUIRE(db.schema_ok());
     db.seed_world();
+    db.must("INSERT INTO BidProjects (UID, Name) VALUES (3, 'Empty')");
+    db.must("UPDATE Bids SET OrigBidProjectUID = 3 WHERE UID = 10");
     db.block("BidProjects", "DELETE");
     const std::string before = db.snapshot(TempDb::world_tables());
 
-    CHECK_FALSE(ost_store::delete_folder(db.path(), "2"));
+    CHECK_FALSE(ost_store::delete_folder(db.path(), "3"));
     CHECK_EQ(db.snapshot(TempDb::world_tables()), before);
 }
 
-TEST(StoreErrors, DeleteFolderReturnsFalseWhenTheUnassignFails)
+TEST(StoreErrors, DeleteFolderReturnsFalseWhenTheReferenceClearingFails)
 {
     TempDb db("delete_folder_blocked_update");
     REQUIRE(db.schema_ok());
     db.seed_world();
+    db.must("INSERT INTO BidProjects (UID, Name) VALUES (3, 'Empty')");
+    db.must("UPDATE Bids SET OrigBidProjectUID = 3 WHERE UID = 10");
     db.block("Bids", "UPDATE");
     const std::string before = db.snapshot(TempDb::world_tables());
 
-    CHECK_FALSE(ost_store::delete_folder(db.path(), "2"));
+    CHECK_FALSE(ost_store::delete_folder(db.path(), "3"));
     CHECK_EQ(db.snapshot(TempDb::world_tables()), before);
 }
 
-TEST(StoreErrors, DeleteFolderControlOrphansItsBidsAndRemovesTheFolder)
+TEST(StoreErrors, DeleteFolderControlClearsTheReferencesAndRemovesTheEmptyFolder)
 {
     TempDb db("delete_folder_control");
     REQUIRE(db.schema_ok());
     db.seed_world();
+    db.must("INSERT INTO BidProjects (UID, Name) VALUES (3, 'Empty')");
+    db.must("UPDATE Bids SET OrigBidProjectUID = 3 WHERE UID = 10");
 
-    CHECK(ost_store::delete_folder(db.path(), "2"));
-    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidProjects WHERE UID = 2"), 0);
-    CHECK_EQ(db.count("SELECT COUNT(*) FROM Bids WHERE UID = 11 AND BidProjectUID IS NULL"), 1);
+    CHECK(ost_store::delete_folder(db.path(), "3"));
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidProjects WHERE UID = 3"), 0);
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM Bids WHERE UID = 10 AND OrigBidProjectUID IS NULL"), 1);
+}
+
+// A folder with a bid inside is not deleted (BRW-08, decided): refused, nothing written.
+TEST(StoreErrors, DeleteFolderRefusesAFolderThatHasBids)
+{
+    TempDb db("delete_folder_refused");
+    REQUIRE(db.schema_ok());
+    db.seed_world();
+    const std::string before = db.snapshot(TempDb::world_tables());
+
+    CHECK_FALSE(ost_store::delete_folder(db.path(), "2")); // 'Folder A' holds bid 11
+    CHECK_EQ(db.snapshot(TempDb::world_tables()), before);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -430,10 +449,11 @@ TEST(StoreErrors, UpdateConditionReturnsFalseWhenTheUpdateFails)
     db.block("BidConditions", "UPDATE");
     const std::string before = db.snapshot(TempDb::world_tables());
 
-    ost_domain::Condition condition;
-    condition.uid = "30";
-    condition.name = "Renamed";
-    CHECK_FALSE(ost_store::update_condition(db.path(), condition));
+    // the bid-scoped update with a change set (COND-UPD-02): the only update_condition there is since the legacy whole-row overload went
+    ost_domain::ConditionChanges changes;
+    changes.values.name = "Renamed";
+    changes.mark(ost_domain::ConditionField::Name);
+    CHECK_FALSE(ost_store::update_condition(db.path(), "10", "30", changes));
     CHECK_EQ(db.snapshot(TempDb::world_tables()), before);
 }
 
@@ -443,10 +463,10 @@ TEST(StoreErrors, UpdateConditionControlWritesTheName)
     REQUIRE(db.schema_ok());
     db.seed_world();
 
-    ost_domain::Condition condition;
-    condition.uid = "30";
-    condition.name = "Renamed";
-    CHECK(ost_store::update_condition(db.path(), condition));
+    ost_domain::ConditionChanges changes;
+    changes.values.name = "Renamed";
+    changes.mark(ost_domain::ConditionField::Name);
+    CHECK(ost_store::update_condition(db.path(), "10", "30", changes));
     CHECK_EQ(db.text("SELECT Name FROM BidConditions WHERE UID = 30"), "Renamed");
 }
 

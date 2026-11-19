@@ -211,6 +211,53 @@ TEST(ImportPipeline, Imp01_BidNoComesFromSettingsNotFromTheFile)
     CHECK_EQ(db.count("SELECT NextBidNo FROM Settings"), 3);
 }
 
+// IMP-19 (decided: the "already imported" guard of ImportService.mm is removed, every import is an independent copy): the SAME
+// project file imported twice gives two bids with BidNo 1 and 2, each with a complete copy of its layer, condition, pages,
+// takeoffs and dimension under new UIDs; and a bid that already carries the file's Bid UID does not refuse the import (the
+// stored UIDs are re-numbered, nothing is overwritten). Windows has no duplicate check (ost_importer.py:84-99,
+// import_operations.py:33-82). The Core import never had a guard; ost_store::is_bid_imported only served the Objective-C one.
+TEST(ImportPipeline, Imp19_TheSameProjectImportedTwiceIsTwoIndependentCopies)
+{
+    ScratchDb db("pipe_twice", /*with_ios_schema=*/true);
+    REQUIRE(db.schema_ok());
+    db.must("INSERT INTO Bids (UID, JobName) VALUES (1, 'Existing bid with the file UID')");
+    const std::string xml = project_xml("1", "Sheet", "L", "Same");
+    ImportResult first, second;
+    REQUIRE(import_xml(db, xml, &first));
+    REQUIRE(import_xml(db, xml, &second));
+    CHECK(!first.bid_uid.empty());
+    CHECK(!second.bid_uid.empty());
+    CHECK_NE(first.bid_uid, second.bid_uid);
+    CHECK_NE(first.bid_uid, std::string("1"));
+    CHECK_NE(second.bid_uid, std::string("1"));
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM Bids"), 3);
+    CHECK_EQ(db.rows("SELECT JobName FROM Bids WHERE UID = 1", 1), std::string("Existing bid with the file UID"));
+    CHECK_EQ(db.rows("SELECT BidNo FROM Bids WHERE UID = " + first.bid_uid, 1), std::string("1"));
+    CHECK_EQ(db.rows("SELECT BidNo FROM Bids WHERE UID = " + second.bid_uid, 1), std::string("2"));
+    for (const ImportResult *r : {&first, &second})
+    {
+        SCOPED_CONTEXT("bid " + r->bid_uid);
+        const std::string bid = r->bid_uid;
+        CHECK_EQ(db.rows("SELECT Name FROM BidPages WHERE BidUID = " + bid, 1), std::string("Sheet"));
+        CHECK_EQ(db.rows("SELECT Name FROM BidLayers WHERE BidUID = " + bid, 1), std::string("L"));
+        CHECK_EQ(db.rows("SELECT Name FROM BidConditions WHERE BidUID = " + bid, 1), std::string("Cdn Same"));
+        CHECK_EQ(db.count("SELECT COUNT(*) FROM BidTakeoffs WHERE BidUID = " + bid), 2);
+        CHECK_EQ(db.count("SELECT COUNT(*) FROM BidDimensions WHERE BidUID = " + bid), 1);
+    }
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidPages"), 2);
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidTakeoffs"), 4);
+    // every row of the first copy has a UID of its own, none shared with the second one
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidPages a JOIN BidPages b ON a.UID = b.UID AND a.BidUID <> b.BidUID"), 0);
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidTakeoffs a JOIN BidTakeoffs b ON a.UID = b.UID AND a.BidUID <> b.BidUID"), 0);
+    // both copies load
+    for (const ImportResult *r : {&first, &second})
+    {
+        const ost_data::ProjectData project = ost_store::load_project(db.path(), r->bid_uid);
+        CHECK(!project.empty());
+        CHECK_EQ(project.takeoffs.size(), 2u);
+    }
+}
+
 // IMP-01 test plan: Settings.NextBidNo = 7 -> BidNo 7 / NextBidNo 8; then 8 / 9. Two Settings rows make the import fail with
 // nothing written; an empty Settings table gives BidNo 1 and NextBidNo 2.
 TEST(ImportPipeline, Imp01_SettingsCardinalityAndEmptySettings)
@@ -269,6 +316,27 @@ TEST(ImportPipeline, Imp03_ZeroUidFieldsAreStoredAsNull)
     const ost_data::ProjectData project = ost_store::load_project(db.path(), r.bid_uid);
     REQUIRE_EQ(project.pages.size(), 1u);
     CHECK_STR_EQ(project.pages.begin()->second.folder_uid, std::string());
+}
+
+// IMP-03, the read side (regression guard, not a fix): a database imported before the zero UIDs became NULL still holds the
+// integer 0 in BidPages.BidPageFolderUID. The Windows reader (bid_data_reader.py:742, settings_reader.py:268
+// `str(row.BidPageFolderUID) if row.BidPageFolderUID else None`) reads 0 and NULL as "no folder". load_project already clears
+// the folder of every page whose folder does not exist, so such a page keeps a button in the page selector; a page in a real
+// folder keeps its folder.
+TEST(ImportPipeline, Imp03_AStoredZeroFolderUidReadsAsNoFolder)
+{
+    ScratchDb db("pipe_legacy_zero_folder", /*with_ios_schema=*/true);
+    REQUIRE(db.schema_ok());
+    db.must_all({"INSERT INTO Bids (UID, JobName) VALUES (500, 'Legacy')",
+                 "INSERT INTO BidPageFolders (UID, BidUID, Name) VALUES (77, 500, 'F')",
+                 "INSERT INTO BidPages (UID, BidUID, Name, BidPageFolderUID, Index1) VALUES (601, 500, 'zero', 0, 1)",
+                 "INSERT INTO BidPages (UID, BidUID, Name, BidPageFolderUID, Index1) VALUES (602, 500, 'null', NULL, 2)",
+                 "INSERT INTO BidPages (UID, BidUID, Name, BidPageFolderUID, Index1) VALUES (603, 500, 'real', 77, 3)"});
+    const ost_data::ProjectData project = ost_store::load_project(db.path(), "500");
+    REQUIRE_EQ(project.pages.size(), 3u);
+    CHECK_STR_EQ(project.pages.at("601").folder_uid, std::string());
+    CHECK_STR_EQ(project.pages.at("602").folder_uid, std::string());
+    CHECK_STR_EQ(project.pages.at("603").folder_uid, std::string("77"));
 }
 
 // IMP-05 test plan: BidLayers Show="True" must load as visible; a condition with Backout="True" loads with backout.
@@ -533,6 +601,21 @@ TEST(ImportPipeline, Imp08_ASuccessfulImportCommitsEverythingAndLeavesNoTransact
     CHECK_EQ(db.rows("SELECT UID, BidPageUID FROM BidTakeoffs", 2), std::string("4|3"));
     CHECK_EQ(db.rows("SELECT NextBidNo FROM Settings", 1), std::string("8"));
     CHECK(db.exec("INSERT INTO Bids (UID, JobName) VALUES (99, 'a write after the import works')"));
+}
+
+// Windows imports a <Bid> element that has no attributes: the empty row gets BidNo = Settings.NextBidNo and BidProjectUID =
+// NULL, the engine numbers the UID (OstImporter._parse_ost_xml finds the element, import_operations._write_to_db inserts it).
+// iOS used to refuse it as "no Bid element" because OstRawData::empty() only looked at bid_row.
+TEST(ImportPipeline, Imp08_ABidElementWithoutAttributesIsImportedWithItsBidNo)
+{
+    ScratchDb db("pipe_attributeless_bid");
+    create_import_schema(db, {"7"});
+    const OstRawData raw = parse_ost_xml("<XML_ROOT><Bid/></XML_ROOT>");
+    ImportResult r;
+    CHECK(ost_store::import_project(db.path(), raw, &r));
+    CHECK_EQ(db.rows("SELECT UID, BidProjectUID, BidNo FROM Bids", 3), std::string("1|NULL|7"));
+    CHECK_EQ(r.bid_uid, std::string("1"));
+    CHECK_EQ(db.rows("SELECT NextBidNo FROM Settings", 1), std::string("8"));
 }
 
 // IMP-08 (+ dbp11 control): a BEFORE INSERT trigger that fails on a late table leaves the database exactly as it was.

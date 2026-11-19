@@ -12,17 +12,33 @@
 #include "Persistence/OstDatabase.hpp"
 #include "Persistence/ProjectStore/ProjectStore.hpp"
 
+#include <algorithm>
 #include <cstdio>
+#include <random>
 #include <string>
 #include <vector>
 
 namespace ost_itest
 {
+    // Random per-process part of every scratch file name: several test processes (an area run next to `all`, runs of
+    // other agents or CI jobs) share the system temp dir, and a fixed name made them delete each other's databases.
+    inline const std::string &process_token()
+    {
+        static const std::string token = []
+        {
+            std::random_device device;
+            char buffer[32];
+            std::snprintf(buffer, sizeof(buffer), "%08x%08x", static_cast<unsigned>(device()), static_cast<unsigned>(device()));
+            return std::string(buffer);
+        }();
+        return token;
+    }
+
     class ScratchDb
     {
     public:
         explicit ScratchDb(const std::string &name, bool with_ios_schema = false)
-            : _path(ost_test::temp_path("import_" + name + ".db"))
+            : _path(ost_test::temp_path("import_" + process_token() + "_" + name + ".db"))
         {
             remove_files();
             if (with_ios_schema)

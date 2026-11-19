@@ -35,12 +35,15 @@ namespace ost_store
     };
 
     // Windows _convert_access_value for the column types the iOS schema can express: NULL/"NULL" -> NULL for every
-    // type; yesno -> -1 for "True"/"true"/"-1"/"1", otherwise 0; numeric types (type name contains one of int, long,
-    // short, double, float, real, bit, byte, counter, currency, single, numeric, decimal): "" -> NULL, "0" -> 0, a
-    // value with '.' -> float, otherwise integer, unparsable -> NULL; every other type keeps the text (including
-    // ""). Datetime/IMAGE conversion (IMP-20) is not part of this function. Returns false only when a number is a
-    // valid integer that SQLite cannot store (more than 64 bits), which fails the import.
-    bool import_convert_value(const std::string &value, const std::string &type_name, ImportValue &out);
+    // type; yesno -> -1 for "True"/"true"/"-1"/"1", otherwise 0; datetime (IMP-20): a value of exactly six whitespace
+    // separated integers that form a valid date (datetime.datetime) keeps its raw text, anything else is NULL (also an
+    // integer outside the C int range, where Windows raises an uncaught OverflowError: deliberate deviation, see
+    // ProjectStore+ImportWriter.cpp); longbinary / memo: "" -> NULL, text kept; numeric types (type name contains one of
+    // int, long, short, double, float, real, bit, byte, counter, currency, single, numeric, decimal): "" -> NULL, "0" -> 0,
+    // a value with '.' -> float, otherwise integer, unparsable -> NULL; every other type keeps the text (including "").
+    // Returns false only when the Windows code would raise: a number that is a valid integer SQLite cannot store (more
+    // than 64 bits), which fails the import (`failure`, when given, gets the Python message).
+    bool import_convert_value(const std::string &value, const std::string &type_name, ImportValue &out, std::string *failure = nullptr);
 
     // ---- table metadata and the row writer (_get_table_info, _insert_raw_row, _write_to_db) ------------------------
 
@@ -55,7 +58,8 @@ namespace ost_store
     };
 
     // Columns and types of `table` ({} for a table that does not exist or cannot be described, like the Windows
-    // catalog lookup that swallows pyodbc.Error). A YESNO column of the Windows schema reports the type "yesno".
+    // catalog lookup that swallows pyodbc.Error). A YESNO / DATETIME / IMAGE column of the Windows schema reports the type
+    // "yesno" / "datetime" / "longbinary" (the iOS DDL declares them INTEGER / TEXT / BLOB).
     ImportTableInfo import_get_table_info(ost_db::OstDatabase &db, const std::string &table);
 
     // Windows _should_omit_autonumber_uid: the UID of an autonumber table with a blank value ("", "0", "NULL") is

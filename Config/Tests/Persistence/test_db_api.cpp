@@ -12,6 +12,8 @@
 // Windows contract being matched: mdb_writer.py _connection (every execute error raises, the scope rolls back).
 #include "TestHarness.hpp"
 
+#include "PersistenceTestSupport.hpp"
+
 #include "Persistence/OstDatabase.hpp"
 #include "Persistence/sqlite3.h"
 
@@ -47,7 +49,8 @@ namespace
 
     struct TempFile
     {
-        explicit TempFile(const std::string &name) : path(ost_test::temp_path(name))
+        // (the run token keeps two concurrent runs of this test from sharing, and deleting, one file)
+        explicit TempFile(const std::string &name) : path(ost_test::temp_path(ost_ptest::run_token() + "_" + name))
         {
             remove_all();
         }

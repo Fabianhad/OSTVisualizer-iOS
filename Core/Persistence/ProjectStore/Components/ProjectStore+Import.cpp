@@ -96,20 +96,4 @@ namespace ost_store
         return true;
     }
 
-    bool is_bid_imported(const std::string &db_path, const std::string &bid_uid)
-    {
-        ost_db::OstDatabase db;
-        if (!db.open(db_path))
-            return false;
-
-        ost_db::Statement stmt = db.prepare(
-            "SELECT COUNT(*) FROM Bids WHERE UID = ?");
-        if (!stmt.valid())
-            return false;
-        stmt.bind_text(1, bid_uid);
-        if (stmt.step())
-            return stmt.column_int(0) > 0;
-        return false;
-    }
-
 }

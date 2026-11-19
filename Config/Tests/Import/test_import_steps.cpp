@@ -236,6 +236,43 @@ TEST(ImportBidNumber, Imp01_NonNumericValueIsRejectedAndUntouched)
     CHECK_EQ(db.rows("SELECT NextBidNo FROM Settings", 1), std::string("not-a-number"));
 }
 
+// int(value) of a stored float: truncation toward zero (Windows normalize_next_bid_number: int(2.9) == 2, int(-2.9) == -2);
+// a float outside the 64-bit range (nan/inf raise, 1e30 is a big integer SQLite cannot store) fails the import and leaves the
+// row alone, instead of the undefined double -> long long conversion.
+TEST(ImportBidNumber, Imp01_StoredFloatsTruncateAndOutOfRangeFloatsFail)
+{
+    {
+        ScratchDb db("bidno_float_truncates");
+        create_import_schema(db, {"2.9"});
+        ost_import::Row bid_row;
+        std::string error;
+        CHECK(assign_bid_no(db, bid_row, error));
+        CHECK_EQ(bid_row.count("BidNo"), 1u);
+        CHECK_STR_EQ(bid_row["BidNo"], std::string("2"));
+        CHECK_EQ(db.rows("SELECT NextBidNo FROM Settings", 1), std::string("3"));
+    }
+    {
+        ScratchDb db("bidno_float_negative");
+        create_import_schema(db, {"-2.9"});
+        ost_import::Row bid_row;
+        std::string error;
+        CHECK(assign_bid_no(db, bid_row, error));
+        CHECK_STR_EQ(bid_row["BidNo"], std::string("-2"));
+        CHECK_EQ(db.rows("SELECT NextBidNo FROM Settings", 1), std::string("-1"));
+    }
+    for (const char *literal : {"1e30", "-1e30", "9223372036854775808.0", "1e999", "-1e999"})
+    {
+        SCOPED_CONTEXT(std::string("NextBidNo = ") + literal);
+        ScratchDb db("bidno_float_out_of_range");
+        create_import_schema(db, {literal});
+        ost_import::Row bid_row;
+        std::string error;
+        CHECK_FALSE(assign_bid_no(db, bid_row, error));
+        CHECK(!error.empty());
+        CHECK_EQ(bid_row.count("BidNo"), 0u);
+    }
+}
+
 // A second row is reported before a malformed first value (fetch_optional_global_settings_row runs first).
 TEST(ImportBidNumber, Imp01_CardinalityIsCheckedBeforeTheValueIsRead)
 {

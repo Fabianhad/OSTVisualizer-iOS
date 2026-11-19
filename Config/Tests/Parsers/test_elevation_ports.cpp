@@ -83,6 +83,15 @@ TEST(ElevationPort, AFailedLookupDoesNotAffectValidNames)
     expect_z("Wall @B 6 1/2\"", 6.5, false);
 }
 
+TEST(ElevationPort, AFeetRunOverPythonsIntDigitLimitStoresNoElevation)
+{
+    // Not in the Windows tests: computed by running Windows extract_z_value_from_name (Python 3.11.4). int(str) refuses
+    // more than 4300 digits (leading zeros included) with a ValueError, which the MDB reader turns into (0.0, False).
+    expect_z("Wall @T " + std::string(4299, '0') + "5' 0\"", 60.0, true);
+    expect_none("Wall @T " + std::string(4300, '0') + "5' 0\"");
+    expect_none("Wall @T " + std::string(4300, '0') + "5'x");
+}
+
 TEST(ElevationPort, ZeroDenominatorMessagesStillGiveNoElevation)
 {
     // Port of ...::ElevationValueBoundaryTests::test_the_zero_denominator_error_names_the_offending_fraction
