@@ -1,4 +1,5 @@
 #import "Renderer.h"
+#include "../Core/Domain/CameraFraming.hpp"
 #include "../Core/Geometry/feature_edges.hpp"
 #include "MathUtils.hpp"
 #include "MeshLoader.hpp"
@@ -452,9 +453,10 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
   _gpuMeshesDirty = false;
 }
 
-- (void)fitCameraToMeshes {
+// The bounds box of all meshes in the scene; NO when there are none.
+- (BOOL)_sceneBounds:(ost_domain::SceneBounds *)out {
   if (_meshes.empty())
-    return;
+    return NO;
   Vec3 totalMin = _meshes[0].boundsMin;
   Vec3 totalMax = _meshes[0].boundsMax;
   for (size_t i = 1; i < _meshes.size(); i++) {
@@ -465,19 +467,43 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
     totalMax.y = fmaxf(totalMax.y, _meshes[i].boundsMax.y);
     totalMax.z = fmaxf(totalMax.z, _meshes[i].boundsMax.z);
   }
-  _cameraTargetX = (totalMin.x + totalMax.x) * 0.5f;
-  _cameraTargetY = (totalMin.y + totalMax.y) * 0.5f;
-  _cameraTargetZ = (totalMin.z + totalMax.z) * 0.5f;
-  float dx = totalMax.x - totalMin.x;
-  float dy = totalMax.y - totalMin.y;
-  float dz = totalMax.z - totalMin.z;
-  float maxExtent = fmaxf(dx, fmaxf(dy, dz));
-  _cameraDistance = maxExtent * 2.5f;
-  if (_cameraDistance < 3.0f)
-    _cameraDistance = 3.0f;
-  _sceneRadius = maxExtent * 0.5f;
-  _cameraYaw = 0.5f;
-  _cameraPitch = 0.45f;
+  out->min_x = totalMin.x;
+  out->min_y = totalMin.y;
+  out->min_z = totalMin.z;
+  out->max_x = totalMax.x;
+  out->max_y = totalMax.y;
+  out->max_z = totalMax.z;
+  return YES;
+}
+
+- (float)sceneMaxExtent {
+  ost_domain::SceneBounds bounds;
+  if (![self _sceneBounds:&bounds])
+    return 0.0f;
+  return bounds.max_extent();
+}
+
+- (void)fitCameraToMeshes {
+  // Windows Camera.show_object (CAM-01); without any mesh nothing is framed and the camera stays as it is (CAM-03).
+  ost_domain::SceneBounds bounds;
+  if (![self _sceneBounds:&bounds])
+    return;
+  ost_domain::CameraPose pose;
+  pose.target_x = _cameraTargetX;
+  pose.target_y = _cameraTargetY;
+  pose.target_z = _cameraTargetZ;
+  pose.distance = _cameraDistance;
+  pose.yaw = _cameraYaw;
+  pose.pitch = _cameraPitch;
+  pose = ost_domain::frame_camera(pose, bounds);
+  _cameraTargetX = pose.target_x;
+  _cameraTargetY = pose.target_y;
+  _cameraTargetZ = pose.target_z;
+  _cameraDistance = pose.distance;
+  _cameraYaw = pose.yaw;
+  _cameraPitch = pose.pitch;
+  if (bounds.is_finite())
+    _sceneRadius = bounds.max_extent() * 0.5f;
 }
 
 - (NSInteger)meshTriangleCount {
@@ -550,7 +576,9 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
   Mat4 view = Mat4::lookAt(eye, target, Vec3(0, 1, 0));
   Mat4 proj = Mat4::perspective(M_PI / 4.0f, aspect, near, far);
 
-  float lightParams[4] = {0.20f, 0.60f, 0.30f, 0.20f};
+  // The Windows lighting constants (renderer.cpp opaque_fragment_shader / set_lighting_uniforms): ambient 0.55, key 0.45, fill
+  // 0.35, rim 0.2 (RPV-29). The light directions of the shaders are the Windows ones in this Y-up space.
+  float lightParams[4] = {0.55f, 0.45f, 0.35f, 0.20f};
   float eyePos[4] = {eye.x, eye.y, eye.z, 0.0f};
   float identityMtx[16];
   memcpy(identityMtx, Mat4::identity().m, sizeof(identityMtx));

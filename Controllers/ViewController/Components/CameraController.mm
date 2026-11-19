@@ -1,5 +1,6 @@
 #import "CameraController.h"
 #import "../../../Rendering/Renderer.h"
+#include "../../../Core/Domain/CameraLimits.hpp"
 
 @implementation CameraController {
   CGPoint _lastPanPoint;
@@ -29,13 +30,9 @@
 }
 
 - (void)fitScene {
-  _renderer.cameraYaw = 0.5f;
-  _renderer.cameraPitch = 0.45f;
-  if ([_renderer meshTriangleCount] > 0) {
-    [_renderer fitCameraToMeshes];
-  } else {
-    _renderer.cameraDistance = 12.0f;
-  }
+  // Windows reset_view: frames the scene like Camera.show_object (CAM-01); with nothing shown the camera is left as it is
+  // (CAM-03), the renderer does nothing then.
+  [_renderer fitCameraToMeshes];
 }
 
 #pragma mark - UIGestureRecognizerDelegate
@@ -112,11 +109,15 @@
     CGFloat delta = pinch.scale - _lastPinchScale;
     _lastPinchScale = pinch.scale;
 
-    _renderer.cameraDistance -= delta * _renderer.cameraDistance * 0.5f;
-    if (_renderer.cameraDistance < 1.0f)
-      _renderer.cameraDistance = 1.0f;
-    if (_renderer.cameraDistance > 500.0f)
-      _renderer.cameraDistance = 500.0f;
+    // The zoom limits of the Windows camera, relative to the scene (CAM-04): 2 * near .. 0.5 * far with the planes of the
+    // scene size, or of an empty scene when nothing is shown.
+    const ost_domain::CameraClipPlanes planes =
+        _renderer.meshTriangleCount > 0
+            ? ost_domain::camera_clip_planes_for_extent(_renderer.sceneMaxExtent)
+            : ost_domain::default_camera_clip_planes();
+    _renderer.cameraDistance = ost_domain::zoom_camera_distance(
+        _renderer.cameraDistance, (float)delta, ost_domain::kPinchZoomRate,
+        planes);
   }
 }
 

@@ -39,16 +39,52 @@
   [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)_shareExportURLs:(NSArray<NSURL *> *)urls {
+- (void)_presentExportAlertWithTitle:(NSString *)title
+                             message:(NSString *)message {
+  UIAlertController *err = [UIAlertController
+      alertControllerWithTitle:title
+                       message:message
+                preferredStyle:UIAlertControllerStyleAlert];
+  [err addAction:[UIAlertAction actionWithTitle:@"OK"
+                                          style:UIAlertActionStyleDefault
+                                        handler:nil]];
+  [self presentViewController:err animated:YES completion:nil];
+}
+
+- (void)_shareExportURLs:(NSArray<NSURL *> *)urls
+                 outcome:(ExportOutcome)outcome
+              formatName:(NSString *)formatName {
   if (!urls) {
-    UIAlertController *err = [UIAlertController
-        alertControllerWithTitle:@"Nothing to Export"
-                         message:@"No visible meshes to export."
-                  preferredStyle:UIAlertControllerStyleAlert];
-    [err addAction:[UIAlertAction actionWithTitle:@"OK"
-                                            style:UIAlertActionStyleDefault
-                                          handler:nil]];
-    [self presentViewController:err animated:YES completion:nil];
+    // Like Windows, a missing selection or takeoff, an export without any
+    // surviving mesh and a failed write are three different results.
+    switch (outcome) {
+    case ExportOutcomeNoTakeoffs:
+      [self _presentExportAlertWithTitle:@"No Data"
+                                 message:@"No takeoffs found for any of the "
+                                         @"selected pages."];
+      break;
+    case ExportOutcomeNothingToExport:
+      [self _presentExportAlertWithTitle:@"Nothing to Export"
+                                 message:@"No visible meshes to export."];
+      break;
+    case ExportOutcomeFailed:
+      [self _presentExportAlertWithTitle:@"Export Error"
+                                 message:[NSString
+                                             stringWithFormat:
+                                                 @"Error creating %@ export: "
+                                                 @"The export failed.",
+                                                 formatName]];
+      break;
+    default:
+      [self _presentExportAlertWithTitle:@"Export Error"
+                                 message:[NSString
+                                             stringWithFormat:
+                                                 @"Error creating %@ export: "
+                                                 @"The file could not be "
+                                                 @"written.",
+                                                 formatName]];
+      break;
+    }
     return;
   }
   UIActivityViewController *vc =
@@ -59,23 +95,36 @@
   [self presentViewController:vc animated:YES completion:nil];
 }
 
+// The display mode and grayscale of the 3D view colour the export too, and
+// only the pages selected for 3D are exported.
 - (void)_exportOBJ {
-  [self _shareExportURLs:[ExportService exportOBJ:self.projectService.project
-                                    selectedPages:self.projectService
-                                                      .selected3DPageUIDs]];
+  ExportOutcome outcome = ExportOutcomeOK;
+  NSArray<NSURL *> *urls =
+      [ExportService exportOBJ:self.projectService.project
+                 selectedPages:self.projectService.selected3DPageUIDs
+                  renderConfig:self.projectService.renderConfig
+                       outcome:&outcome];
+  [self _shareExportURLs:urls outcome:outcome formatName:@"OBJ"];
 }
 
 - (void)_exportDXF {
-  [self _shareExportURLs:[ExportService exportDXF:self.projectService.project
-                                    selectedPages:self.projectService
-                                                      .selected3DPageUIDs]];
+  ExportOutcome outcome = ExportOutcomeOK;
+  NSArray<NSURL *> *urls =
+      [ExportService exportDXF:self.projectService.project
+                 selectedPages:self.projectService.selected3DPageUIDs
+                  renderConfig:self.projectService.renderConfig
+                       outcome:&outcome];
+  [self _shareExportURLs:urls outcome:outcome formatName:@"DXF"];
 }
 
 - (void)_exportThreeJS {
-  [self
-      _shareExportURLs:[ExportService exportThreeJS:self.projectService.project
-                                      selectedPages:self.projectService
-                                                        .selected3DPageUIDs]];
+  ExportOutcome outcome = ExportOutcomeOK;
+  NSArray<NSURL *> *urls =
+      [ExportService exportThreeJS:self.projectService.project
+                     selectedPages:self.projectService.selected3DPageUIDs
+                      renderConfig:self.projectService.renderConfig
+                           outcome:&outcome];
+  [self _shareExportURLs:urls outcome:outcome formatName:@"HTML"];
 }
 
 @end

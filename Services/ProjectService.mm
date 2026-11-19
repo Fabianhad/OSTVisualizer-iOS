@@ -1,8 +1,7 @@
 #import "ProjectService.h"
-#include "../Core/Geometry/boolean_ops.hpp"
-#include "../Core/Geometry/mesh_repair.hpp"
-#include "../Core/Meshing/MeshFactory.hpp"
-#include <algorithm>
+#include "../Core/Data/PageNavigation.hpp"
+#include "../Core/Meshing/ExportMeshSet.hpp"
+#include <exception>
 
 @implementation ProjectService {
   ost_data::ProjectData _project;
@@ -42,28 +41,23 @@
   _selected3DPageUIDs.clear();
   _selected2DPageUID.clear();
   _pageList.clear();
-  for (const auto &pair : _project.pages) {
-    _pageList.push_back({pair.first, pair.second.name, pair.second.page_index,
-                         pair.second.folder_uid});
+  // LP-08: the pages in the Windows page order (Sequence, Name, UID; Index1
+  // is only the PDF page index) of the Windows page tree walk.
+  for (const std::string &uid : ost_data::page_tree_order(_project)) {
+    const ost_domain::Page &page = _project.pages.at(uid);
+    _pageList.push_back({uid, page.name, page.page_index, page.folder_uid});
   }
-  std::sort(_pageList.begin(), _pageList.end(),
-            [](const PageEntry &a, const PageEntry &b) {
-              if (a.index != b.index)
-                return a.index < b.index;
-              return a.name < b.name;
-            });
+  // BRW-17: the page folders in the order Core loaded them (Name, UID).
   _folderOrder.clear();
   for (const auto &pair : _project.folders) {
     _folderOrder.push_back(pair.first);
   }
-  const auto &folders = _project.folders;
-  std::sort(_folderOrder.begin(), _folderOrder.end(),
-            [&folders](const std::string &a, const std::string &b) {
-              return folders.at(a).name < folders.at(b).name;
-            });
-  if (!_pageList.empty()) {
-    _selected3DPageUIDs.insert(_pageList[0].uid);
-    _selected2DPageUID = _pageList[0].uid;
+  // LP-12: the saved page of the bid (BidPageSelectedUID) when it still
+  // exists, else the first page of the tree walk; 3D and 2D start with it.
+  const std::string firstPage = ost_data::initial_page_uid(_project);
+  if (!firstPage.empty()) {
+    _selected3DPageUIDs.insert(firstPage);
+    _selected2DPageUID = firstPage;
   }
 }
 
@@ -79,12 +73,10 @@
   }
 }
 
-- (void)select2DPage:(const std::string &)uid {
-  if (_selected2DPageUID == uid) {
-    _selected2DPageUID.clear();
-  } else {
-    _selected2DPageUID = uid;
-  }
+- (BOOL)select2DPage:(const std::string &)uid {
+  // LP-11: selecting the active page again keeps it (Windows only activates a
+  // page that is not the active one).
+  return ost_data::activate_page(_selected2DPageUID, uid);
 }
 
 - (void)select3DFolder:(const std::string &)folderUID {
@@ -92,144 +84,47 @@
   if (it == _project.folders.end())
     return;
 
-  auto folderPages = it->second.all_page_uids();
-  _selected3DPageUIDs.clear();
-  for (const auto &uid : folderPages) {
-    _selected3DPageUIDs.insert(uid);
-  }
+  // LP-10: all pages of the folder are added to the selection, or, when they
+  // are all selected already, removed; other selected pages are kept.
+  ost_data::toggle_folder_pages(_selected3DPageUIDs,
+                                it->second.all_page_uids());
 }
 
 #pragma mark - Mesh Generation
-static std::unordered_map<std::string,
-                          std::vector<std::vector<std::pair<double, double>>>>
-build_hole_map(const ost_data::ProjectData &project,
-               const std::set<std::string> &selectedPages) {
-  std::unordered_map<std::string,
-                     std::vector<std::vector<std::pair<double, double>>>>
-      holes;
-
-  for (const auto &takeoff : project.takeoffs) {
-    if (!takeoff.is_hole())
-      continue;
-    if (!selectedPages.empty() && !selectedPages.count(takeoff.page_uid))
-      continue;
-    if (takeoff.position.size() < 6)
-      continue;
-
-    double sr = 1.0 / project.page_scale_ratio(takeoff.page_uid);
-    std::vector<std::pair<double, double>> hole_verts;
-    for (size_t j = 0; j + 1 < takeoff.position.size(); j += 2) {
-      hole_verts.emplace_back(-takeoff.position[j] * sr,
-                              -takeoff.position[j + 1] * sr);
-    }
-    if (hole_verts.size() >= 3) {
-      holes[takeoff.parent_uid].push_back(std::move(hole_verts));
-    }
-  }
-  return holes;
-}
 
 - (void)generateMeshesIntoRenderer:(Renderer *)renderer {
   [renderer clearMeshes];
 
   if (_project.empty())
     return;
+  // Core reads an empty page set as "every page"; the view shows nothing.
   if (_selected3DPageUIDs.empty())
     return;
 
-  auto holeMap = build_hole_map(_project, _selected3DPageUIDs);
-
-  struct PositiveMesh {
-    ost_geometry::CppMeshData mesh;
-    int condition_type;
-    std::string condition_uid;
-    std::string takeoff_uid;
-    float r, g, b, alpha;
-  };
-
-  std::vector<PositiveMesh> positives;
-  std::unordered_map<int, std::vector<ost_geometry::CppMeshData>>
-      negativesByType;
-
-  // Phase 1: Generate all meshes, separating positives and negatives per
-  // condition type
-  for (const auto &takeoff : _project.takeoffs) {
-    if (!_selected3DPageUIDs.count(takeoff.page_uid))
-      continue;
-
-    auto cdnIt = _project.conditions.find(takeoff.condition_uid);
-    if (cdnIt == _project.conditions.end())
-      continue;
-
-    const auto &condition = cdnIt->second;
-    if (!_project.is_condition_visible(condition))
-      continue;
-    if (takeoff.is_hole())
-      continue;
-
-    double sr = 1.0 / _project.page_scale_ratio(takeoff.page_uid);
-    std::vector<std::vector<std::pair<double, double>>> holes;
-    if (condition.is_area()) {
-      auto it = holeMap.find(takeoff.uid);
-      if (it != holeMap.end())
-        holes = it->second;
-    }
-
-    auto result =
-        ost_meshing::create_mesh_for_takeoff(takeoff, condition, sr, holes);
-    if (!result.valid)
-      continue;
-
-    int cdnType = static_cast<int>(condition.condition_type);
-    if (takeoff.is_negative) {
-      negativesByType[cdnType].push_back(std::move(result.mesh));
-    } else {
-      float alpha = 1.0f;
-      if (_renderConfig.is_transparent()) {
-        alpha = 0.5f;
-      } else if (_renderConfig.is_ost()) {
-        alpha = (condition.pattern == ost_domain::Pattern::Solid) ? 1.0f : 0.5f;
-      }
-
-      float cr = result.color_r;
-      float cg = result.color_g;
-      float cb = result.color_b;
-      if (_renderConfig.grayscale_enabled) {
-        float gray = 0.299f * cr + 0.587f * cg + 0.114f * cb;
-        cr = cg = cb = gray;
-      }
-
-      positives.push_back({std::move(result.mesh), cdnType,
-                           takeoff.condition_uid, takeoff.uid, cr, cg, cb,
-                           alpha});
-    }
+  // One Core call builds the scene like Windows: raw OST units, page rotation
+  // and flip, holes, the boolean pass (a negative cuts the positives of its
+  // condition type), the mesh order and the colour / opacity of the mode.
+  std::vector<ost_meshing::BooleanMesh> meshes;
+  try {
+    meshes = ost_meshing::generate_view_meshes(_project, _selected3DPageUIDs,
+                                               _renderConfig);
+  } catch (const std::exception &) {
+    // Windows: a failed scene generation leaves the view empty.
+    return;
   }
 
-  // Phase 2: Apply boolean operations per condition type and add to renderer
-  for (auto &pos : positives) {
-    ost_geometry::CppMeshData finalMesh = std::move(pos.mesh);
-
-    auto negIt = negativesByType.find(pos.condition_type);
-    if (negIt != negativesByType.end() && !negIt->second.empty()) {
-      auto diff =
-          ost_geometry::boolean_difference_batch(finalMesh, negIt->second);
-      if (diff.has_value()) {
-        ost_geometry::remove_degenerate_faces(*diff);
-        finalMesh = std::move(*diff);
-      }
-    }
-
+  for (const auto &m : meshes) {
     NSString *condUID =
-        [NSString stringWithUTF8String:pos.condition_uid.c_str()];
-    NSString *tkUID = [NSString stringWithUTF8String:pos.takeoff_uid.c_str()];
-    [renderer addMeshWithVertices:(const double *)finalMesh.vertices.data()
-                      vertexCount:(int)finalMesh.vertices.size()
-                            faces:(const uint32_t *)finalMesh.faces.data()
-                        faceCount:(int)finalMesh.faces.size()
-                           colorR:pos.r
-                                g:pos.g
-                                b:pos.b
-                            alpha:pos.alpha
+        [NSString stringWithUTF8String:m.takeoff->condition_uid.c_str()];
+    NSString *tkUID = [NSString stringWithUTF8String:m.takeoff->uid.c_str()];
+    [renderer addMeshWithVertices:(const double *)m.mesh.vertices.data()
+                      vertexCount:(int)m.mesh.vertices.size()
+                            faces:(const uint32_t *)m.mesh.faces.data()
+                        faceCount:(int)m.mesh.faces.size()
+                           colorR:m.color.r
+                                g:m.color.g
+                                b:m.color.b
+                            alpha:m.color.opacity
                      conditionUID:condUID
                        takeoffUID:tkUID];
   }

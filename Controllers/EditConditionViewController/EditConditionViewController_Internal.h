@@ -103,7 +103,11 @@ struct ElevationParts
     std::vector<std::string> _sortedCdnTypeUIDs;
     std::vector<DimRow> _dimRows;
     std::vector<AdvRow> _advRows;
+    // The bid's measurement system (project.bid.measure_base == 1): dimensions are millimetres (COND-METRIC-01)
+    BOOL _metric;
+    // The form differs from the state it had when it was loaded or last saved (Windows _dirty / _saved_form_state)
     BOOL _dirty;
+    NSArray *_savedFormState;
     BOOL _styleDisabled;
     NSInteger _currentIndex;
 
@@ -125,7 +129,10 @@ struct ElevationParts
 - (void)_rebuildDimRows;
 - (void)_rebuildAdvRows;
 - (void)_syncFieldCacheFromCondition;
-- (void)_applyStyleDefaults:(ost_domain::ConditionType)conditionType;
+// The Style picker: a different style gets the defaults of its controls, everything else stays as typed (COND-STYLE-01).
+- (void)_applyStyleChangeTo:(ost_domain::ConditionType)conditionType;
+// Recomputes the dirty flag after a change of a text, a switch or a picker.
+- (void)_updateDirty;
 - (BOOL)_validateAndCollectTextFields;
 - (NSString *)_cachedTextForTag:(NSInteger)tag;
 - (UITableViewCell *)_detailCell:(UITableView *)table id:(NSString *)cellId;

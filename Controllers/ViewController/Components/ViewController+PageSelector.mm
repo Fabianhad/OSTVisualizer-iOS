@@ -1,3 +1,4 @@
+#include "../../../Core/Data/PageNavigation.hpp"
 #include "../../../Core/Domain/Folder.hpp"
 #import "../ViewController_Internal.h"
 
@@ -131,22 +132,8 @@
         x += fW + gap;
       }
 
-      for (size_t pi = 0; pi < self.projectService.pageList.size(); pi++) {
-        if (self.projectService.pageList[pi].folder_uid !=
-            self.projectService.folderOrder[fi])
-          continue;
-        NSString *name = [NSString
-            stringWithUTF8String:self.projectService.pageList[pi].name.c_str()];
-        UIButton *btn = [self _selectorButtonWithTitle:name
-                                                   tag:pageTagBase + (int)pi
-                                                  font:font
-                                                action:pageAction];
-        CGFloat w = [name sizeWithAttributes:attrs].width + 20;
-        btn.frame = CGRectMake(x, 2, w, h);
-        [bar addSubview:btn];
-        x += w + gap;
-      }
-
+      // Like the Windows page tree (LP-08): the subfolders first, then the
+      // folder's own pages.
       [self _addSubfolderItems:folder
                        intoBar:bar
                              x:&x
@@ -159,12 +146,26 @@
                    pageTagBase:pageTagBase
                     pageAction:pageAction
                          depth:0];
+
+      for (size_t pi = 0; pi < self.projectService.pageList.size(); pi++) {
+        if (self.projectService.pageList[pi].folder_uid !=
+            self.projectService.folderOrder[fi])
+          continue;
+        NSString *name = [self _pageButtonTitleAtIndex:pi];
+        UIButton *btn = [self _selectorButtonWithTitle:name
+                                                   tag:pageTagBase + (int)pi
+                                                  font:font
+                                                action:pageAction];
+        CGFloat w = [name sizeWithAttributes:attrs].width + 20;
+        btn.frame = CGRectMake(x, 2, w, h);
+        [bar addSubview:btn];
+        x += w + gap;
+      }
     }
     for (size_t pi = 0; pi < self.projectService.pageList.size(); pi++) {
       if (!self.projectService.pageList[pi].folder_uid.empty())
         continue;
-      NSString *name = [NSString
-          stringWithUTF8String:self.projectService.pageList[pi].name.c_str()];
+      NSString *name = [self _pageButtonTitleAtIndex:pi];
       UIButton *btn = [self _selectorButtonWithTitle:name
                                                  tag:pageTagBase + (int)pi
                                                 font:font
@@ -176,8 +177,7 @@
     }
   } else {
     for (size_t pi = 0; pi < self.projectService.pageList.size(); pi++) {
-      NSString *name = [NSString
-          stringWithUTF8String:self.projectService.pageList[pi].name.c_str()];
+      NSString *name = [self _pageButtonTitleAtIndex:pi];
       UIButton *btn = [self _selectorButtonWithTitle:name
                                                  tag:pageTagBase + (int)pi
                                                 font:font
@@ -221,20 +221,6 @@
     subLabel.frame = CGRectMake(*x, 4, lw, h - 4);
     [bar addSubview:subLabel];
     *x += lw + gap;
-    for (size_t pi = 0; pi < self.projectService.pageList.size(); pi++) {
-      if (self.projectService.pageList[pi].folder_uid != pair.first)
-        continue;
-      NSString *name = [NSString
-          stringWithUTF8String:self.projectService.pageList[pi].name.c_str()];
-      UIButton *btn = [self _selectorButtonWithTitle:name
-                                                 tag:pageTagBase + (int)pi
-                                                font:font
-                                              action:pageAction];
-      CGFloat w = [name sizeWithAttributes:attrs].width + 20;
-      btn.frame = CGRectMake(*x, 2, w, h);
-      [bar addSubview:btn];
-      *x += w + gap;
-    }
     [self _addSubfolderItems:sub
                      intoBar:bar
                            x:x
@@ -247,7 +233,32 @@
                  pageTagBase:pageTagBase
                   pageAction:pageAction
                        depth:depth + 1];
+    for (size_t pi = 0; pi < self.projectService.pageList.size(); pi++) {
+      if (self.projectService.pageList[pi].folder_uid != pair.first)
+        continue;
+      NSString *name = [self _pageButtonTitleAtIndex:pi];
+      UIButton *btn = [self _selectorButtonWithTitle:name
+                                                 tag:pageTagBase + (int)pi
+                                                font:font
+                                              action:pageAction];
+      CGFloat w = [name sizeWithAttributes:attrs].width + 20;
+      btn.frame = CGRectMake(*x, 2, w, h);
+      [bar addSubview:btn];
+      *x += w + gap;
+    }
   }
+}
+
+// The text of a page button: the page name, or its uid when it has none, like
+// the Windows page combo (LP-25). The sequence and sheet number the Windows
+// page labels can show are preferences that iOS does not have.
+- (NSString *)_pageButtonTitleAtIndex:(size_t)index {
+  const PageEntry &entry = self.projectService.pageList[index];
+  auto page = self.projectService.project.pages.find(entry.uid);
+  const std::string label = page != self.projectService.project.pages.end()
+                                ? ost_data::page_label(page->second)
+                                : (entry.name.empty() ? entry.uid : entry.name);
+  return [NSString stringWithUTF8String:label.c_str()];
 }
 
 - (UIButton *)_selectorButtonWithTitle:(NSString *)title
@@ -306,13 +317,22 @@
 
   BOOL previousHad2D = !self.projectService.selected2DPageUID.empty();
 
-  [self.projectService select2DPage:self.projectService.pageList[idx].uid];
+  // LP-11: tapping the active page again changes nothing.
+  if (![self.projectService
+          select2DPage:self.projectService.pageList[idx].uid])
+    return;
 
   [self _highlightSelection];
+
+  // The selection does not follow a takeoff to another page (RPV-16).
+  [self _clearSelectionForPageSwitch];
 
   BOOL currentHas2D = !self.projectService.selected2DPageUID.empty();
   BOOL resetZoom = !previousHad2D && currentHas2D;
   [self _loadCurrentPageIntoPlanViewResetZoom:resetZoom];
+
+  // The totals are those of the active page now (QTY-15).
+  [self _updateConditionQuantities];
 }
 
 - (void)_highlightSelection {

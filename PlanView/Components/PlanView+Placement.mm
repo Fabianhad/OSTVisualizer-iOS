@@ -1,24 +1,16 @@
+#include "../../Core/Domain/DisplayColor.hpp"
 #import "../PlanView_Internal.h"
+#include "../../Core/Geometry/coord_transform.hpp"
+#include "../../Core/Geometry/placement_snap.hpp"
+#include "../../Core/Geometry/takeoff_footprint.hpp"
+#include <optional>
+#include <stdexcept>
 
-static const double kPlaceSnapAngleRad = M_PI / 8.0;
-static const CGFloat kCloseDistPts = 12.0;
-
-static double placeSnapOst(double val, double inc) {
-  if (inc <= 0.0)
-    return val;
-  return round(val / inc) * inc;
-}
-
-static void placeSnapAngle(double ox, double oy, double &tx, double &ty) {
-  double dx = tx - ox, dy = ty - oy;
-  double len = hypot(dx, dy);
-  if (len < 1e-9)
-    return;
-  double angle = atan2(dy, dx);
-  double snapped = round(angle / kPlaceSnapAngleRad) * kPlaceSnapAngleRad;
-  tx = ox + len * cos(snapped);
-  ty = oy + len * sin(snapped);
-}
+// Grid snapping has no setting on iOS; Windows has it on by default
+// (Config.snap_to_grid_enabled).
+static const bool kGridSnapEnabled = true;
+// placement_mode._add_place_handle(x, y, 2.5): the edge middles of the rectangle that is being dragged out
+static const CGFloat kRectDragMidHalf = 2.5;
 
 static std::vector<ost_types::Vec2>
 pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
@@ -31,48 +23,52 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
 
 @implementation PlanView (Placement)
 
-- (std::pair<double, double>)_canvasToOst:(CGPoint)pt {
-  double units_per_inch = (_scaleFactor2 / _scaleFactor1);
-  double units_per_point = units_per_inch / kPointsPerInch;
-  int rot = ((_pageRotation % 360) + 360) % 360;
-  double ox, oy;
-  switch (rot) {
-  case 90:
-    ox = (_pageHeightPts - pt.y) * units_per_point;
-    oy = (_pageWidthPts - pt.x) * units_per_point;
-    break;
-  case 180:
-    ox = (_pageWidthPts - pt.x) * units_per_point;
-    oy = pt.y * units_per_point;
-    break;
-  case 270:
-    ox = pt.y * units_per_point;
-    oy = pt.x * units_per_point;
-    break;
-  default:
-    ox = pt.x * units_per_point;
-    oy = pt.y * units_per_point;
-    break;
+// The exact inverse of the page transform (rotation and flips), like Windows
+// selection_manager._scene_pos_to_ost; no snapping here. Empty for an invalid
+// page contract (non-positive scale, rotation that is not a quarter turn, ...).
+- (std::optional<ost_types::Vec2>)_canvasToOst:(CGPoint)pt {
+  try {
+    return ost_coord::canvas_to_ost_point(
+        pt.x, pt.y, _pageWidthPts, _pageHeightPts, _scaleFactor1, _scaleFactor2,
+        _pageRotation, _pageFlipX, _pageFlipY);
+  } catch (const std::invalid_argument &) {
+    return std::nullopt;
   }
-  ox = placeSnapOst(ox, _placeSnapIncrement);
-  oy = placeSnapOst(oy, _placeSnapIncrement);
-  return {ox, oy};
 }
 
 - (CGPoint)_ostToCanvas:(double)ox oy:(double)oy {
-  double ppu = kPointsPerInch / (_scaleFactor2 / _scaleFactor1);
-  int rot = ((_pageRotation % 360) + 360) % 360;
-  switch (rot) {
-  case 90:
-    return {(CGFloat)(_pageWidthPts - oy * ppu),
-            (CGFloat)(_pageHeightPts - ox * ppu)};
-  case 180:
-    return {(CGFloat)(_pageWidthPts - ox * ppu), (CGFloat)(oy * ppu)};
-  case 270:
-    return {(CGFloat)(oy * ppu), (CGFloat)(ox * ppu)};
-  default:
-    return {(CGFloat)(ox * ppu), (CGFloat)(oy * ppu)};
+  try {
+    ost_types::Vec2 canvas = ost_coord::ost_to_canvas_point(
+        ox, oy, _pageWidthPts, _pageHeightPts, _scaleFactor1, _scaleFactor2,
+        _pageRotation, _pageFlipX, _pageFlipY);
+    return {(CGFloat)canvas[0], (CGFloat)canvas[1]};
+  } catch (const std::invalid_argument &) {
+    return CGPointZero;
   }
+}
+
+// Windows _placement_snap_from_scene for a touch location: the grid point when
+// it lies within kGridSnapThresholdPx screen points of the touch, otherwise
+// the raw point (Windows' takeoff and PDF-line snaps do not exist on iOS).
+// Empty for an invalid page contract.
+- (std::optional<ost_placement::PlacementPoint>)_placementPointAtCanvas:
+    (CGPoint)pt {
+  std::optional<ost_types::Vec2> raw = [self _canvasToOst:pt];
+  if (!raw)
+    return std::nullopt;
+  // screen points per OST unit: points = ost * 72 * sf1 / sf2, then the zoom
+  double screenPtsPerOst =
+      kPointsPerInch * _scaleFactor1 / _scaleFactor2 * self.zoomScale;
+  return ost_placement::grid_snap((*raw)[0], (*raw)[1], _placeSnapIncrement,
+                                  screenPtsPerOst,
+                                  ost_placement::kGridSnapThresholdPx,
+                                  kGridSnapEnabled);
+}
+
+// The angle step: Windows' unpressed default; the iOS toggle stands for the
+// Shift key (off = the pressed default, no angle snap).
+- (double)_placeAngleDegrees {
+  return _angleSnappingEnabled ? ost_placement::kDefaultSnapAngleDegrees : 0.0;
 }
 
 - (void)enterPlacementModeWithCondition:(const ost_domain::Condition &)condition
@@ -161,19 +157,13 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
   float fillG = invalid ? 0.0f : _placeColorG;
   float fillB = invalid ? 0.0f : _placeColorB;
 
-  if (!invalid && _renderConfig.grayscale_enabled) {
-    float gray = 0.299f * fillR + 0.587f * fillG + 0.114f * fillB;
-    fillR = fillG = fillB = gray;
-  }
+  // COL-02: the gray byte of Windows, like the overlays and the 3D view
+  if (!invalid && _renderConfig.grayscale_enabled)
+    ost_domain::grayscale_channels(fillR, fillG, fillB);
 
-  float previewAlpha;
-  if (_renderConfig.is_solid()) {
-    previewAlpha = 1.0f;
-  } else if (_renderConfig.is_transparent()) {
-    previewAlpha = 0.5f;
-  } else {
-    previewAlpha = (_placePattern == ost_domain::Pattern::Solid) ? 1.0f : 0.5f;
-  }
+  // COL-04: the 2D fill opacity of Windows (pattern 0: no fill, the outline stays)
+  float previewAlpha = (float)ost_domain::display_opacity_2d(
+      _renderConfig.color_mode, (int)_placePattern);
 
   CGRect frame = _canvasView.bounds;
   std::vector<OverlayPath> paths;
@@ -184,19 +174,16 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
                                  oy:_placePoints[0].second];
     CGPoint p2 = [self _ostToCanvas:_placePoints[1].first
                                  oy:_placePoints[1].second];
-    double scaleRatio =
-        (_scaleFactor1 != 0.0) ? _scaleFactor2 / _scaleFactor1 : 1.0;
-    CGFloat thickPts = (_placeThickness > 0 ? _placeThickness : 1.0) /
-                       scaleRatio * kPointsPerInch;
-    if (thickPts < kMinThicknessPts)
-      thickPts = kMinThicknessPts;
-    CGFloat halfT = thickPts / 2.0;
+    // RPV-26: the Windows band thickness (scene px / view scale = canvas points)
+    CGFloat halfT = ost_footprint::rendered_linear_thickness(
+                        _placeThickness, _scaleFactor2 / _scaleFactor1,
+                        ost_footprint::kInteractivePdfRenderScale) /
+                    ost_footprint::kInteractivePdfRenderScale / 2.0;
     CGFloat dx = p2.x - p1.x, dy = p2.y - p1.y;
     CGFloat len = hypot(dx, dy);
     if (len > 0.001) {
       CGFloat px = -dy / len * halfT, py = dx / len * halfT;
       OverlayPath op;
-      op.isEllipse = false;
       op.filled = true;
       op.r = fillR;
       op.g = fillG;
@@ -219,7 +206,6 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
       canvasPts.push_back([self _ostToCanvas:pt.first oy:pt.second]);
 
     OverlayPath op;
-    op.isEllipse = false;
     op.filled = true;
     op.r = fillR;
     op.g = fillG;
@@ -230,7 +216,6 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
     paths.push_back(std::move(op));
 
     OverlayPath border;
-    border.isEllipse = false;
     border.filled = false;
     border.dashed = true;
     border.r = 0;
@@ -246,6 +231,15 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
 
     for (const auto &cp : canvasPts)
       addSquareHandle(cp, kCornerHalf, false, paths);
+
+    // Windows draws the middle of each edge of the rectangle being dragged with a smaller handle (half 2.5)
+    if (_placeAreaRectDragging && canvasPts.size() == 4) {
+      for (size_t i = 0; i < 4; i++) {
+        const CGPoint &a = canvasPts[i], &b = canvasPts[(i + 1) % 4];
+        addSquareHandle(CGPointMake((a.x + b.x) / 2, (a.y + b.y) / 2),
+                        kRectDragMidHalf, false, paths);
+      }
+    }
   }
 
   if (paths.empty())
@@ -268,7 +262,11 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
     return;
 
   CGPoint canvasPt = [tap locationInView:_canvasView];
-  auto [ox, oy] = [self _canvasToOst:canvasPt];
+  std::optional<ost_placement::PlacementPoint> cursor =
+      [self _placementPointAtCanvas:canvasPt];
+  if (!cursor)
+    return;
+  double ox = cursor->point[0], oy = cursor->point[1];
 
   if (_placeConditionType == ost_domain::ConditionType::Count) {
     std::vector<double> pos = {ox, oy};
@@ -280,28 +278,22 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
 
   if (_placeConditionType == ost_domain::ConditionType::Area) {
     if (_placePoints.empty()) {
-      ox = placeSnapOst(ox, _placeSnapIncrement);
-      oy = placeSnapOst(oy, _placeSnapIncrement);
       _placePoints.push_back({ox, oy});
       [self _updatePlacePreview];
       [self _notifyAreaPlacementInProgress:YES];
       return;
     }
 
-    auto &last = _placePoints.back();
-    if (_angleSnappingEnabled)
-      placeSnapAngle(last.first, last.second, ox, oy);
-    ox = placeSnapOst(ox, _placeSnapIncrement);
-    oy = placeSnapOst(oy, _placeSnapIncrement);
-
+    // Windows closes the polygon when the RAW tap (not the snapped point) is
+    // within 12 screen points of the first point and at least three points are
+    // placed; an invalid polygon neither closes nor adds a point.
     if (_placePoints.size() >= 3) {
       CGPoint startCanvas = [self _ostToCanvas:_placePoints[0].first
                                             oy:_placePoints[0].second];
-      CGPoint tapCanvas = [self _ostToCanvas:ox oy:oy];
-      CGFloat closeDist = kCloseDistPts / self.zoomScale;
-      CGFloat cdx = tapCanvas.x - startCanvas.x;
-      CGFloat cdy = tapCanvas.y - startCanvas.y;
-      if (cdx * cdx + cdy * cdy < closeDist * closeDist) {
+      double closeDistPx = hypot(canvasPt.x - startCanvas.x,
+                                 canvasPt.y - startCanvas.y) *
+                           self.zoomScale;
+      if (ost_placement::polygon_close_hit(_placePoints.size(), closeDistPx)) {
         auto polyVec = pairsToVec2(_placePoints);
         if (!ost_geom::polygon_is_valid(polyVec))
           return;
@@ -320,6 +312,13 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
         return;
       }
     }
+
+    const auto &last = _placePoints.back();
+    ost_types::Vec2 end = ost_placement::snap_angle_for_placement(
+        last.first, last.second, ox, oy, cursor->kind, _placeSnapIncrement,
+        [self _placeAngleDegrees]);
+    ox = end[0];
+    oy = end[1];
 
     auto candidate = _placePoints;
     candidate.push_back({ox, oy});
@@ -346,33 +345,45 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
   if (!_canvasView || !_editDelegate || !_placementActive)
     return;
 
-  CGPoint canvasPt = [pan locationInView:_canvasView];
+  // The press position (Windows) is where the touch went down: UIKit begins a
+  // pan only after the touch travelled a recognition threshold, so the start
+  // is the location at Began minus that travel (RPV-M07).
+  CGPoint canvasPt = pan.state == UIGestureRecognizerStateBegan
+                         ? PlanViewPanStartPoint(pan, _canvasView)
+                         : [pan locationInView:_canvasView];
 
   if (_placeConditionType == ost_domain::ConditionType::Linear) {
     if (pan.state == UIGestureRecognizerStateBegan) {
-      auto [ox, oy] = [self _canvasToOst:canvasPt];
+      auto cursor = [self _placementPointAtCanvas:canvasPt];
+      if (!cursor)
+        return;
       _placePoints.clear();
-      _placePoints.push_back({ox, oy});
+      _placePoints.push_back({cursor->point[0], cursor->point[1]});
       _placeLinearDragging = YES;
     } else if (pan.state == UIGestureRecognizerStateChanged &&
                _placeLinearDragging) {
-      auto [ox, oy] = [self _canvasToOst:canvasPt];
-      if (_angleSnappingEnabled)
-        placeSnapAngle(_placePoints[0].first, _placePoints[0].second, ox, oy);
-      ox = placeSnapOst(ox, _placeSnapIncrement);
-      oy = placeSnapOst(oy, _placeSnapIncrement);
+      auto cursor = [self _placementPointAtCanvas:canvasPt];
+      if (!cursor)
+        return;
+      // angle snap against the first point, then (grid points only) the length
+      // rounded to the increment along that direction
+      ost_types::Vec2 end = ost_placement::snap_angle_for_placement(
+          _placePoints[0].first, _placePoints[0].second, cursor->point[0],
+          cursor->point[1], cursor->kind, _placeSnapIncrement,
+          [self _placeAngleDegrees]);
       if (_placePoints.size() < 2)
-        _placePoints.push_back({ox, oy});
+        _placePoints.push_back({end[0], end[1]});
       else
-        _placePoints[1] = {ox, oy};
+        _placePoints[1] = {end[0], end[1]};
       [self _updatePlacePreview];
     } else if (_placeLinearDragging) {
       _placeLinearDragging = NO;
       if (_placePoints.size() >= 2) {
         double dx = _placePoints[1].first - _placePoints[0].first;
         double dy = _placePoints[1].second - _placePoints[0].second;
-        double minLen = _placeSnapIncrement > 0 ? _placeSnapIncrement : 1e-6;
-        if (hypot(dx, dy) >= minLen) {
+        if (ost_placement::meets_placement_minimum(
+                hypot(dx, dy),
+                ost_placement::placement_minimum_length(_placeSnapIncrement))) {
           std::vector<double> pos = {
               _placePoints[0].first, _placePoints[0].second,
               _placePoints[1].first, _placePoints[1].second};
@@ -390,17 +401,18 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
   } else if (_placeConditionType == ost_domain::ConditionType::Area &&
              (_placePoints.empty() || _placeAreaRectDragging)) {
     if (pan.state == UIGestureRecognizerStateBegan && _placePoints.empty()) {
-      auto [ox, oy] = [self _canvasToOst:canvasPt];
-      ox = placeSnapOst(ox, _placeSnapIncrement);
-      oy = placeSnapOst(oy, _placeSnapIncrement);
-      _placePoints.push_back({ox, oy});
+      auto cursor = [self _placementPointAtCanvas:canvasPt];
+      if (!cursor)
+        return;
+      _placePoints.push_back({cursor->point[0], cursor->point[1]});
       _placeAreaRectDragging = YES;
       [self _notifyAreaPlacementInProgress:YES];
     } else if (pan.state == UIGestureRecognizerStateChanged &&
                _placeAreaRectDragging) {
-      auto [ox, oy] = [self _canvasToOst:canvasPt];
-      ox = placeSnapOst(ox, _placeSnapIncrement);
-      oy = placeSnapOst(oy, _placeSnapIncrement);
+      auto cursor = [self _placementPointAtCanvas:canvasPt];
+      if (!cursor)
+        return;
+      double ox = cursor->point[0], oy = cursor->point[1];
       double x1 = _placePoints[0].first, y1 = _placePoints[0].second;
       _placePoints.resize(4);
       _placePoints[1] = {ox, y1};
@@ -411,8 +423,10 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
       _placeAreaRectDragging = NO;
       double x1 = _placePoints[0].first, y1 = _placePoints[0].second;
       double x2 = _placePoints[2].first, y2 = _placePoints[2].second;
-      double minLen = _placeSnapIncrement > 0 ? _placeSnapIncrement : 1e-6;
-      if (fabs(x2 - x1) >= minLen && fabs(y2 - y1) >= minLen) {
+      double minLen =
+          ost_placement::placement_minimum_length(_placeSnapIncrement);
+      if (ost_placement::meets_placement_minimum(fabs(x2 - x1), minLen) &&
+          ost_placement::meets_placement_minimum(fabs(y2 - y1), minLen)) {
         std::vector<double> pos = {x1, y1, x2, y1, x2, y2, x1, y2};
         _placePoints.clear();
         [self _clearPlacePreview];

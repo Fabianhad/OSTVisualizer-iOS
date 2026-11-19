@@ -11,7 +11,9 @@
 #import "../ConditionsViewController.h"
 #import "../EditConditionViewController/EditConditionViewController.h"
 #import <objc/runtime.h>
+#include "../../Core/Domain/ConditionChoices.hpp"
 #include "../../Core/Domain/EditMode.hpp"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -43,6 +45,10 @@ static const int kModeLabelTag2D = 50001;
 - (void)_generateMeshesForSelectedPages;
 - (void)_updateUndoRedoButtons;
 - (void)_updateConditionQuantities;
+// Drops the whole undo / redo history (a deleted condition invalidates it, UND-03).
+- (void)_clearUndoHistory;
+// Nothing stays selected after the 2D page changed (RPV-16).
+- (void)_clearSelectionForPageSwitch;
 - (void)_switchToMode2D:(BOOL)want2D;
 - (void)_setEditMode:(ost_domain::EditMode)mode;
 - (void)_loadCurrentPageIntoPlanViewResetZoom:(BOOL)resetZoom;
@@ -59,6 +65,12 @@ static const int kModeLabelTag2D = 50001;
 - (int &)activeHandleIndex;
 - (__weak ConditionsViewController *)conditionsVC;
 - (void)setConditionsVC:(ConditionsViewController *)vc;
+// The placement a hidden layer suspended and the tool revision it is checked against (COND-PLACE-01)
+- (std::optional<ost_domain::SuspendedPlacement> &)suspendedPlacement;
+- (unsigned long long)toolRevision;
+- (void)_selectConditionForPlacement:(NSString *)conditionUID
+                              action:(ost_domain::PlacementAction)action;
+- (void)_leavePlacement;
 - (void)_syncSelection;
 
 @end

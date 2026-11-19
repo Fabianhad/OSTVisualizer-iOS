@@ -1,5 +1,6 @@
 #import "../EditConditionViewController_Internal.h"
 #import "EditConditionHelpers.h"
+#include "../../../Core/Domain/ConditionFormRules.hpp"
 
 @interface EditConditionViewController (Pickers) <
     UIColorPickerViewControllerDelegate>
@@ -60,13 +61,9 @@
                                 style:UIAlertActionStyleDefault
                               handler:^(UIAlertAction *a) {
                                 [self
-                                    _applyStyleDefaults:
+                                    _applyStyleChangeTo:
                                         static_cast<ost_domain::ConditionType>(
                                             typeVal)];
-                                self->_dirty = YES;
-                                [self _rebuildDimRows];
-                                [self _rebuildAdvRows];
-                                [self->_tableView reloadData];
                               }]];
   }
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
@@ -86,7 +83,7 @@
                                        handler:^(UIAlertAction *a) {
                                          self->_condition.cdn_type_uid.clear();
                                          self->_condition.cdn_type_name.clear();
-                                         self->_dirty = YES;
+                                         [self _updateDirty];
                                          [self->_tableView reloadData];
                                        }]];
   for (const auto &uid : _sortedCdnTypeUIDs) {
@@ -100,7 +97,7 @@
                                  handler:^(UIAlertAction *a) {
                                    self->_condition.cdn_type_uid = capUID;
                                    self->_condition.cdn_type_name = capName;
-                                   self->_dirty = YES;
+                                   [self _updateDirty];
                                    [self->_tableView reloadData];
                                  }]];
   }
@@ -115,6 +112,15 @@
       alertControllerWithTitle:@"Layer"
                        message:nil
                 preferredStyle:UIAlertControllerStyleActionSheet];
+  // An empty layer is saved as no layer (COND-LAYER-01): the picker can keep or return to "none", like the Type picker
+  [alert
+      addAction:[UIAlertAction actionWithTitle:@"(none)"
+                                         style:UIAlertActionStyleDefault
+                                       handler:^(UIAlertAction *a) {
+                                         self->_condition.layer_uid.clear();
+                                         [self _updateDirty];
+                                         [self->_tableView reloadData];
+                                       }]];
   for (const auto &uid : _sortedLayerUIDs) {
     NSString *name =
         [NSString stringWithUTF8String:_layers.at(uid).name.c_str()];
@@ -124,7 +130,7 @@
                                             handler:^(UIAlertAction *a) {
                                               self->_condition.layer_uid =
                                                   capUID;
-                                              self->_dirty = YES;
+                                              [self _updateDirty];
                                               [self->_tableView reloadData];
                                             }]];
   }
@@ -150,7 +156,7 @@
                                  handler:^(UIAlertAction *a) {
                                    self->_condition.pattern =
                                        static_cast<ost_domain::Pattern>(val);
-                                   self->_dirty = YES;
+                                   [self _updateDirty];
                                    [self->_tableView reloadData];
                                  }]];
   }
@@ -167,14 +173,13 @@
                 preferredStyle:UIAlertControllerStyleActionSheet];
   NSArray *labels = shapeLabels();
   for (NSInteger i = 0; i < (NSInteger)labels.count; i++) {
-    int val = shapeValues[i];
+    ost_domain::ShapeId shape = shapeIdAtIndex(i);
     [alert addAction:[UIAlertAction
                          actionWithTitle:labels[i]
                                    style:UIAlertActionStyleDefault
                                  handler:^(UIAlertAction *a) {
-                                   self->_condition.shape =
-                                       static_cast<ost_domain::ShapeId>(val);
-                                   self->_dirty = YES;
+                                   self->_condition.shape = shape;
+                                   [self _updateDirty];
                                    [self _rebuildDimRows];
                                    [self->_tableView reloadData];
                                  }]];
@@ -186,33 +191,28 @@
 }
 
 - (void)_showColorPicker {
-  if (@available(iOS 14.0, *)) {
-    UIColorPickerViewController *picker =
-        [[UIColorPickerViewController alloc] init];
-    int cf = _condition.color_fill;
-    CGFloat r = (cf & 0xFF) / 255.0;
-    CGFloat g = ((cf >> 8) & 0xFF) / 255.0;
-    CGFloat b = ((cf >> 16) & 0xFF) / 255.0;
-    picker.selectedColor = [UIColor colorWithRed:r green:g blue:b alpha:1.0];
-    picker.supportsAlpha = NO;
-    picker.delegate = (id<UIColorPickerViewControllerDelegate>)self;
-    [self presentViewController:picker animated:YES completion:nil];
-  }
+  UIColorPickerViewController *picker =
+      [[UIColorPickerViewController alloc] init];
+  int cf = _condition.color_fill;
+  CGFloat r = (cf & 0xFF) / 255.0;
+  CGFloat g = ((cf >> 8) & 0xFF) / 255.0;
+  CGFloat b = ((cf >> 16) & 0xFF) / 255.0;
+  picker.selectedColor = [UIColor colorWithRed:r green:g blue:b alpha:1.0];
+  picker.supportsAlpha = NO;
+  picker.delegate = (id<UIColorPickerViewControllerDelegate>)self;
+  [self presentViewController:picker animated:YES completion:nil];
 }
 
 #pragma mark - UIColorPickerViewControllerDelegate
 
 - (void)colorPickerViewControllerDidFinish:
-    (UIColorPickerViewController *)viewController API_AVAILABLE(ios(14.0)) {
+    (UIColorPickerViewController *)viewController {
   UIColor *color = viewController.selectedColor;
   CGFloat r, g, b, a;
   [color getRed:&r green:&g blue:&b alpha:&a];
-  int ri = (int)(r * 255.0) & 0xFF;
-  int gi = (int)(g * 255.0) & 0xFF;
-  int bi = (int)(b * 255.0) & 0xFF;
-  _condition.color_fill = ri | (gi << 8) | (bi << 16);
-  _condition.color_line = _condition.color_fill;
-  _dirty = YES;
+  // Only ColorFill changes (ColorLine is never touched), each channel rounded to the nearest 8-bit value (COL-PICK-01)
+  _condition.color_fill = ost_domain::color_fill_from_rgb(r, g, b);
+  [self _updateDirty];
   [_tableView reloadData];
 }
 
@@ -253,7 +253,8 @@
 }
 
 - (void)_showPickerForUom:(NSInteger)qtyIndex calcType:(int)calcType {
-  auto uomOptions = ost_domain::get_valid_uoms_for_calc_type(calcType);
+  // a metric bid offers m / mm, m2 / mm2, m3 / mm3 (COND-METRIC-01, QTY-05)
+  auto uomOptions = ost_domain::get_valid_uoms_for_calc_type(calcType, _metric);
 
   if (uomOptions.size() == 1) {
     [self _setQuantity:qtyIndex calcType:calcType uom:uomOptions[0].first];
@@ -298,7 +299,7 @@
     _condition.uom3 = (calcType == 0) ? -1 : uom;
     break;
   }
-  _dirty = YES;
+  [self _updateDirty];
   [_tableView reloadData];
 }
 

@@ -1,10 +1,28 @@
 #import "ImportService.h"
-#include "../Core/Import/CabExtractor.hpp"
+#include "../Core/Import/OspFileSystem.hpp"
+#include "../Core/Import/OspPackage.hpp"
 #include "../Core/Import/OstXmlParser.hpp"
-#include "../Core/Import/pugixml.hpp"
+#include "../Core/Import/RawBidIntegrity.hpp"
 #include "../Core/Persistence/ProjectStore/ProjectStore.hpp"
-#include <algorithm>
-#include <sstream>
+#include <string>
+
+// An NSString for UTF-8 text from Core. Everything the import accepts is valid UTF-8 (IMP-M01), but a database filled by an older build may
+// hold raw windows-1252 bytes: those are read as windows-1252 (or Latin-1) instead of becoming nil, which would raise in an NSDictionary
+// literal and make the whole project list unreadable.
+static NSString *OSTString(const std::string &text) {
+  NSString *string = [NSString stringWithUTF8String:text.c_str()];
+  if (!string) {
+    string = [[NSString alloc] initWithBytes:text.data()
+                                      length:text.size()
+                                    encoding:NSWindowsCP1252StringEncoding];
+  }
+  if (!string) {
+    string = [[NSString alloc] initWithBytes:text.data()
+                                      length:text.size()
+                                    encoding:NSISOLatin1StringEncoding];
+  }
+  return string ?: @"";
+}
 
 NSNotificationName const OSTProjectImportedNotification = @"OSTProjectImported";
 NSNotificationName const OSTProjectDeletedNotification = @"OSTProjectDeleted";
@@ -25,23 +43,80 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   return std::string([[[self databaseURL] path] UTF8String]);
 }
 
++ (NSError *)_importErrorWithCode:(NSInteger)code message:(NSString *)message {
+  return [NSError errorWithDomain:@"OSTImport"
+                             code:code
+                         userInfo:@{NSLocalizedDescriptionKey : message}];
+}
+
+// Everything after the parse that both formats share: Windows validates (and repairs) the raw rows before the first write (IMP-09), then
+// the project is stored in one transaction with new UIDs; the notification carries the NEW bid UID (IMP-06). Every import is an
+// independent copy (IMP-19): there is no "already imported" check.
++ (BOOL)_storeRawData:(ost_import::OstRawData &)raw
+                label:(NSString *)label
+                error:(NSError **)error {
+  std::string validationError;
+  std::string validationDetails;
+  if (!ost_import::validate_raw_data(raw, validationError, &validationDetails)) {
+    NSLog(@"ImportService: %@ rejected: %s %s", label, validationError.c_str(),
+          validationDetails.c_str());
+    if (error) {
+      NSString *message = OSTString(validationError);
+      if (!validationDetails.empty()) {
+        message = [NSString stringWithFormat:@"%@\n%@", message,
+                                             OSTString(validationDetails)];
+      }
+      *error = [self _importErrorWithCode:2 message:message];
+    }
+    return NO;
+  }
+
+  std::string db_path = [self _dbPath];
+  if (!ost_store::create_schema(db_path)) {
+    NSLog(@"ImportService: %@: the database schema could not be created", label);
+    if (error) {
+      *error = [self _importErrorWithCode:4
+                                  message:@"Failed to store project data"];
+    }
+    return NO;
+  }
+
+  ost_store::ImportResult result;
+  if (!ost_store::import_project(db_path, raw, &result)) {
+    NSLog(@"ImportService: %@: storing the project failed: %s", label,
+          result.error.c_str());
+    if (error) {
+      *error = [self _importErrorWithCode:4
+                                  message:@"Failed to store project data"];
+    }
+    return NO;
+  }
+
+  NSString *bidUIDStr = OSTString(result.bid_uid);
+
+  [[NSNotificationCenter defaultCenter]
+      postNotificationName:OSTProjectImportedNotification
+                    object:nil
+                  userInfo:@{@"bid_uid" : bidUIDStr}];
+
+  NSLog(@"ImportService: imported %@ (bid_uid=%@)", label, bidUIDStr);
+  return YES;
+}
+
 + (BOOL)importOSTFile:(NSURL *)fileURL error:(NSError **)error {
   BOOL accessing = [fileURL startAccessingSecurityScopedResource];
 
-  NSData *data = [NSData dataWithContentsOfURL:fileURL
-                                       options:NSDataReadingMappedIfSafe
-                                         error:error];
+  // `bytes` points into the data: it must live until the parse is done (ARC may otherwise release it after its last message).
+  NSData *data __attribute__((objc_precise_lifetime)) =
+      [NSData dataWithContentsOfURL:fileURL
+                            options:NSDataReadingMappedIfSafe
+                              error:error];
   if (accessing)
     [fileURL stopAccessingSecurityScopedResource];
 
   if (!data) {
     if (error && !*error) {
-      *error =
-          [NSError errorWithDomain:@"OSTImport"
-                              code:1
-                          userInfo:@{
-                            NSLocalizedDescriptionKey : @"Could not read file"
-                          }];
+      *error = [self _importErrorWithCode:1 message:@"Could not read file"];
     }
     return NO;
   }
@@ -49,82 +124,40 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   const char *bytes = static_cast<const char *>(data.bytes);
   size_t length = data.length;
 
+  // The parse is as strict as the Windows one (IMP-M01): malformed XML is rejected with the reason, a windows-1252 file is transcoded.
   ost_import::OstRawData raw = ost_import::parse_ost_xml(bytes, length);
   if (raw.empty()) {
     if (error) {
-      *error = [NSError
-          errorWithDomain:@"OSTImport"
-                     code:2
-                 userInfo:@{
-                   NSLocalizedDescriptionKey : @"Invalid OST file format"
-                 }];
+      NSString *message = @"Invalid OST file format";
+      if (!raw.error.empty()) {
+        message = [NSString stringWithFormat:@"%@: %@", message,
+                                             OSTString(raw.error)];
+      }
+      *error = [self _importErrorWithCode:2 message:message];
     }
     return NO;
   }
 
-  std::string db_path = [self _dbPath];
-  ost_store::create_schema(db_path);
-
-  std::string bid_uid;
-  auto it = raw.bid_row.find("UID");
-  if (it != raw.bid_row.end())
-    bid_uid = it->second;
-
-  if (!bid_uid.empty() && ost_store::is_bid_imported(db_path, bid_uid)) {
-    if (error) {
-      *error = [NSError errorWithDomain:@"OSTImport"
-                                   code:3
-                               userInfo:@{
-                                 NSLocalizedDescriptionKey :
-                                     @"This project is already imported"
-                               }];
-    }
-    return NO;
-  }
-
-  bool ok = ost_store::import_project(db_path, raw);
-  if (!ok) {
-    if (error) {
-      *error = [NSError
-          errorWithDomain:@"OSTImport"
-                     code:4
-                 userInfo:@{
-                   NSLocalizedDescriptionKey : @"Failed to store project data"
-                 }];
-    }
-    return NO;
-  }
-
-  NSString *bidUIDStr =
-      bid_uid.empty() ? @"" : [NSString stringWithUTF8String:bid_uid.c_str()];
-
-  [[NSNotificationCenter defaultCenter]
-      postNotificationName:OSTProjectImportedNotification
-                    object:nil
-                  userInfo:@{@"bid_uid" : bidUIDStr}];
-
-  NSLog(@"ImportService: imported OST file '%@' (bid_uid=%@)",
-        fileURL.lastPathComponent, bidUIDStr);
-  return YES;
+  return [self _storeRawData:raw
+                       label:[NSString stringWithFormat:@"OST file '%@'",
+                                                        fileURL.lastPathComponent]
+                       error:error];
 }
 
 + (BOOL)importOSPFile:(NSURL *)fileURL error:(NSError **)error {
   BOOL accessing = [fileURL startAccessingSecurityScopedResource];
 
-  NSData *data = [NSData dataWithContentsOfURL:fileURL
-                                       options:NSDataReadingMappedIfSafe
-                                         error:error];
+  // `bytes` points into the (memory mapped) data: it must live until the package is staged.
+  NSData *data __attribute__((objc_precise_lifetime)) =
+      [NSData dataWithContentsOfURL:fileURL
+                            options:NSDataReadingMappedIfSafe
+                              error:error];
   if (accessing)
     [fileURL stopAccessingSecurityScopedResource];
 
   if (!data) {
     if (error && !*error) {
-      *error =
-          [NSError errorWithDomain:@"OSTImport"
-                              code:1
-                          userInfo:@{
-                            NSLocalizedDescriptionKey : @"Could not read file"
-                          }];
+      *error = [self _importErrorWithCode:1 message:@"Could not read file"];
     }
     return NO;
   }
@@ -132,209 +165,50 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   const char *bytes = static_cast<const char *>(data.bytes);
   size_t length = data.length;
 
-  auto entries = ost_import::list_cab(bytes, length);
-  if (entries.empty()) {
-    if (error) {
-      *error = [NSError
-          errorWithDomain:@"OSTImport"
-                     code:2
-                 userInfo:@{
-                   NSLocalizedDescriptionKey : @"Invalid OSP file format"
-                 }];
-    }
-    return NO;
-  }
-
-  std::string ost_entry_name;
-  for (const auto &entry : entries) {
-    std::string name_lower = entry.name;
-    std::transform(name_lower.begin(), name_lower.end(), name_lower.begin(),
-                   ::tolower);
-    if (name_lower.size() >= 4 &&
-        name_lower.substr(name_lower.size() - 4) == ".ost") {
-      ost_entry_name = entry.name;
-      break;
-    }
-  }
-
-  if (ost_entry_name.empty()) {
-    if (error) {
-      *error = [NSError
-          errorWithDomain:@"OSTImport"
-                     code:2
-                 userInfo:@{
-                   NSLocalizedDescriptionKey : @"No OST file found in package"
-                 }];
-    }
-    return NO;
-  }
-
-  std::string ost_filename = ost_entry_name;
-  auto slash_pos = ost_filename.find_last_of("/\\");
-  if (slash_pos != std::string::npos)
-    ost_filename = ost_filename.substr(slash_pos + 1);
-  std::string bid_name = ost_filename;
-  auto dot_pos = bid_name.rfind('.');
-  if (dot_pos != std::string::npos)
-    bid_name = bid_name.substr(0, dot_pos);
-
+  // Package checks, one streaming extraction into a temporary folder, image staging and the parse of the embedded OST are one Core
+  // function (IMP-14, IMP-15, IMP-16, IMP-12, IMP-M02, IMP-13, IMP-M03, IMP-M01). Documents/OST/<ost name> is the iOS place of the staged
+  // drawings (the Windows working directory); nothing is written before the package passed its checks, and the temporary folder is
+  // always removed.
   NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
                                                        NSUserDomainMask, YES);
   NSString *docsDir = paths.firstObject;
-  std::string dest_dir = std::string([docsDir UTF8String]) + "/OST/" + bid_name;
-  NSString *destDirNS = [NSString stringWithUTF8String:dest_dir.c_str()];
-
-  bool has_pdfs = false;
-  for (const auto &entry : entries) {
-    std::string name_lower = entry.name;
-    std::transform(name_lower.begin(), name_lower.end(), name_lower.begin(),
-                   ::tolower);
-    if (name_lower.size() >= 4 &&
-        name_lower.substr(name_lower.size() - 4) == ".pdf") {
-      if (!has_pdfs) {
-
-        [[NSFileManager defaultManager] createDirectoryAtPath:destDirNS
-                                  withIntermediateDirectories:YES
-                                                   attributes:nil
-                                                        error:nil];
-        has_pdfs = true;
-      }
-
-      auto pdf_data = ost_import::extract_cab_file(bytes, length, entry.name);
-      if (!pdf_data.empty()) {
-
-        std::string pdf_filename = entry.name;
-        auto pdf_slash = pdf_filename.find_last_of("/\\");
-        if (pdf_slash != std::string::npos)
-          pdf_filename = pdf_filename.substr(pdf_slash + 1);
-
-        std::string pdf_path = dest_dir + "/" + pdf_filename;
-        NSData *pdfNSData = [NSData dataWithBytes:pdf_data.data()
-                                           length:pdf_data.size()];
-        [pdfNSData writeToFile:[NSString stringWithUTF8String:pdf_path.c_str()]
-                    atomically:YES];
-      }
-    }
-  }
-
-  auto ost_data_vec =
-      ost_import::extract_cab_file(bytes, length, ost_entry_name);
-  if (ost_data_vec.empty()) {
+  std::string images_root = std::string([docsDir UTF8String]) + "/OST";
+  ost_import::StdOspFileSystem files;
+  ost_import::OspStageResult staged;
+  if (!ost_import::stage_osp_package(bytes, length,
+                                     std::string([NSTemporaryDirectory() UTF8String]),
+                                     images_root, files, staged)) {
+    NSLog(@"ImportService: OSP file '%@' rejected: %s",
+          fileURL.lastPathComponent, staged.error.c_str());
     if (error) {
-      *error = [NSError errorWithDomain:@"OSTImport"
-                                   code:2
-                               userInfo:@{
-                                 NSLocalizedDescriptionKey :
-                                     @"Failed to extract OST from package"
-                               }];
+      *error = [self _importErrorWithCode:2 message:OSTString(staged.error)];
     }
     return NO;
   }
 
-  pugi::xml_document doc;
-  pugi::xml_parse_result parse_result =
-      doc.load_buffer(ost_data_vec.data(), ost_data_vec.size());
-
-  if (parse_result) {
-    bool modified = false;
-
-    pugi::xml_node root_node = doc.first_child();
-    pugi::xml_node bid_node = root_node.name() == std::string("Bid")
-                                  ? root_node
-                                  : root_node.child("Bid");
-    pugi::xml_node pages_node = bid_node.child("BidPages");
-    for (pugi::xml_node page = pages_node.first_child(); page;
-         page = page.next_sibling()) {
-      const char *attr_names[] = {"ImagePath", "OverlayImagePath"};
-      for (const char *attr_name : attr_names) {
-        pugi::xml_attribute attr = page.attribute(attr_name);
-        if (attr && attr.value()[0] != '\0') {
-          std::string old_path = attr.value();
-
-          auto pos = old_path.find_last_of("/\\");
-          std::string filename =
-              (pos != std::string::npos) ? old_path.substr(pos + 1) : old_path;
-          std::string new_path = dest_dir + "/" + filename;
-          attr.set_value(new_path.c_str());
-          modified = true;
-        }
-      }
-    }
-
-    if (modified) {
-      std::ostringstream ss;
-      doc.save(ss, "", pugi::format_raw);
-      std::string xml_str = ss.str();
-      ost_data_vec.assign(xml_str.begin(), xml_str.end());
-    }
-  }
-
-  ost_import::OstRawData raw =
-      ost_import::parse_ost_xml(ost_data_vec.data(), ost_data_vec.size());
-  if (raw.empty()) {
-    if (error) {
-      *error = [NSError
-          errorWithDomain:@"OSTImport"
-                     code:2
-                 userInfo:@{
-                   NSLocalizedDescriptionKey : @"Invalid OST data in package"
-                 }];
-    }
-    return NO;
-  }
-
-  std::string db_path = [self _dbPath];
-  ost_store::create_schema(db_path);
-
-  std::string bid_uid;
-  auto it = raw.bid_row.find("UID");
-  if (it != raw.bid_row.end())
-    bid_uid = it->second;
-
-  if (!bid_uid.empty() && ost_store::is_bid_imported(db_path, bid_uid)) {
-    if (error) {
-      *error = [NSError errorWithDomain:@"OSTImport"
-                                   code:3
-                               userInfo:@{
-                                 NSLocalizedDescriptionKey :
-                                     @"This project is already imported"
-                               }];
-    }
-    return NO;
-  }
-
-  bool ok = ost_store::import_project(db_path, raw);
-  if (!ok) {
-    if (error) {
-      *error = [NSError
-          errorWithDomain:@"OSTImport"
-                     code:4
-                 userInfo:@{
-                   NSLocalizedDescriptionKey : @"Failed to store project data"
-                 }];
-    }
-    return NO;
-  }
-
-  NSString *bidUIDStr =
-      bid_uid.empty() ? @"" : [NSString stringWithUTF8String:bid_uid.c_str()];
-
-  [[NSNotificationCenter defaultCenter]
-      postNotificationName:OSTProjectImportedNotification
-                    object:nil
-                  userInfo:@{@"bid_uid" : bidUIDStr}];
-
-  NSLog(
-      @"ImportService: imported OSP file '%@' (bid_uid=%@, %zu PDFs extracted)",
-      fileURL.lastPathComponent, bidUIDStr, has_pdfs ? entries.size() : 0UL);
-  return YES;
+  return [self _storeRawData:staged.raw
+                       label:[NSString stringWithFormat:@"OSP file '%@' (%zu images staged)",
+                                                        fileURL.lastPathComponent,
+                                                        staged.staged_image_count]
+                       error:error];
 }
 
-+ (NSDictionary *)loadHierarchy {
++ (NSDictionary *)loadHierarchyWithError:(NSString **)errorText {
   std::string db_path = [self _dbPath];
-  ost_store::create_schema(db_path);
+  // create_schema only prepares a fresh database. When it fails, the read below says why the database cannot be used (DBP-11, DBP-M02).
+  if (!ost_store::create_schema(db_path)) {
+    NSLog(@"ImportService: the project database could not be prepared");
+  }
 
-  ost_domain::DatabaseHierarchy hierarchy = ost_store::load_hierarchy(db_path);
+  ost_domain::DatabaseHierarchy hierarchy;
+  std::string loadError;
+  if (!ost_store::load_hierarchy(db_path, hierarchy, &loadError)) {
+    NSLog(@"ImportService: the project list cannot be read: %s",
+          loadError.c_str());
+    if (errorText)
+      *errorText = OSTString(loadError);
+    return nil;
+  }
 
   NSMutableArray *folders =
       [NSMutableArray arrayWithCapacity:hierarchy.folders.size()];
@@ -342,14 +216,14 @@ NSNotificationName const OSTRenderConfigChangedNotification =
     NSMutableArray *bids = [NSMutableArray arrayWithCapacity:group.bids.size()];
     for (const auto &bid : group.bids) {
       [bids addObject:@{
-        @"uid" : [NSString stringWithUTF8String:bid.bid_uid.c_str()],
-        @"name" : [NSString stringWithUTF8String:bid.name.c_str()],
-        @"folder_uid" : [NSString stringWithUTF8String:bid.folder_uid.c_str()],
+        @"uid" : OSTString(bid.bid_uid),
+        @"name" : OSTString(bid.name),
+        @"folder_uid" : OSTString(bid.folder_uid),
       }];
     }
     [folders addObject:@{
-      @"uid" : [NSString stringWithUTF8String:group.folder.uid.c_str()],
-      @"name" : [NSString stringWithUTF8String:group.folder.name.c_str()],
+      @"uid" : OSTString(group.folder.uid),
+      @"name" : OSTString(group.folder.name),
       @"bids" : bids,
     }];
   }
@@ -358,8 +232,8 @@ NSNotificationName const OSTRenderConfigChangedNotification =
       [NSMutableArray arrayWithCapacity:hierarchy.orphan_bids.size()];
   for (const auto &bid : hierarchy.orphan_bids) {
     [orphanBids addObject:@{
-      @"uid" : [NSString stringWithUTF8String:bid.bid_uid.c_str()],
-      @"name" : [NSString stringWithUTF8String:bid.name.c_str()],
+      @"uid" : OSTString(bid.bid_uid),
+      @"name" : OSTString(bid.name),
     }];
   }
 
@@ -369,9 +243,29 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   };
 }
 
-+ (ost_data::ProjectData)loadProjectWithUID:(NSString *)bidUID {
++ (BOOL)loadProjectWithUID:(NSString *)bidUID
+                   project:(ost_data::ProjectData &)project
+                     error:(NSString **)errorText {
   std::string uid = [bidUID UTF8String];
-  return ost_store::load_project([self _dbPath], uid);
+  ost_data::ProjectData loaded;
+  std::string loadError;
+  if (!ost_store::load_project([self _dbPath], uid, loaded, &loadError)) {
+    project = ost_data::ProjectData();
+    if (errorText)
+      *errorText = OSTString(loadError);
+    return NO;
+  }
+  project = std::move(loaded);
+  return YES;
+}
+
++ (ost_data::ProjectData)loadProjectWithUID:(NSString *)bidUID {
+  ost_data::ProjectData project;
+  NSString *errorText = nil;
+  if (![self loadProjectWithUID:bidUID project:project error:&errorText]) {
+    NSLog(@"ImportService: bid %@ cannot be loaded: %@", bidUID, errorText);
+  }
+  return project;
 }
 
 + (BOOL)deleteProjectWithUID:(NSString *)bidUID {
@@ -398,6 +292,10 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   return ok ? YES : NO;
 }
 
++ (BOOL)restoreBidWithUID:(NSString *)bidUID {
+  return ost_store::restore_bid([self _dbPath], [bidUID UTF8String]) ? YES : NO;
+}
+
 #pragma mark - Folder Management
 
 + (NSString *)createFolderWithName:(NSString *)name {
@@ -413,9 +311,30 @@ NSNotificationName const OSTRenderConfigChangedNotification =
              : NO;
 }
 
-+ (BOOL)deleteFolderWithUID:(NSString *)folderUID {
-  return ost_store::delete_folder([self _dbPath], [folderUID UTF8String]) ? YES
-                                                                          : NO;
++ (BOOL)deleteFolderWithUID:(NSString *)folderUID error:(NSString **)errorText {
+  std::string reason;
+  if (ost_store::delete_folder([self _dbPath], [folderUID UTF8String],
+                               &reason)) {
+    if (errorText)
+      *errorText = nil;
+    return YES;
+  }
+  if (errorText)
+    *errorText = reason.empty() ? nil : OSTString(reason);
+  return NO;
+}
+
++ (BOOL)canDeleteFolderWithUID:(NSString *)folderUID message:(NSString **)message {
+  std::string reason;
+  if (ost_store::can_delete_folder([self _dbPath], [folderUID UTF8String],
+                                   &reason)) {
+    if (message)
+      *message = nil;
+    return YES;
+  }
+  if (message)
+    *message = reason.empty() ? nil : OSTString(reason);
+  return NO;
 }
 
 + (BOOL)assignBid:(NSString *)bidUID toFolder:(NSString *)folderUID {
@@ -442,11 +361,30 @@ NSNotificationName const OSTRenderConfigChangedNotification =
              : NO;
 }
 
++ (BOOL)setLayersVisibility:(BOOL)visible
+                  forLayers:(const std::vector<std::string> &)layerUIDs
+                      inBid:(NSString *)bidUID {
+  return ost_store::set_layers_visibility([self _dbPath], [bidUID UTF8String],
+                                          layerUIDs, visible)
+             ? YES
+             : NO;
+}
+
 + (BOOL)saveTakeoffPosition:(const std::vector<double> &)position
                  forTakeoff:(NSString *)takeoffUID
                       inBid:(NSString *)bidUID {
   return ost_store::save_takeoff_position([self _dbPath], [bidUID UTF8String],
                                           [takeoffUID UTF8String], position)
+             ? YES
+             : NO;
+}
+
++ (BOOL)saveTakeoffPositions:
+            (const std::vector<std::pair<std::string, std::vector<double>>> &)
+                positions
+                       inBid:(NSString *)bidUID {
+  return ost_store::save_takeoff_positions([self _dbPath], [bidUID UTF8String],
+                                           positions)
              ? YES
              : NO;
 }
@@ -466,6 +404,19 @@ NSNotificationName const OSTRenderConfigChangedNotification =
              : NO;
 }
 
++ (BOOL)deleteTakeoffs:(const std::vector<std::string> &)takeoffUIDs {
+  return ost_store::delete_takeoffs([self _dbPath], takeoffUIDs) ? YES : NO;
+}
+
++ (BOOL)insertTakeoffs:(const std::vector<ost_domain::Takeoff> &)takeoffs
+                 inBid:(NSString *)bidUID {
+  std::vector<std::string> newUIDs;
+  return ost_store::insert_takeoffs([self _dbPath], [bidUID UTF8String],
+                                    takeoffs, newUIDs)
+             ? YES
+             : NO;
+}
+
 + (BOOL)setTakeoffNegative:(BOOL)negative
                 forTakeoff:(NSString *)takeoffUID
                      inBid:(NSString *)bidUID {
@@ -475,18 +426,28 @@ NSNotificationName const OSTRenderConfigChangedNotification =
              : NO;
 }
 
-+ (BOOL)updateCondition:(const ost_domain::Condition &)condition {
-  return ost_store::update_condition([self _dbPath], condition) ? YES : NO;
-}
-
-+ (BOOL)shiftConditionRefNosFrom:(int)fromRefNo
-              excludingCondition:(NSString *)conditionUID
-                           inBid:(NSString *)bidUID {
-  return ost_store::shift_condition_ref_nos([self _dbPath], [bidUID UTF8String],
-                                            fromRefNo,
-                                            [conditionUID UTF8String])
++ (BOOL)setTakeoffsNegative:(const std::vector<std::pair<std::string, bool>> &)updates
+                      inBid:(NSString *)bidUID {
+  return ost_store::set_takeoffs_negative([self _dbPath], [bidUID UTF8String],
+                                          updates)
              ? YES
              : NO;
+}
+
++ (BOOL)updateConditionWithUID:(NSString *)conditionUID
+                         inBid:(NSString *)bidUID
+                       changes:(const ost_domain::ConditionChanges &)changes {
+  return ost_store::update_condition([self _dbPath], [bidUID UTF8String],
+                                     [conditionUID UTF8String], changes)
+             ? YES
+             : NO;
+}
+
++ (void)loadExtrasForTakeoff:(ost_domain::Takeoff &)takeoff
+                       inBid:(NSString *)bidUID {
+  // false is not an error: Windows get_takeoff_extras returns {} for an unknown takeoff, so the extras stay empty.
+  ost_store::read_takeoff_extras([self _dbPath], [bidUID UTF8String],
+                                 takeoff.uid, takeoff.extras);
 }
 
 + (NSString *)duplicateCondition:(NSString *)conditionUID
@@ -509,10 +470,14 @@ NSNotificationName const OSTRenderConfigChangedNotification =
 
 + (NSDictionary *)loadRenderConfig {
   std::string db_path = [self _dbPath];
-  ost_store::create_schema(db_path);
+  // The configuration falls back to the defaults when it cannot be read (Windows ConfigAggregate); a database that cannot be prepared is
+  // reported where it is read for real (the project list).
+  if (!ost_store::create_schema(db_path)) {
+    NSLog(@"ImportService: the project database could not be prepared");
+  }
   ost_domain::RenderConfig config = ost_store::load_render_config(db_path);
   return @{
-    @"color_mode" : [NSString stringWithUTF8String:config.color_mode.c_str()],
+    @"color_mode" : OSTString(config.color_mode),
     @"grayscale_enabled" : @(config.grayscale_enabled),
   };
 }
@@ -520,12 +485,16 @@ NSNotificationName const OSTRenderConfigChangedNotification =
 + (BOOL)saveRenderConfigWithColorMode:(NSString *)colorMode
                      grayscaleEnabled:(BOOL)grayscale {
   ost_domain::RenderConfig config;
-  config.color_mode = [colorMode UTF8String];
+  // A mode outside Solid / Original / Transparent becomes the default (Original), not Solid (SET-01: Windows _validated_display_mode).
+  config.color_mode =
+      ost_domain::RenderConfig::validated_mode([colorMode UTF8String]);
   config.grayscale_enabled = grayscale;
-  if (!config.is_valid_mode(config.color_mode))
-    config.color_mode = ost_domain::RenderConfig::MODE_SOLID;
-  bool ok = ost_store::save_render_config([self _dbPath], config);
-  if (ok) {
+  // Saving the values that are stored already writes nothing and announces nothing (SET-03: Windows update_options returns only the
+  // changed keys, ConfigService publishes only when there are some); a change makes the open plan rebuild its meshes.
+  bool changed = false;
+  bool ok =
+      ost_store::update_render_config([self _dbPath], config, &changed);
+  if (ok && changed) {
     [[NSNotificationCenter defaultCenter]
         postNotificationName:OSTRenderConfigChangedNotification
                       object:nil];

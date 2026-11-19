@@ -25,7 +25,9 @@ struct PageEntry
 @property(nonatomic) ost_domain::RenderConfig renderConfig;
 - (void)loadProject:(const ost_data::ProjectData &)project;
 - (BOOL)toggle3DPage:(const std::string &)uid;
-- (void)select2DPage:(const std::string &)uid;
+// YES when the active 2D page changed (selecting the active page keeps it,
+// LP-11).
+- (BOOL)select2DPage:(const std::string &)uid;
 - (void)select3DFolder:(const std::string &)folderUID;
 - (void)generateMeshesIntoRenderer:(Renderer *)renderer;
 
