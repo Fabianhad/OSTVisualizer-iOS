@@ -1,170 +1,98 @@
 # OST Visualizer - iOS Porting Plan
 
-Last updated: 2026-11-15
+Last updated: 2026-11-19
 
-Remaining work, in order. Facts this plan rests on (all from `PARITY_MAP.md`, Phase 1, Windows `dceb47d` vs iOS `4a1302d`):
+What is left to do, in order. The parity fixes themselves are done: this plan no longer lists them. Facts it rests on (details in `PORTING_STATUS.md`; item records in `PARITY_MAP.md` and `PARITY_DIVERGENCES.json`; Windows `6d4786f` vs iOS branch `ios-parity-sync`, HEAD `42b46c3` plus uncommitted work):
 
-- 216 divergences between the iOS app and the Windows app: 171 `fix`, 44 `needs-decision`, 1 `cannot-reproduce`. Every item is `open`; no Phase 3 fix has been made yet.
-- Nothing has been built or run on iOS: no Xcode, macOS or device was available. Obj-C/UIKit/bgfx code was read, not compiled. The host C++ harness (`Config/Tests`) has only its own self-test and no iOS behaviour tests.
-- Per-item status lives in `PARITY_MAP.md` (Phase 3 updates it). This plan has no checkboxes so it cannot go stale; current state of each area is in `PORTING_STATUS.md` and `PORTING_MAP.md`.
+- All 220 parity records have a final status and none is open: 172 fixed, 25 fixed-ui-unverified, 21 wont-fix (user decision; this includes the 8 items that were blocked-needs-decision until 2026-11-19), 1 cannot-reproduce, 1 no-longer-divergent. All 44 earlier user decisions and the 25 decisions of 2026-11-19 are recorded.
+- The host unit tests (`Config/Tests`, 12 areas) hold 1598 tests, 1588 of them iOS behaviour tests (0 before the parity job); 1598 of 1598 pass on MSVC and on a clang build with fused multiply-add, 1606 of 1606 with `-DOST_TEST_BOOLEAN=ON`. The decisions job of 2026-11-19 started from 1576 (1584 with Manifold) and added 22 tests.
+- Nothing was built or run on iOS: no Xcode, macOS, XcodeGen, ldid, simulator or device was available. The `.m`/`.mm` files were only syntax-checked (27 of 27, 0 errors, 4 baseline warnings) against hand-written stub headers that are not in the repo. The only GitHub run (2026-11-16) stopped at the host unit tests, before the fix described in section 1.
+- The status documents have no checkboxes so they cannot go stale; this plan lists what is still open, not what was done.
 
-## 0. Phase 3: parity fixes (171 `fix` items)
+## 1. First full CI run on GitHub
 
-Rule: test first. Port the Windows test named in `PARITY_MAP.md` into `Config/Tests/<Area>/test_*.cpp` with the same inputs and expected values (conventions in `Config/Tests/README.md`), watch it fail on iOS code, then fix. Never relax a tolerance to make a port pass; a failing port is an iOS bug or a Windows ambiguity to report.
+`.github/workflows/build.yml` ("Build IPA", macos-15, Xcode 16.4, iPhoneOS 18.5 SDK, Apple clang 17) has never completed. Details in `BUILD.md`. Push the branch and check, in job order:
 
-How the 171 `fix` items can be tested (all 216 items: 108 / 95 / 13):
+1. Xcode selection (`/Applications/Xcode_16.4.app` must exist on the runner image; the step fails with a listing if not) and the Homebrew install of xcodegen and ldid. Both worked on 2026-11-16.
+2. **Unit tests on AppleClang** (`cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug`, `ctest --no-tests=error`; Debug flags plus `-Os`). This is where the run of 2026-11-16 failed: Meshing 75 of 76, `CurvedMesh.CentreLineMatchesTheWindowsMeshOnTheOracleCases` (zero-length case `zero_len_7`, sample 3), a result that differs between MSVC and AppleClang because of fused multiply-add on arm64. The fix compiles the Core meshing code, the earcut instantiation and some geometry code without FMA contraction (`Core/Geometry/strict_fp.hpp`, `#pragma clang fp contract(off)`, plus `ost_fp::hypot`). It passes on the clang+FMA host build; only this step shows whether it holds on AppleClang arm64. If another test differs by one bit, the same file is the place to look; never relax a tolerance.
+3. libmanifold arm64 check and plist lint.
+4. bgfx, bx and bimg built from the pinned commits (`BGFX_SHA`, `BX_SHA`, `BIMG_SHA`) with `make ios-arm64-release`. The generated makefiles hard-code clang flags that were verified only with Xcode 16.4 (workflow comment). The first run is the slow one; check that the cache is saved and a second run restores it. The pins are the commits the committed headers were taken from, per the workflow comment; not re-checked.
+5. The minos check of the five prebuilt libraries (`libmanifold.a` and the four bgfx libraries) against `EXPECTED_MIN_OS` 16.0: the step fails on any object with a higher minos.
+6. `xcodegen generate` from `project.yml`, then the readback of `-Os` (`GCC_OPTIMIZATION_LEVEL` s) and the 16.0 deployment target from the generated project for both configurations.
+7. `xcodebuild` (iphoneos, Release, signing off). This is the first time Xcode compiles the Objective-C/Objective-C++ sources against the real SDK and links `libmanifold.a` plus the four bgfx libraries: expect to fix compile or link errors (see section 2). No "built for newer iOS version" linker warnings are expected: the deployment target is 16.0 and the libraries are minos 16.0.
+8. Bundle checks: executable `OST Visualizer`, bundle id `com.fabian.ostvisualizer`, `MinimumOSVersion` 16.0, arm64 only, no `*.sc` in the bundle.
+9. `ldid` fake-sign with `Config/Entitlements.fakesign.plist` (only `get-task-allowed`); the step fails if any entitlement key matches `memory|jetsam|extended-virtual-addressing`.
+10. IPA packaging and artifact upload (`OST-Visualizer-ipa`, 30 days).
 
-| Testable | Items | Meaning |
-|---|---:|---|
-| `core-cpp` | 83 | host unit test against `Core/` with the existing harness |
-| `needs-extraction-from-objc` | 76 | logic lives in `.mm` files; move it into `Core/` first, then test |
-| `objc-only` | 12 | UIKit/manual or device test |
+## 2. Compile the platform layer against the real SDK
 
-Work in global rank order (sections A-D of `PARITY_MAP.md`), inside each owner area. Ordering constraints from the item notes:
+The syntax check used hand-written stubs for Foundation, CoreFoundation, CoreGraphics, QuartzCore, UIKit and UniformTypeIdentifiers, and a macOS target (so `TARGET_OS_IPHONE` is 0; the sources contain no such conditionals). It cannot see wrong API availability, ARC problems, selector or protocol mismatches against the real headers, or anything in the bgfx/Metal code beyond what compiles against the stubs. When `xcodebuild` first runs, compile errors are expected and are the next work item; the files with the most new code are `Controllers/ViewController/ViewController.mm` and its components, `PlanView/PlanView.mm` and its components, `Services/ProjectService.mm`, `Services/ExportService.mm`, `Services/ImportService.mm` and the `EditConditionViewController` files.
 
-- MSH-01 (page scale) before MSH-02 (page rotation/flip); MSH-02 also needs GEO-06 (page transform) and a page-size source.
-- LP-16 (PDF page index, rotation, flip) ships with GEO-06, RPV-02, RPV-03; RPV-M04 follows from the same page transform.
-- QTY-07, QTY-08, QTY-09 together (curved length); QTY-05 before the metric half of QTY-06.
-- ELV-01 to ELV-06: replace `extract_z_value` in `Core/Persistence/ProjectStore/ProjectStore.cpp` in one change; patching single cases will not converge.
-- IMP-03 and IMP-06 before IMP-04; BRW-05 before BRW-09 (a dangling OrigBidProjectUID becomes rare once BRW-05 is fixed).
-- EXP-03 and MSH-14 share one duplicated hole-map helper (`ProjectService.mm`, `ExportService.mm`): move it into `Core/` and fix both. EXP-01 and EXP-02 start from the same Y-up mesh space but need different mappings: Three.js needs the identity (remove the swap in `threejs_writer.cpp`), DXF needs (X, -Z, Y) applied in the `exportDXF` caller while `DXFWriter` stays unchanged.
-- Files edited by more than one owner area (for example `ViewController.mm`, `ProjectStore+Load.cpp`, `ExportService.mm`, `MeshFactory.cpp`) must be changed serially; the list is in the Summary of `PARITY_MAP.md`.
+## 3. Install and run on a device
 
-Prerequisite for the test-first rule: the expected values (`testPlan`) exist only in the machine-readable copy of the parity map, `divergences.json`, which is outside both repositories (Phase 1 scratchpad). Move it somewhere durable, or regenerate it, before Phase 3 starts.
+Not done. The IPA is fake-signed, so stock iOS refuses it; an installer that accepts fake-signed IPAs (TrollStore is one example in `BUILD.md`) is needed. Then:
 
-### 0.1 Wrong numbers (62 fix, 4 decisions)
+- Launch, import a real `.ost` and a real `.osp`. No sample `.ost`/`.osp` files were found in either repository (`Config/Tests/Fixtures` holds only oracle tables and two test cabinets), so real files must be supplied: pages, layers and folders; linear, area, count and attachment conditions; holes, negatives, slope, curves; PDFs (multi-page, rotated, flipped) and overlays; metric bids; annotations.
+- The 25 fixed-ui-unverified ids, one by one: the checklist is in `PORTING_STATUS.md`, section "Not verified" (page rotation and flip on the PDF background, attachments and holes in 2D, handle visuals, edit-pan start, page-switch selection, sidebar refresh, layer hide/show against an active placement, condition editor pickers and Smart Punctuation, save-failure alerts, undo grouping and Count as Negative Quantity on the pressed takeoff only, Edit Condition in a metric bid and the elevation after a save, browser alerts, export alerts).
+- Rendering on device: bgfx/Metal start-up, opaque and OIT passes, mesh-ID picking and readback, selection highlight, orbit/pan/pinch, fit and reset; memory and frame-time baseline on a large project.
+- Takeoff placement, drag and undo on touch; iPad popovers.
+- OBJ, DXF and HTML export through the share sheet; export write failures; empty and large projects; import errors and cancellations.
+- iRAM+ still recognises the app after a reinstall (bundle id and executable name unchanged between builds).
 
-A number, coordinate, exported or stored value differs from Windows.
+Compare each real file with the Windows app: the host tests only cover the cases they were built from.
 
-| Owner area | Fix | Top ids (rank order) | Scope |
-|---|---:|---|---|
-| quantities | 13 | QTY-01, QTY-04, QTY-10, QTY-06, QTY-07, QTY-08 | attachments on areas count 0, rounding never applied, area slope, metric normalization, curved length, sidebar page scope (QTY-11) |
-| meshing | 12 | MSH-01, MSH-02, MSH-14, GEO-05, MSH-05, MSH-06 | page scale applied to meshes, page rotation/flip ignored, hole classification, area slope, curved walls, ellipse/triangle/rhombus/hexagon/octagon shapes (MSH-08 to MSH-11) |
-| rendering-planview | 10 | RPV-03, RPV-04, RPV-08, RPV-07, RPV-06, RPV-10 | placement and drag math, 22.5 vs 15 degree snap, rounding rules, grayscale quantisation (COL-02), 3D alpha (COL-03) |
-| parsers-units | 9 | ELV-01, COL-01, ELV-02, ELV-03, ELV-04, ELV-05 | elevation grammar in condition names, negative ColorFill, display rounding (FMT-01), position text (DBP-07) |
-| export-formats | 5 | EXP-02, EXP-01, EXP-03, EXP-05, EXP-06 | DXF and Three.js axes, mirrored export holes, negatives per type, colour pipeline |
-| import-ost-osp | 5 | IMP-01, IMP-02, IMP-03, IMP-04, IMP-05 | BidNo, backslash rewrite, UID '0', BidPageSettings, typed values |
-| geometry | 3 | GEO-06, RPV-02, GEO-07 | page rotation/flip transform, canvas delta, signed area precision |
-| database-persistence | 3 | DBP-04, QTY-13, DBP-03 | NULL defaults: snap increment, Curve, DisplaySize |
-| conditions | 2 | QTY-12, DLG-PREC-01 | quantity and rise/run/size number formatting |
+## 4. Decisions: closed on 2026-11-19, and what is still open
 
-### 0.2 Data safety (41 fix, 4 decisions)
+On 2026-11-19 the user decided every item that was blocked (8) and every candidate found while fixing (16 entries; DLG-FINITE-01 only for its Rise/Run half): 25 decisions, 21 that keep the iOS behaviour (no code change) and 4 code changes. Nothing waits on a decision to run the app. The decisions with the Windows file:line are in `PORTING_STATUS.md`, section "Decisions of 2026-11-19", and in `PORTING_BLOCKERS.md`.
 
-Data can be lost, overwritten, corrupted or left inconsistent.
+Still open (the user has not decided these; iOS keeps its behaviour meanwhile):
 
-| Owner area | Fix | Top ids (rank order) | Scope |
-|---|---:|---|---|
-| conditions | 10 | COND-DEL-01, COND-UPD-02, COND-UPD-01, COND-UPD-03, COND-DUP-01, COND-STYLE-01 | incomplete delete cascade, update rewrites every column and writes '' for cleared fields, save failures unreported, duplicate keeps GUID, style change wipes edits |
-| import-ost-osp | 9 | IMP-06, IMP-08, IMP-07, IMP-09, IMP-12, IMP-13 | no UID remap (INSERT OR REPLACE overwrites other projects), non-atomic import, no validation, OSP image collisions, corrupt CAB |
-| database-persistence | 8 | DBP-11, DBP-12, DBP-14, DBP-17, DBP-18, DBP-20 | swallowed SQL errors, orphan rows on delete, no ownership checks, UID allocation, lost nested folders |
-| settings-undo-camera | 4 | UND-02, UND-03, UND-06, UND-08 | undo advances on failed write, delete does not clear history, partial restore, cascade depth |
-| project-browser | 3 | BRW-01, BRW-02, BRW-05 | delete without confirmation, Deleted Bids identified by name, dangling OrigBidProjectUID |
-| rendering-planview | 2 | RPV-15, RPV-M01 | children do not follow area drag, edge drag unvalidated |
-| export-formats | 2 | EXP-08, EXP-09 | unescaped HTML payload, raw file name |
-| geometry, layers-pages, parsers-units | 1 each | GEO-09, RPV-16, DBP-08 | degenerate polygons accepted, 2D selection survives page switch, partially numeric position tokens |
+| Id | Question |
+|---|---|
+| DLG-FINITE-01, condition-number half | Widen `Condition::ref_no` and the column reads to 64 bits, or keep refusing 2147483648 and up? Windows accepts any whole number the column holds (`edit_condition_dialog.py:1449-1469`). |
+| COND-PLACE-01, note 1 | Hiding the Image layer: copy the Windows exemption, so a placement of a condition on the Image layer keeps running? Judged an edge case, not a Windows defect (`ui_event_coordinator.py:6473-6476`, `:6503-6504`). |
+| COND-PLACE-01, note 2 | Hide All with an armed placement of a layer-less condition: nothing to port unless the Windows behaviour is wanted byte for byte; it is a possible Windows defect with the same root as LP-22 (`ui_event_coordinator.py:1473-1489`, `project_data_service.py:664-678`). |
 
-### 0.3 Behaviour (57 fix, 29 decisions)
+Besides these, 10 notes for information and 7 code-hygiene notes are listed in `PORTING_STATUS.md`, section "Still open" (20 entries in all).
 
-Ordering, validation or flow differs.
+Decided on 2026-11-19, iOS behaviour kept (21 records, no code change): DBP-04 (with DBP-05, SNP-01, LP-19, LOAD-01), BRW-09, EXP-12, EXP-13, EXP-16, LP-24, RPV-29, IMP-20 (three sub-rules), COND-UPD-02, COND-FOLDER-01, DBP-33, EXP-21, EXP-09, RPV-26, RPV-27 (a and b), RPV-16, UND-02, GEO-M02, IMP-12. The 8 items that were blocked-needs-decision (DBP-04, BRW-09, EXP-12, EXP-13, EXP-16, IMP-20, LP-24, RPV-29) are now `wont-fix`; the others keep their status.
 
-| Owner area | Fix | Top ids (rank order) | Scope |
-|---|---:|---|---|
-| rendering-planview | 10 | LP-16, LP-15, RPV-13, RPV-17, RPV-20, RPV-25 | PDF page index/rotation/size, Image layer, attachments dropped as holes, count shapes and minimum sizes |
-| conditions | 10 | COND-FOLDER-01, COND-LIST-01, COND-PLACE-01, COND-LAYER-01, COND-NAV-01, COND-VAL-01 | condition folders, row order, hidden-layer conditions, layer picker, edit navigation |
-| settings-undo-camera | 8 | UND-01, UND-07, UND-09, UND-11, SET-01, SET-02 | undo bounds and grouping, default display mode, render-config saves, camera fit (CAM-01) |
-| layers-pages | 5 | LP-08, LP-10, LP-11, LP-12, LP-18 | page order, folder selection, 2D page re-tap, initial page, Comments layer |
-| meshing | 5 | MSH-15, MSH-20, MSH-19, EXP-13, GEO-14 | fully negated meshes stay visible, mesh order, stub union cleanup, OBJ winding, area tessellation |
-| export-formats | 5 | EXP-14, EXP-11, EXP-12, EXP-16, EXP-21 | no pages selected, OBJ/DXF grouping and naming, MTL text, error messages |
-| project-browser | 5 | BRW-09, BRW-13, BRW-10, BRW-12, BRW-19 | restore, bid order, trash bookkeeping, existence checks, folder names |
-| database-persistence | 4 | LP-20, BRW-15, BRW-17, DBP-19 | page field loading, folder pruning and order, empty-string vs NULL |
-| quantities | 2 | QTY-16, QTY-17 | UOM labels and area list, unsupported condition types |
-| import-ost-osp | 2 | IMP-14, IMP-16 | OSP structure validation, image reference resolution |
-| parsers-units | 1 | DLG-FINITE-01 | non-finite numeric text |
+Code changes of 2026-11-19 (4, with host tests): COND-STYLE-02 and COND-ELEV-01 (deliberate deviations from the literal Windows behaviour), DLG-FINITE-01 (whitespace-only Rise and Run refused, like Windows) and UND-09 (Count as Negative Quantity changes only the pressed takeoff). Their device checks are part of the checklist in section 3.
 
-### 0.4 UI and cosmetic (11 fix, 7 decisions)
+Possible Windows defects found while researching the kept items (read-only, for you to fix on the Windows side; 18 records, Windows file:line in `PORTING_STATUS.md`, section "Possible Windows defects"): DBP-05 (decision DBP-04), EXP-12, EXP-13, EXP-16, IMP-20 (DATETIME overflow and latin-1 annotation names), IMP-12, COND-UPD-02, COND-FOLDER-01, COND-STYLE-02 (two), COND-ELEV-01, LP-24, RPV-27 (b), and for earlier decisions EXP-17, EXP-M02 and LP-22, plus COND-PLACE-01 note 2.
 
-| Owner area | Fix | Ids |
-|---|---:|---|
-| rendering-planview | 4 | GEO-18, RPV-27, RPV-29, RPV-32 |
-| conditions | 3 | COND-SHAPE-01, COND-CDNPICK-01, UI-MSG-01 |
-| settings-undo-camera | 2 | CAM-03, UND-10 |
-| project-browser | 1 | BRW-21 |
-| layers-pages | 1 | LP-25 |
+Kept by the earlier user decisions of 2026-11-16 (13 `wont-fix`, listed for reference): EXP-15, COND-EXTRA-01, LP-22, EXP-17, EXP-18, EXP-M02, GEO-15, IMP-17, RPV-22, CAM-02, DBP-34, DBP-M05, MSH-21.
 
-## 1. Decisions needed (44 items)
+## 5. Features Windows has and iOS does not (84, list only)
 
-`PARITY_MAP.md` section "(E) Needs your decision" holds the 44 `needs-decision` items with the question and options for each. They stay `open` and are not touched in Phase 3 until answered (4 wrong numbers, 4 data safety, 29 behaviour, 7 UI). One more item, EXP-24 (DXF LINE order), cannot be reproduced on iOS (section F).
-
-| Owner area | Items | Ids |
-|---|---:|---|
-| database-persistence | 7 | DBP-37, DBP-31, QTY-19, BRW-16, DBP-33, DBP-34, DBP-M05 |
-| import-ost-osp | 7 | IMP-M01, IMP-15, IMP-17, IMP-18, IMP-19, IMP-20, IMP-M03 |
-| export-formats | 7 | EXP-15, EXP-18, EXP-20, EXP-22, EXP-M02, MSH-16, EXP-19 |
-| conditions | 6 | COND-METRIC-01, COND-EXTRA-01, QTY-22, COND-M08, COND-STYLE-02, QTY-23 |
-| rendering-planview | 5 | RPV-05, COL-04, GEO-M02, RPV-22, MSH-21 |
-| meshing | 3 | EXP-17, GEO-15, MSH-19b |
-| project-browser | 3 | BRW-08, BRW-11, BRW-M01 |
-| layers-pages | 2 | LP-22, LP-24 |
-| settings-undo-camera | 2 | CAM-04, CAM-02 |
-| parsers-units | 1 | POS-M01 |
-| quantities | 1 | QTY-18 |
-
-The 8 decisions that touch numbers or data safety: RPV-05 (grid snap gate), COL-04 (2D pattern fills and hatch rendering), DBP-37 (scale ratio for sf1 <= 0), COND-METRIC-01 (metric bids end to end), GEO-M02 (hole and attachment containment when editing a parent area), POS-M01 (non-finite position values), IMP-M01 and DBP-31 (reject or load invalid files).
-
-## 2. Features Windows has and iOS does not (87, list only)
-
-Source: `PARITY_MAP.md` section (H). Not scheduled. Marker `[P]` = tied to the Windows platform per the Phase 1 mappers; `[~]` = plausibly platform-only in the writer's judgement (touch or sandbox makes it unnecessary, or it needs a server stack), a product decision either way. `PORTING_MAP.md` sections 2 to 12 name the Windows modules.
+Source: `PARITY_MAP.md` section (H), 87 features at the 2026-11-15 map. Three of them were implemented by this job and are removed here: metric units with dimension display and quantity formatting, quantity rounding with attachment aggregation, and count condition shape meshes (ellipse, triangle, rhombus, hexagon, octagon); the PDF page index half of "multi-page PDF page index and TIFF raster pages" is done too (LP-16, fixed-ui-unverified). Not scheduled. Marker `[P]` = tied to the Windows platform per the Phase 1 mappers; `[~]` = plausibly platform-only in the writer's judgement (touch or sandbox makes it unnecessary, or it needs a server stack), a product decision either way. `PORTING_MAP.md` names the Windows modules.
 
 | Group | Features |
 |---|---|
 | Export (9) | OST export (.ost); OSP export (.osp package); PDF export with takeoff and annotation markup (QPDF vs PDFKit/CoreGraphics writer unresolved); PDF annotation captions (Bluebeam-compatible); FBX export; Summary CSV export; full HTML 3D viewer (2D plan tab, visibility panel, hover tips); elevation callouts in HTML and PDF; drop condition elevation from names on export |
-| Page settings (12) | Set Scale dialog and page settings bar; rename and delete page; Plan Organizer (add, duplicate, import, move pages and folders); Adjust Images (invert, bitonal); rotate and flip page image; overlay image (select, move, resize, show; fields are loaded but never drawn); page show mode (Original, Overlay, Both); multi-page PDF page index and TIFF pages; page image plane in 3D; persisted page view state and selected page; missing-file and render-progress notices; page name display options |
-| Editing (20) | Cut, copy, paste, duplicate takeoffs and annotations; Paste Backout; Backout mode; rotate and flip takeoffs; slope direction handle; curved segment and control points; assign to current area; reassign condition; marquee selection and Select All; snap to PDF lines, takeoffs and right angles; zoom tool and percentage selector `[~]`; PDF text selection; complete undo/redo history; create conditions and condition folders; condition copy, cut and paste across bids; duplicate-and-reassign; Renumber Conditions; layer management and default layers; edit actions in the 3D context menu; cursor and pointer preferences `[P]` |
+| Page settings (12) | Set Scale dialog and page settings bar; rename and delete page; Plan Organizer (add, duplicate, import, move pages and folders); Adjust Images (invert, bitonal); rotate and flip page image; overlay image (select, move, resize, show; fields are loaded but never drawn); page show mode (Original, Overlay, Both); TIFF raster pages; page image plane in 3D; persisted page view state and selected page; missing-file and render-progress notices; page name display options |
+| Editing (20) | Cut, copy, paste, duplicate takeoffs and annotations; Paste Backout; Backout mode; rotate and flip takeoffs; slope direction handle; curved segment and control points (curved placement and the centre handle were declined, RPV-22; existing curves are drawn); assign to current area; reassign condition; marquee selection and Select All; snap to PDF lines, takeoffs and right angles; zoom tool and percentage selector `[~]`; PDF text selection; complete undo/redo history (Windows also undoes rotate, paste, property edits and annotations; iOS covers move, group move, place, delete and negative toggle); create conditions and condition folders; condition copy, cut and paste across bids; duplicate-and-reassign; Renumber Conditions; layer management and default layers; edit actions in the 3D context menu; cursor and pointer preferences `[P]` |
 | Annotation (7) | Annotation drawing, persistence and styles; hotlinks; named views; takeoff condition labels on the 2D plan; detached Annotation and View windows `[~]` |
-| Business (12) | Bid comparison; Cover Sheet; Summary tab; project tree editing (new, duplicate, rename, copy/cut/paste bids); job status grouping and bid lock; Employees, Payroll classes, Job statuses and Condition types master data; bid areas; metric units, dimension display and quantity formatting; quantity rounding and attachment aggregation (metric units and these two also appear in sections 0 and 1) |
-| Other (8) | Count shape meshes (ellipse, triangle, rhombus, hexagon, octagon; also MSH-08 to MSH-11); 3D section cuts; 3D feature-edge overlay; saved per-bid 3D camera state; separate 2D and 3D display modes with sync toggle; tower crane visualization; multi-database registry `[~]`; pan sidebar (mini-map) `[~]` |
+| Business (10) | Bid comparison; Cover Sheet; Summary tab; project tree editing (new, duplicate, rename, copy/cut/paste bids); job status grouping and bid lock; Employees, Payroll classes, Job statuses and Condition types master data; bid areas (areas are not surfaced by decision, DBP-M05) |
+| Other (7) | 3D section cuts; 3D feature-edge overlay; saved per-bid 3D camera state (the refit is kept, CAM-02); separate 2D and 3D display modes with sync toggle; tower crane visualization; multi-database registry `[~]`; pan sidebar (mini-map) `[~]` |
 | AI takeoff (6) | AI takeoff analysis; proposals (scale and slab elements); changeset review, apply, undo; assumptions sidecar and audit log; AI takeoff MCP helper `[P]`; read-only MCP database server `[P]` |
 | Collaboration (3) | Microsoft SQL Server backend `[~]`; multi-user collaboration engine `[~]`; SQL credentials in Windows Credential Manager `[P]` |
 | Platform (10) | Access .mdb databases `[P]`; realtime sync with On-Screen Takeoff `[P]`; licensing `[P]`; update check `[P]`; About dialog `[P]`; Windows installer and file associations `[P]`; desktop menus, toolbars, status bar, shortcuts `[P]`; takeoff toolbar customization `[P]`; Options dialog and config `[P]`; Windows theme following `[P]` |
 
-Two of these were the old plan's top blockers and are still open: round-tripping an edited project back to `.ost`/`.osp` (B-009 in `PORTING_BLOCKERS.md`) and PDF export with takeoff markup (B-004). Whether the MVP needs them is a product decision; none is started.
+Two of these were the old plan's top blockers and are still open: round-tripping an edited project back to `.ost`/`.osp` (B-009 in `PORTING_BLOCKERS.md`) and PDF export with takeoff markup (B-004). Whether the MVP needs them is a product decision; none is started. IMP-20 (kept as iOS does, decided 2026-11-19) and DBP-34 would need another look only if an OST export is added.
 
-## 3. Validation still required (needs a Mac, CI or a device)
+## 6. Not verified in BUILD.md
 
-See B-010 (no iOS build or device run on record) and B-011 (no behaviour tests or fixtures) in `PORTING_BLOCKERS.md`.
-
-### 3.1 First run of the CI build
-
-`.github/workflows/build.yml` ("Build IPA", macos-15, Xcode 16.4) has never run. Details in `BUILD.md`. Check on the first run, in job order:
-
-1. `/Applications/Xcode_16.4.app` exists on the runner image; the step fails with a listing if not.
-2. Unit-test step on AppleClang with the system zlib (`cmake -S Config/Tests ...`, `ctest --no-tests=error`). Only MSVC has been used so far (harness self-test 10 of 10 pass; `Core/` (with `boolean_ops.cpp` stubbed by default) plus `Rendering/MeshLoader.cpp` compile there).
-3. bgfx, bx and bimg build from the pinned commits (`BGFX_SHA`, `BX_SHA`, `BIMG_SHA`) with `make ios-arm64-release`. The generated makefiles hard-code clang flags that were verified only with Xcode 16.4 (workflow comment). First run is the slow one; check the cache is saved and a second run restores it. The pins are the commits the committed headers were taken from, per the workflow comment; not re-checked here.
-4. `xcodegen generate` from `project.yml` and the unsigned Release `xcodebuild`. This is the first time Xcode compiles the Obj-C/Obj-C++ sources and links `libmanifold.a` plus the four bgfx libraries: expect to fix compile or link errors. "Built for newer iOS version" linker warnings are expected (deployment target 14.8, libraries built for 16.0).
-5. Bundle checks: executable `OST Visualizer`, bundle id `com.fabian.ostvisualizer`, `MinimumOSVersion` 14.8, arm64 only, no `*.sc` in the bundle.
-6. `ldid` fake-sign with `Config/Entitlements.fakesign.plist` (only `get-task-allowed`); the step fails if any entitlement key matches `memory|jetsam|extended-virtual-addressing`.
-7. IPA packaging and artifact upload (`OST-Visualizer-ipa`, 30 days).
-
-### 3.2 Install and run on a device
-
-Not done. The IPA is fake-signed, so stock iOS refuses it; an installer that accepts fake-signed IPAs (TrollStore is one example in `BUILD.md`) is needed. Then:
-
-- Launch, import a real `.ost` and a real `.osp`. No sample `.ost`/`.osp` files were found in either repository (`Config/Tests/Fixtures` holds only `.gitkeep`), so fixtures must be supplied: pages, layers and folders; linear, area, count and attachment conditions; holes, negatives, slope, curves; PDFs and overlays; metric bids; annotations.
-- Rendering on device: bgfx/Metal start-up, opaque and OIT passes, mesh-ID picking and readback, selection highlight, orbit/pan/pinch, fit and reset; memory and frame-time baseline.
-- PDF drawing (CoreGraphics) including page rotation; takeoff placement, drag, undo on touch; iPad popovers.
-- OBJ, DXF and HTML export through the share sheet; export write failures; empty and large projects; import errors and cancellations.
-- iRAM+ still recognises the app after a reinstall (bundle id and executable name unchanged between builds).
-
-### 3.3 Not verified in `BUILD.md`
-
-- iOS below 16 (libraries target 16.0, app 14.8): untested.
+- iOS below 16: not supported (minimum is 16.0 everywhere; the sources have no pre-16 availability checks or fallbacks). The first CI run of the minos and `-Os` checks is still to be seen.
 - UI chrome differences when linked against the iPhoneOS 18.5 SDK instead of Nyxian's device SDK 26.4: untested.
 - Nyxian still builds the app with `Config/Tests/` present: relies on Nyxian's public source skipping the top-level `Config/` and `Resources/` folders; the installed Nyxian version was not inspected. Do not move the tests out of `Config/` (duplicate symbols from their own `main()` and boolean stub).
 - `Config/Info.plist` leaves out `UIRequiresFullScreen` and the iPad orientation keys that Nyxian's public source adds; defaults on a device not checked.
-- `Config/Project.plist` and `Config/Entitlements.plist` (Nyxian) were not changed or re-verified.
+- `Config/Project.plist` (Nyxian) only had `LDEMinimumVersion` raised to 16.0 and `-Os` added to `LDECompilerFlags`, and that was not run in Nyxian; `Config/Entitlements.plist` was not changed or re-verified.
 
-### 3.4 Test infrastructure
+## 7. Test infrastructure and follow-ups
 
-- Add the per-area differential tests of Phase 3 under `Config/Tests/<Area>/`; today there are none. Boolean-operation tests need `-DOST_TEST_BOOLEAN=ON` (downloads Manifold v3.0.0).
-- The 76 `needs-extraction-from-objc` items need their logic moved into `Core/` before they can be tested on the host; the 12 `objc-only` items need device or manual checks.
-- Run the host tests on the macOS CI runner with each push (already in `build.yml`); no iOS Simulator test target exists.
+- Run the host tests on the macOS CI runner with each push (already in `build.yml`); add a run with `-DOST_TEST_BOOLEAN=ON` there if real Manifold should be covered on AppleClang (the default CI run uses the boolean stub; 9 Export and Meshing tests only run with it, and 1 Meshing test only runs without it, so the total goes from 1598 to 1606). There is no iOS Simulator test target and no automated UI test.
+- Real `.ost` and `.osp` fixtures (none in the repo) would turn the oracle-table tests into end-to-end import tests.
+- Cleanup noted by the wiring wave, no behaviour change: four near-identical "present an OK alert from the top-most presented controller" helpers in `ViewController` categories; `PlanView.mm` `isCountLike()` repeats a test in `Core/Geometry/takeoff_footprint.cpp`; functions with no caller kept by tests (`ost_store::shift_condition_ref_nos`, `ImportService +loadProjectWithUID:`, `ost_meshing::generate_takeoff_meshes`, `RenderConfig::is_ost()`); a project is loaded twice on open (preflight in `DatabaseViewController`, then `ViewController`); the edit pan hit-tests at the recognition location, not at touch-down.
+- Rule for any further parity work: test first. Port the Windows test into `Config/Tests/<Area>/test_*.cpp` with the same inputs and expected values (conventions in `Config/Tests/README.md`), watch it fail on the iOS code, then fix. Never relax a tolerance to make a port pass; a failing port is an iOS bug or a Windows ambiguity to report. If a Windows behaviour looks accidental, inconsistent or unsafe, do not port it: keep the iOS behaviour and list it with the Windows file:line.
+- Commit: nothing of this job is committed. The user commits.

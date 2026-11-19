@@ -2,23 +2,99 @@
 
 > Chronological record of porting decisions, changes, and progress.
 
-> **Reading note (2026-11-15):** entries dated before 2026-11-15 are historical and may be superseded. Several of them describe files, tables, Windows behaviour or "Ported" status that were later found to be wrong or have since changed (`PARITY_MAP.md` section I lists the stale claims). The current truth is `PORTING_STATUS.md`, `PORTING_MAP.md` and `PARITY_MAP.md`; remaining work is in `PORTING_PLAN.md`.
+> **Reading note (2026-11-19):** entries dated before 2026-11-15 are historical and may be superseded. Several of them describe files, tables, Windows behaviour or "Ported" status that were later found to be wrong or have since changed (`PARITY_MAP.md` section I lists the stale claims). The entries from 2026-11-15 to 2026-11-19 record what was true on that day; where a later entry changes a statement it says so. The current truth is `PORTING_STATUS.md` (with `PORTING_STATUS.json`), `PORTING_MAP.md` and `PARITY_MAP.md`; the remaining work is in `PORTING_PLAN.md`.
+
+---
+
+## 2026-11-19 - Open blockers closed by user decisions, four code changes, possible Windows defects
+
+### Decisions recorded (25)
+- The user decided every item that was `blocked-needs-decision` (8) and every candidate found while fixing (16 entries). **21 decisions keep the iOS behaviour with no code change:** DBP-04 (with DBP-05, SNP-01, LP-19, LOAD-01), BRW-09 (DBP-22), EXP-12, EXP-13 (MSH-M02), EXP-16, LP-24, RPV-29, IMP-20 (three sub-rules), COND-UPD-02, COND-FOLDER-01, DBP-33, EXP-21, EXP-09, RPV-26, RPV-27 (a and b), RPV-16, UND-02, GEO-M02, IMP-12. **4 are code changes** (below). Counting rule: IMP-20 is three records (its three sub-rules), DBP-04 and DBP-05 are one record, RPV-27 (a) and (b) are one record; counted apart the keep decisions are 22.
+- IMP-20, all three sub-rules: a DATETIME integer outside the C int range stores NULL and the import goes on; `BidTexts.Name` and `BidCallOuts.Name` are stored as UTF-8 text; memo and IMAGE text columns stay TEXT. The decided DATETIME rule itself (raw 6-part string, NULL when invalid) is fixed and tested.
+- The 8 items that were `blocked-needs-decision` (DBP-04, BRW-09, EXP-12, EXP-13, EXP-16, IMP-20, LP-24, RPV-29) changed to `wont-fix`; the candidates keep their status and the question inside each is marked decided. DLG-FINITE-01 is decided only for its Rise/Run half.
+- The DBP-33 decision text was corrected: `NameFontColor` is a Windows default (`reference_schema_metadata.py:113`), so the explicitly defaulted columns are Count, GridOffsetX/Y, GridRotation, FontColor and NameFontColor. `IsNegativeQuantity` (also a Windows default, `:111`) was checked against the code: it is a typed column written on every insert with the takeoff's own flag, so the record is consistent and the decision was not widened.
+- The decisions are recorded in `PORTING_BLOCKERS.md`, `PARITY_MAP.md` and as `decisionUpdate` records in `PARITY_DIVERGENCES.json`; the status documents (`PORTING_STATUS.md`, `PORTING_STATUS.json`, `PORTING_PLAN.md`, `PORTING_MAP.md`) and this log were synced with them.
+
+### Code changes (4), with host tests
+- COND-STYLE-02 (deliberate deviation from the literal Windows behaviour): on a style change in a metric bid the metric type defaults `style_dimension_defaults(type, metric)` are persisted, not the imperial table. +6 tests (one added by the reviewer); the test that pinned the literal Windows behaviour was renamed and updated; 4 of 163 Conditions tests were red before the change. Review: production code correct, one test gap closed by the reviewer. Status `fixed-ui-unverified` (was `fixed`).
+- COND-ELEV-01 (deliberate deviation): after a Save `is_top` and `z_value` are derived from the condition name with `extract_z_value_from_name`, so memory equals a reload. +8 tests, including a round trip through the real store (244 of 261 conditions differed on the old code; six of the first seven new tests were red). Review: confirmed fixed. Status `fixed-ui-unverified` (was `fixed`).
+- DLG-FINITE-01 (port, Rise/Run half only): a whitespace-only Rise or Run is refused with "Rise must be a number." / "Run must be a number.". +2 tests (the new test was red before the change). Status stays `fixed`. The condition-number half is not decided and stays open (iOS refuses 2147483648 and up, Windows accepts any whole number the column holds).
+- UND-09 (port): "Count as Negative Quantity" changes only the pressed takeoff, in one undoable entry (`Core/Domain/NegativeChange.hpp`, `ViewController.mm`, `UndoRedoController`). +6 tests in Settings. Status stays `fixed-ui-unverified`.
+- Test first and review: the red run before the change is recorded for all four code changes (UND-09: against the old rule placed in Core, 5 of the 6 new tests failed; DLG-FINITE-01: 1 of 5 tests failed, on all 60 rows). All four were independently reviewed, each with a mutation check on a copy restored byte-identically: COND-STYLE-02 (production code correct, one test gap closed by the reviewer), COND-ELEV-01, DLG-FINITE-01 and UND-09 (no defect found).
+
+### Possible Windows defects (researched read-only)
+- For every kept item that looks like a Windows defect the Windows file:line was researched without touching the Windows repository: the real Windows functions were re-executed headless where possible and an adversarial pass merged the findings. 18 records, 14 for items decided on 2026-11-19, 3 for earlier decisions (EXP-17, EXP-M02, LP-22) and 1 for an open note (COND-PLACE-01 note 2); 28 questions were judged "kept, not a defect". All of them, with the file:line, are in `PORTING_STATUS.md` ("Possible Windows defects") for the user to fix on the Windows side. The most serious ones are EXP-12 and EXP-16 (a line break in a condition name injects statements into OBJ, MTL and DXF files; unsafe, high confidence) and COND-STYLE-02 and COND-ELEV-01 (wrong numbers).
+- Every cited file existed and every line range lay inside its file (checked by script); seven citations were spot-checked again by hand while these documents were written. The Windows status snapshots taken during the steps were identical to the one taken at the start; HEAD `6d4786f`, working tree clean.
+
+### Status and counts after this job
+- 220 records: 172 fixed, 25 fixed-ui-unverified, 21 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 1 no-longer-divergent; 0 open. On 2026-11-18 it was 174 / 23 / 13 / 8 / 1 / 1.
+
+### Verification (fresh runs, 2026-11-19)
+- Host unit tests: 1598 of 1598 pass on MSVC and on clang 22 (zig toolchain, x86-64 with FMA3, `-Os`, `-ffp-contract=on`, Debug flags like CI); 1606 of 1606 with `-DOST_TEST_BOOLEAN=ON` on both. Before this job: 1576 and 1584. Added: 22 (Conditions +16, Settings +6). Per area: Browser 67, Conditions 174, Export 97 (102 with the boolean option), Formatting 74, Geometry 171, Harness 10, Import 304, Meshing 101 (104 with the boolean option), Parsers 114, Persistence 278, Quantities 134, Settings 74. iOS behaviour tests: 1588 (1598 minus the 10 harness self-tests).
+- Objective-C syntax check: 27 of 27 platform files, 0 errors, 4 warnings (baseline protocol warnings in `EditConditionViewController`). This is not a build against the real SDK: the stubs are hand-written, the target is macOS, and nothing about ARC runtime behaviour, layout or UI is covered.
+- Nothing was committed; the user commits.
+
+### Not verified / still open
+- Still open and not decided by the user (20 entries): the condition number above the int range (the other half of DLG-FINITE-01), the two COND-PLACE-01 notes (Image-layer exemption on hide; layer-less conditions on Hide All), 10 notes for information and 7 code-hygiene notes; see `PORTING_STATUS.md`, section "Still open".
+- Not verified: no run of the GitHub workflow exists for the current code (the only run, 2026-11-16, stopped at the host unit tests), the `.mm` files have never been compiled against the real SDK, and nothing was run on a device. The three `.mm` changes of this job (`EditConditionViewController.mm`, `ViewController.mm`, `UndoRedoController`) were only syntax-checked against the hand-written stubs, and the UI part of the 25 fixed-ui-unverified ids, among them COND-STYLE-02, COND-ELEV-01 and UND-09, has never been seen running.
+
+---
+
+## 2026-11-18 - Objective-C wiring wave, final review, status documents synced
+
+> Superseded in part on 2026-11-19 (entry above): the final item statuses, the 8 blocked items, the test counts and the 23 fixed-ui-unverified ids named in this entry are as of 2026-11-18.
+
+### Objective-C wiring wave (2026-11-17 to 2026-11-18)
+- Goal: make the Core results reachable from the app. No `.m`/`.mm` file can be compiled on the authoring machine, so a syntax checker was built first: `clang -fsyntax-only` (ARC, C++17, the include paths and defines of the build) over every platform `.m`/`.mm` against hand-written stub Foundation, UIKit, QuartzCore, CoreGraphics and UniformTypeIdentifiers headers. It found 4 compile errors that already existed at HEAD (Core-call signature drift in `DragController.mm`, `ViewController.mm` and `PlanView.mm`); they were fixed in the wave. The checker and the stubs are tools outside the repo.
+- Six clusters, each a fixer and an independent reviewer (plus rework): U1 services (`ProjectService`, `ExportService`, export UI), U2a placement and drag numerics, U2b plan view visuals (page transform, holes, handles, minimum sizes), U3 `ViewController` (page switching, undo, camera, renderer settings), U4 conditions UI, U5 import and browser. The wave was interrupted and resumed twice (a usage limit, then a stop by the user to leave clean sections); after each stop the tree was checked: no half-edited file, line-ending check clean, Windows repo untouched.
+- Result of the final audit: 108 wiring entries for 57 item ids, 108 done, 0 open. COND-PLACE-01 (hiding a layer suspends an active placement and showing it restores it, and the Conditions list follows the layer state) was the last open hand-off and was finished and reviewed at the end, with 9 new host tests.
+- Final item statuses on 2026-11-18 (220 records; changed on 2026-11-19, see the entry above): 174 fixed, 23 fixed-ui-unverified, 13 wont-fix, 8 blocked-needs-decision (DBP-04, BRW-09, EXP-12, EXP-13, EXP-16, IMP-20, LP-24, RPV-29), 1 cannot-reproduce (EXP-24), 1 no-longer-divergent (MSH-19); 0 open. The 8 blocked items are Windows behaviours that look accidental, inconsistent or unsafe; they were not ported (iOS behaviour kept) and were listed with the Windows file:line, together with 16 candidates; the user decided all of them on 2026-11-19 (see the entry above).
+
+### Verification at the end of the job (fresh runs, 2026-11-18)
+- Host unit tests on 2026-11-18 (superseded by the counts of 2026-11-19 in the entry above): 1576 of 1576 pass on MSVC and on clang 22 (zig toolchain, x86-64 with FMA3, `-Os`, `-ffp-contract=on`, Debug flags like CI); 1584 of 1584 with `-DOST_TEST_BOOLEAN=ON` on both. Per area: Browser 67, Conditions 158, Export 97 (102 with the boolean option), Formatting 74, Geometry 171, Harness 10, Import 304, Meshing 101 (104), Parsers 114, Persistence 278, Quantities 134, Settings 68. iOS behaviour tests: 0 before this job, 1566 now (1576 minus the 10 harness self-tests).
+- Objective-C syntax check: 27 of 27 platform files, 0 errors, 4 warnings (baseline protocol warnings in `EditConditionViewController`). This is not a build against the real SDK: the stubs are hand-written, the target is macOS, and nothing about ARC runtime behaviour, layout or UI is covered.
+- Windows repo: working tree clean at `6d4786f` (2026-11-17; the commit holds the same 18 paths that were uncommitted at the 2026-11-16 re-baseline), read-only throughout.
+
+### Documents
+- `PORTING_STATUS.md` and `PORTING_STATUS.json` rewritten to the final state (phases, final statuses by area and impact, what was verified and how, what is not verified, the needs-my-decision list (replaced on 2026-11-19 by the decisions and the possible Windows defects), features not implemented). `PORTING_PLAN.md` rewritten as the remaining work (first full CI run, real-SDK compile, device checks, decisions, features not implemented). This entry and the reading note replace the stale parts of the 2026-11-15 entry.
+
+### Not verified / still open
+- No run of the GitHub workflow exists for the current code. The only run (2026-11-16) stopped at the host unit tests; everything after them (bgfx build, xcodegen, xcodebuild, ldid fake-signing, IPA) has never run. The `.mm` files have never been compiled against the real SDK and nothing was run on a device; the UI part of the 23 fixed-ui-unverified ids of that day (25 since 2026-11-19; listed in `PORTING_STATUS.md`) has never been seen.
+- Comments in `Config/Tests/CMakeLists.txt` and `project.yml` still refer to a top-level `Tests/` folder; the harness is at `Config/Tests/` (the CMake source root path itself is correct).
+- Nothing of this job is committed; the user commits.
+
+---
+
+## 2026-11-17 - Core completion
+
+- The Core half of Phase 3 was finished on the re-baselined list of 220 records, in test-first steps (parsers and formatting, geometry and placement, quantities, meshing and export rules, persistence and import, conditions, browser, settings and undo), each with an independent reviewer. New Core modules took over logic that lived in `.mm` files (page transform and page view, placement and drag rules, takeoff footprint and hole grouping, condition choices, form rules and style change, dimension and number formatting, export text and file names, export mesh sets, OSP package rules, store integrity checks, browser rules, undo history, camera framing).
+- End of the Core wave: the host tests passed on MSVC (with and without the boolean option) and on the clang build with `-ffp-contract=on` (the count at that moment is not recorded here; the final counts are in the 2026-11-18 entry); 56 items were marked deferred-wiring (Core done, `.mm` wiring pending), with a list of 108 wiring entries for 57 ids.
+- The CI failure of 2026-11-16 (Meshing, `zero_len_7`) was fixed in Core: the meshing code, the earcut instantiation and some geometry code are compiled without fused multiply-add contraction (`Core/Geometry/strict_fp.hpp`, `#pragma clang fp contract(off)`, plus `ost_fp::hypot`). Verified on the clang+FMA host build only, not on GitHub.
+- The Objective-C wave started the same day (see the 2026-11-18 entry).
+
+---
+
+## 2026-11-16 - Decisions, re-baseline, first CI run
+
+- All 44 `needs-decision` items were answered by the user (33 "port", 11 "keep"; GEO-15 and EXP-17 chose the option that keeps outward-facing meshes and ended as wont-fix, so wont-fix is 13). Build decisions: minimum iOS 16.0 everywhere (`project.yml`, `Config/Info.plist`, `Config/Project.plist`, `build.yml`), `-Os` (`GCC_OPTIMIZATION_LEVEL: s`) in every configuration and in the Nyxian flags, `Info.plist` additions kept (empty `UILaunchScreen`, iPhone and iPad). The sources lost their pre-iOS-16 availability checks. The CI workflow gained a minos check of the five prebuilt libraries and a readback of `-Os` and the 16.0 target from the generated project.
+- The Windows tree had changed since the Phase 1 map (uncommitted at the time; committed as `6d4786f` on 2026-11-17): one export boolean rule for the 3D view and all exports, writers that read only the post-boolean mesh, an export without a surviving mesh fails before writing, and a drop-stub union failure keeps the plain wall and logs a warning. The map was re-baselined against it: 4 new records (RB-01 to RB-04), 220 in total. `PARITY_DIVERGENCES.json` was added at the repo root as the machine-readable twin (header, items, decisions, test plans); its top level is `{header, items}`.
+- First GitHub Actions run (00:48 UTC, macos-15-arm64, Xcode 16.4, Apple clang 17.0.0): checkout, Xcode selection, install of xcodegen 2.46.0 and ldid 2.1.5_2 and the configure and build of the host tests worked; the unit tests failed (Meshing 75 of 76, `CurvedMesh.CentreLineMatchesTheWindowsMeshOnTheOracleCases`, `zero_len_7` sample 3: a result that differs between MSVC and AppleClang). The job stopped there. The cause and fix are in the 2026-11-17 entry.
 
 ---
 
 ## 2026-11-15 - Build/Test Infrastructure, Parity Map, Documentation Rewrite
 
-### Phase 0: build and test infrastructure (new files, nothing committed)
-- `project.yml` (XcodeGen) reproduces the Nyxian build of `Config/Project.plist` with standard Xcode settings: arm64 device only, deployment target 14.8, bundle id `com.fabian.ostvisualizer`, product name `OST Visualizer`, the same `-I`, `-D`, `-ObjC` and library flags. The Xcode project is generated and not committed (`.gitignore` gained `*.xcodeproj/`, `DerivedData/`, `/build/`, `/deps/`).
+### Phase 0: build and test infrastructure (new files; committed and pushed the same day: `a950f9a`, `c73b6d0`)
+- `project.yml` (XcodeGen) reproduces the Nyxian build of `Config/Project.plist` with standard Xcode settings: arm64 device only, deployment target 14.8 at that time (raised to 16.0 on 2026-11-16 by user decision), bundle id `com.fabian.ostvisualizer`, product name `OST Visualizer`, the same `-I`, `-D`, `-ObjC` and library flags. The Xcode project is generated and not committed (`.gitignore` gained `*.xcodeproj/`, `DerivedData/`, `/build/`, `/deps/`).
 - `.github/workflows/build.yml` ("Build IPA", macos-15, Xcode 16.4): host unit tests, `libmanifold.a` arm64 check, plist lint, bgfx/bx/bimg built from pinned commits with an Actions cache, `xcodegen generate`, unsigned Release `xcodebuild`, bundle checks, fake-sign with `ldid`, entitlement verification, IPA upload. No Apple account, certificate or secret is used.
 - Fake-signing: `Config/Entitlements.fakesign.plist` holds only `get-task-allowed`. The job fails if any entitlement key matches `memory|jetsam|extended-virtual-addressing`, because memory entitlements are applied after install with iRAM+ (bundle id and executable name are kept stable for that). `Config/Info.plist` (copied document types and scene manifest) and `BUILD.md` complete the set. The Nyxian files `Config/Project.plist` and `Config/Entitlements.plist` were not changed.
 - Host test harness `Config/Tests/` (CMake, `Support/TestHarness.hpp`, `TestMain.cpp`, `BooleanOpsStub.cpp`, `Harness/test_harness_selftest.cpp`): builds all of `Core/` plus `Rendering/MeshLoader.cpp` (with `boolean_ops.cpp` stubbed unless `OST_TEST_BOOLEAN` is on) into one library and one test executable per area folder. Built and run with MSVC on Windows: the 10-test harness self-test passes. The AppleClang run is configured in CI and has not happened. There are no iOS behaviour tests yet and `Config/Tests/Fixtures` holds only `.gitkeep`.
 - Why the tests live under `Config/`: Nyxian compiles every `.c`, `.cpp`, `.m`, `.mm` and `.swift` file under the project folder except the top-level `Config/` and `Resources/` folders (Nyxian's public source, `NXPhaseEngine.m`; the installed version was not inspected). The harness has its own `main()` and a boolean-operations stub, so outside `Config/` an on-device Nyxian build would fail with duplicate symbols. The CI build is unaffected because `project.yml` lists the app folders explicitly.
 
-### Phase 3 (partial, stopped early): Core parity fixes on branch ios-parity-sync
+### Phase 3 (partial, stopped early): Core parity fixes on branch ios-parity-sync (commit `42ad10d`; completed on 2026-11-16 to 2026-11-18, see the later entries)
 - Applied test-first in the host-testable Core (`Config/Tests/<Area>` ported from the Windows tests, Windows code as oracle): quantities (UomService.hpp), geometry/page transform, persistence error propagation (DBP-11), elevation/position parsing, meshing (curved walls, count shapes, area slope, 3D scale/rotation), import pipeline. 591 host tests pass under MSVC (iOS behaviour tests before: 0).
 - NOT finished: independent review had completed only for quantities, geometry and DBP-11; the parsers, meshing and import steps were not reviewed or finished (import was mid-step); export, remaining persistence, browser, conditions and settings steps were not started; none of the Objective-C wiring (`.mm`) or extraction was done, so most fixes are not yet reachable from the app. Nothing here was built or run on iOS.
-- The status docs (`PORTING_STATUS.*`, `PORTING_BLOCKERS.md`, `PORTING_MAP.md`, `PORTING_PLAN.md`) and `PARITY_MAP.md` still describe the pre-fix baseline (every item `open`); they were not updated for the fixes above.
+- The status docs (`PORTING_STATUS.*`, `PORTING_BLOCKERS.md`, `PORTING_MAP.md`, `PORTING_PLAN.md`) and `PARITY_MAP.md` still describe the pre-fix baseline (every item `open`); they were not updated for the fixes above (superseded: rewritten on 2026-11-18).
 
 ### Phase 1: parity map (`PARITY_MAP.md`)
 - Method: 12 area mappers and 12 independent verifiers compared iOS with the Windows app (`dceb47d`) at iOS `4a1302d`. The real iOS C++ sources were compiled on the host with MSVC (with the vendored sqlite3 and pugixml) and compared with the Windows Python modules and native extensions; Obj-C/UIKit code was compared by reading and re-implementing the arithmetic. No iOS source file was edited.
@@ -30,9 +106,9 @@
 - `PORTING_MAP.md` rewritten from the code: every iOS and Windows path verified to exist, one status per row, parity ids per row. `PORTING_PLAN.md` rewritten as the remaining work: Phase 3 fixes by impact and owner, the 44 decisions, features not implemented, validation that needs a Mac, CI or a device. This reading note was added to the log; older entries were not changed. `PORTING_STATUS.md`, `PORTING_STATUS.json` and `PORTING_BLOCKERS.md` were rewritten in the same pass (see those files).
 - Claims removed as wrong: `ProjectStore+RenderConfig.cpp` (never existed; render config is in `ProjectStore+Conditions.cpp`), the Windows paths `infrastructure/mdb/ost_schema.py`, `domain/ost_schema.py` and `presentation/visualization/exporters/ost_exporter.py`, "no CI or test target", and the "Ported" status of rows that diverge.
 
-### Not verified / still open
-- Nothing was built or run on iOS: no Xcode, macOS, device, XcodeGen or ldid was available. The CI workflow has never run; the Obj-C/Obj-C++ sources have not been compiled by Xcode in this work.
-- Phase 3 (the fixes) has not started. Machine-readable `divergences.json` with the test-plan expected values is still outside the repositories (Phase 1 scratchpad).
+### Not verified / still open at the end of 2026-11-15 (superseded by the 2026-11-18 entry)
+- Nothing was built or run on iOS: no Xcode, macOS, device, XcodeGen or ldid was available. The CI workflow had not run yet (its first run, on 2026-11-16, stopped at the host unit tests); the Obj-C/Obj-C++ sources had not been compiled by Xcode.
+- Phase 3 had only partly started (see above). The machine-readable parity data with the test-plan expected values was still outside the repositories; it was added as `PARITY_DIVERGENCES.json` at the repo root on 2026-11-16.
 - Comments in `Config/Tests/CMakeLists.txt` and `project.yml` still refer to a `Tests/` folder; the harness is at `Config/Tests/` (the CMake source root path itself is correct).
 
 ---
