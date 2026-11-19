@@ -5,10 +5,13 @@
   it builds its own Info.plist from the LDE* keys in Config/Project.plist.
 
   - Identity keys come from build settings in project.yml (bundle id, executable, name, versions).
-    MinimumOSVersion, UIDeviceFamily and the platform keys are added by Xcode at build time.
+    UIDeviceFamily (iPhone and iPad, from TARGETED_DEVICE_FAMILY) and the platform keys are added by
+    Xcode at build time. MinimumOSVersion is written here explicitly (16.0, equal to the deployment
+    target in project.yml and LDEMinimumVersion in Config/Project.plist); the CI build fails if the
+    built app reports a different value.
   - UTImportedTypeDeclarations, CFBundleDocumentTypes and UIApplicationSceneManifest are copied
     unchanged from LDEBundleInfo in Config/Project.plist (keep the two in sync).
-  - UILaunchScreen (empty) and LSRequiresIPhoneOS are the only additions. The empty UILaunchScreen
+  - UILaunchScreen (empty), LSRequiresIPhoneOS and MinimumOSVersion are the only additions. The empty UILaunchScreen
     dictionary stops iOS from running the app letterboxed (legacy screen size) because there is no
     launch storyboard; it adds no launch image and changes no app logic.
   - Deliberately absent: orientation keys, UIFileSharingEnabled, LSSupportsOpeningDocumentsInPlace
@@ -44,6 +47,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>MinimumOSVersion</key>
+	<string>16.0</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UTImportedTypeDeclarations</key>

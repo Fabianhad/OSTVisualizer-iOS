@@ -16,13 +16,13 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
   deploymentTarget:
-    iOS: "14.8"          # LDEMinimumVersion
+    iOS: "16.0"          # LDEMinimumVersion (Config/Project.plist); libmanifold.a and the bgfx libraries are minos 16.0 too
 
 targets:
   OSTVisualizer:
     type: application
     platform: iOS
-    deploymentTarget: "14.8"
+    deploymentTarget: "16.0"
 
     # Only compilable files and headers are listed (explicit includes), so no other file type can
     # land in "Copy Bundle Resources": the app ships no resources (Resources/ is empty) and the
@@ -79,6 +79,9 @@ targets:
         # Conditions, Database and Export controllers).
         SDKROOT: iphoneos
         SUPPORTED_PLATFORMS: iphoneos
+        # Minimum iOS 16.0 (XcodeGen also derives this from deploymentTarget above; pinned here so no other
+        # preset can change it). The sources use no pre-16 availability checks or fallbacks.
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         ARCHS: arm64
         ONLY_ACTIVE_ARCH: "NO"
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -96,6 +99,10 @@ targets:
         GCC_C_LANGUAGE_STANDARD: gnu17
         # Nyxian passes no -fmodules, and the sources use #import/#include only (no @import).
         CLANG_ENABLE_MODULES: "NO"
+        # -Os (optimise for size) for C, C++ and Objective-C, in every configuration (also set per configuration
+        # below, because the XcodeGen Debug preset would otherwise set 0 = -O0 there). Config/Project.plist passes
+        # -Os too. There are no Swift sources, so SWIFT_OPTIMIZATION_LEVEL is not set.
+        GCC_OPTIMIZATION_LEVEL: s
         # -DBGFX_CONFIG_RENDERER_METAL=1 -DBX_CONFIG_DEBUG=0. Nyxian defines nothing else: no DEBUG, no
         # NDEBUG (earcut.hpp asserts stay active, as before).
         GCC_PREPROCESSOR_DEFINITIONS: "BGFX_CONFIG_RENDERER_METAL=1 BX_CONFIG_DEBUG=0"
@@ -131,8 +138,8 @@ targets:
         DEBUG_INFORMATION_FORMAT: dwarf
 
       configs:
+        # Both configurations optimise for size (-Os). CI builds Release; Debug is listed so that nothing yields -O0.
+        Debug:
+          GCC_OPTIMIZATION_LEVEL: s
         Release:
-          # Nyxian passes no -O flag, so it compiles with clang's default (-O0). The CI Release build uses the
-          # usual optimised Xcode level (-Os, pinned here so it is explicit). Defined behaviour is the same; if
-          # a difference ever shows up, set this to "0" to reproduce the Nyxian build exactly.
           GCC_OPTIMIZATION_LEVEL: s

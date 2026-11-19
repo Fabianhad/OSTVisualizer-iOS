@@ -99,6 +99,7 @@
 		<string>-resource-dir</string>
 		<string>$(BSROOT)/Include</string>
 		<string>-fobjc-arc</string>
+		<string>-Os</string>
 		<string>-I$(SRCROOT)/Libs/Manifold/include</string>
 		<string>-I$(SRCROOT)/Libs/bgfx/bgfx/include</string>
 		<string>-I$(SRCROOT)/Libs/bgfx/bx/include</string>
@@ -154,7 +155,7 @@
 	<key>LDEOutputPath</key>
 	<string>$(CACHEROOT)/Payload/$(LDEDisplayName).app/$(LDEExecutable)</string>
 	<key>LDEMinimumVersion</key>
-	<string>14.8</string>
+	<string>16.0</string>
 	<key>LDEProjectType</key>
 	<integer>1</integer>
 	<key>LDEVersion</key>

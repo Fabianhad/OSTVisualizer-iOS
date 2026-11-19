@@ -2,7 +2,8 @@ name: Build IPA
 
 # Builds the iOS app with standard tools (XcodeGen + xcodebuild) on a macOS runner and produces a
 # FAKE-SIGNED IPA (no Apple account, certificate, provisioning profile or secret is used).
-# See BUILD.md. The Nyxian path (Config/Project.plist) and the two older workflows are untouched.
+# See BUILD.md. The Nyxian path (Config/Project.plist: only LDEMinimumVersion 16.0 and -Os changed) and the two older
+# workflows are otherwise untouched.
 
 on:
   push:
@@ -36,7 +37,9 @@ env:
   # Kept stable between builds so iRAM+ keeps recognising the installed app. The build fails if they change.
   EXPECTED_BUNDLE_ID: com.fabian.ostvisualizer
   EXPECTED_EXECUTABLE: OST Visualizer
-  EXPECTED_MIN_OS: "14.8"
+  # Minimum iOS: project.yml (deploymentTarget), Config/Info.plist (MinimumOSVersion) and Config/Project.plist (LDEMinimumVersion)
+  # must all say this. It is also the ceiling for the minos of the five prebuilt libraries (checked below).
+  EXPECTED_MIN_OS: "16.0"
   BGFX_LIB_DIR: Libs/bgfx/bgfx/.build/ios-arm64/bin
   HOMEBREW_NO_AUTO_UPDATE: "1"
   HOMEBREW_NO_INSTALL_CLEANUP: "1"
@@ -187,11 +190,105 @@ jobs:
             fi
             echo "$f: $ARCHS"
           done
-          # Informational: platform and minimum iOS the bgfx objects were built for.
+          # Informational: platform and minimum iOS the bgfx objects were built for (enforced in the next step).
           otool -l "$BGFX_LIB_DIR/libbgfxRelease.a" 2>/dev/null | grep -m1 -A4 LC_BUILD_VERSION || true
 
-      # Saved only after the verification above (a wrong-architecture build must never be cached), and before the app
-      # build, so a later failure does not throw the libraries away.
+      # The app's minimum iOS is EXPECTED_MIN_OS (16.0), so no prebuilt static library may require a newer iOS. The check
+      # covers all five libraries (libmanifold.a and the four bgfx libraries): every member of each ar archive is parsed as a
+      # Mach-O object (thin, or fat at any level) and the minimum OS is read from LC_BUILD_VERSION (minos) or, for old
+      # objects, LC_VERSION_MIN_IPHONEOS. The step FAILS if any object has minos > EXPECTED_MIN_OS, was not built for
+      # iOS (platform 2), carries no version load command, or if an archive holds no Mach-O object at all.
+      # It runs before the cache save, so a bgfx build that fails it is never cached.
+      - name: Verify the minimum iOS (minos) of the prebuilt libraries
+        run: |
+          set -euo pipefail
+          LIBS=(Libs/Manifold/lib/libmanifold.a)
+          for lib in libbgfxRelease libbxRelease libbimgRelease libbimg_decodeRelease; do
+            LIBS+=("$BGFX_LIB_DIR/$lib.a")
+          done
+          python3 - "$EXPECTED_MIN_OS" "${LIBS[@]}" <<'PY'
+          import struct
+          import sys
+
+          limit = [int(x) for x in sys.argv[1].split(".")]
+          limit = tuple(limit + [0] * (3 - len(limit)))
+          LC_VERSION_MIN_IPHONEOS, LC_BUILD_VERSION, PLATFORM_IOS = 0x25, 0x32, 2
+
+
+          def thin(buf, off, out):
+              # One thin 64-bit little-endian Mach-O object; appends (platform, minos) per version load command.
+              magic, _cpu, _sub, _type, ncmds = struct.unpack_from("<IiiII", buf, off)
+              if magic != 0xFEEDFACF:
+                  raise SystemExit("::error::unsupported Mach-O magic 0x%08x" % magic)
+              p, found = off + 32, False
+              for _ in range(ncmds):
+                  cmd, size = struct.unpack_from("<II", buf, p)
+                  if cmd == LC_BUILD_VERSION:  # platform, minos, sdk, ntools
+                      out.append(struct.unpack_from("<II", buf, p + 8))
+                      found = True
+                  elif cmd == LC_VERSION_MIN_IPHONEOS:  # version, sdk
+                      out.append((PLATFORM_IOS, struct.unpack_from("<I", buf, p + 8)[0]))
+                      found = True
+                  p += size
+              if not found:
+                  out.append((0, 0))
+
+
+          def walk(buf, off, size, out):
+              # ar archive (members are Mach-O objects), fat file (slices) or thin Mach-O object.
+              if buf[off:off + 8] == b"!<arch>\n":
+                  p, end = off + 8, off + size
+                  while p + 60 <= end:
+                      name, n = buf[p:p + 16].decode("ascii", "replace").strip(), int(buf[p + 48:p + 58])
+                      data, length = p + 60, n
+                      if name.startswith("#1/"):  # BSD long name: stored at the start of the member data
+                          k = int(name[3:])
+                          name = buf[data:data + k].split(b"\0")[0].decode("utf-8", "replace")
+                          data, length = data + k, length - k
+                      if not name.startswith(("__.SYMDEF", "/")):  # skip the symbol table
+                          walk(buf, data, length, out)
+                      p += 60 + n + (n & 1)  # members are 2-byte aligned
+                  return
+              (magic,) = struct.unpack_from(">I", buf, off)
+              if magic in (0xCAFEBABE, 0xCAFEBABF):  # fat: 20-byte (32-bit) or 32-byte (64-bit) arch entries
+                  (count,) = struct.unpack_from(">I", buf, off + 4)
+                  for i in range(count):
+                      if magic == 0xCAFEBABE:
+                          o, s = struct.unpack_from(">II", buf, off + 16 + 20 * i)
+                      else:
+                          o, s = struct.unpack_from(">QQ", buf, off + 16 + 32 * i)
+                      walk(buf, off + o, s, out)
+                  return
+              thin(buf, off, out)
+
+
+          def fmt(v):
+              return "%d.%d" % (v >> 16, (v >> 8) & 0xFF) + (".%d" % (v & 0xFF) if v & 0xFF else "")
+
+
+          failed = False
+          for path in sys.argv[2:]:
+              with open(path, "rb") as f:
+                  buf = f.read()
+              out = []
+              walk(buf, 0, len(buf), out)
+              counts = {}
+              for item in out:
+                  counts[item] = counts.get(item, 0) + 1
+              print("%s: %d objects" % (path, len(out)))
+              ok = len(out) > 0
+              for (platform, minos), n in sorted(counts.items()):
+                  good = platform == PLATFORM_IOS and (minos >> 16, (minos >> 8) & 0xFF, minos & 0xFF) <= limit
+                  ok = ok and good
+                  print("    platform %d (2 = iOS) minos %s: %d objects %s" % (platform, fmt(minos), n, "ok" if good else "FAIL"))
+              if not ok:
+                  print("::error::%s: an object needs a newer iOS than %s, was not built for iOS, has no version load command, or the archive has no Mach-O objects" % (path, sys.argv[1]))
+                  failed = True
+          sys.exit(1 if failed else 0)
+          PY
+
+      # Saved only after the verification above (a wrong-architecture or too-new-minos build must never be cached), and
+      # before the app build, so a later failure does not throw the libraries away.
       - name: Save bgfx libraries to cache
         if: steps.bgfx_cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -207,6 +304,28 @@ jobs:
           test -d OSTVisualizer.xcodeproj
           xcodebuild -list -project OSTVisualizer.xcodeproj
 
+      # Reads the effective settings back from the generated project (not just from project.yml): C/C++/Objective-C are
+      # optimised for size (-Os, GCC_OPTIMIZATION_LEVEL = s) in every configuration, so nothing yields -O0, and the
+      # deployment target is EXPECTED_MIN_OS. There are no Swift sources, so no Swift optimisation level is set or checked.
+      - name: Verify optimisation level and deployment target
+        run: |
+          set -euo pipefail
+          for config in Debug Release; do
+            SETTINGS="$(xcodebuild -project OSTVisualizer.xcodeproj -scheme OSTVisualizer -configuration "$config" -sdk iphoneos -showBuildSettings)"
+            OPT="$(awk '$1 == "GCC_OPTIMIZATION_LEVEL" && $2 == "=" { print $3 }' <<<"$SETTINGS")"
+            TARGET="$(awk '$1 == "IPHONEOS_DEPLOYMENT_TARGET" && $2 == "=" { print $3 }' <<<"$SETTINGS")"
+            echo "$config: GCC_OPTIMIZATION_LEVEL=$OPT IPHONEOS_DEPLOYMENT_TARGET=$TARGET"
+            if [ "$OPT" != "s" ]; then
+              echo "::error::$config: GCC_OPTIMIZATION_LEVEL must be s (-Os), found: '$OPT'"
+              exit 1
+            fi
+            if [ "$TARGET" != "$EXPECTED_MIN_OS" ]; then
+              echo "::error::$config: IPHONEOS_DEPLOYMENT_TARGET must be $EXPECTED_MIN_OS, found: '$TARGET'"
+              exit 1
+            fi
+          done
+
+      # No optimisation or deployment-target override on this command line: both come from project.yml (-Os, iOS 16.0).
       - name: Build app (Release, iphoneos, unsigned)
         run: |
           set -euo pipefail

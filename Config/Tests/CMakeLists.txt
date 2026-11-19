@@ -12,6 +12,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
+# Optimization: the app is built with -Os (project.yml GCC_OPTIMIZATION_LEVEL = s, Config/Project.plist -Os), so the
+# tests are too, not at the compiler's default -O0. Directory-level options come AFTER the build-type flags on the
+# command line (CMAKE_CXX_FLAGS_DEBUG = -g), so -Os wins over any -O0 while -g stays; NDEBUG is not defined
+# (the app does not define it either: earcut.hpp asserts stay active). Applies to every target created below
+# (ost_core, ost_zlib, the test executables and, with OST_TEST_BOOLEAN, Manifold). MSVC is left alone (Debug stays /Od).
+if(NOT MSVC)
+  add_compile_options(-Os)
+endif()
+
 # Repository root (parent of Tests/). Overridable so the harness can be exercised from a copy.
 set(OST_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE PATH "iOS repository root")
 get_filename_component(OST_REPO_ROOT "${OST_REPO_ROOT}" ABSOLUTE)
