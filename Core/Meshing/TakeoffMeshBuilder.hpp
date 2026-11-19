@@ -55,9 +55,56 @@ namespace ost_meshing
         float color_r = 0, color_g = 0, color_b = 0;
     };
 
+    // The takeoffs of a scene or an export before any mesh exists (Windows collect_takeoffs_for_pages(visible_only=True),
+    // BaseExporter._filter_exportable_takeoffs and group_area_takeoffs_with_holes).
+    struct ElementTakeoffs
+    {
+        // How many visible takeoffs the selected pages have (Windows CollectedTakeoffsResult.takeoffs): 0 is the
+        // "no takeoffs" case (ExportStatus::NoTakeoffs), whatever the rest says.
+        size_t collected = 0;
+        // The takeoffs that are meshed as elements, in the Windows order of BaseExporter / process_takeoffs_to_meshes:
+        // non-area takeoffs, then the area takeoffs that are not a hole. Takeoffs of an unknown condition or of a
+        // condition type outside 0..3 are not in it (_filter_exportable_takeoffs; group_takeoffs_by_type drops them too).
+        std::vector<const ost_domain::Takeoff *> takeoffs;
+        // The holes of the area takeoffs of `takeoffs`.
+        AreaHoleGrouping grouping;
+    };
+
+    // Windows collect_takeoffs_for_pages: the pages of `selected_pages` in sorted order (an empty set means every page,
+    // as the export does; the 3D view sorts its page uids: normalize_scene_page_uids), the visible takeoffs of each page
+    // in project order, then the element filter and the hole grouping above. MSH-20: the order is by page, not the
+    // database row order.
+    ElementTakeoffs collect_element_takeoffs(
+        const ost_data::ProjectData &project,
+        const std::set<std::string> &selected_pages);
+
+    // Windows collect_takeoffs_for_pages(page_uids, visible_only=True).valid_page_uids: the pages of `page_uids`, in the
+    // given order, that have at least one visible takeoff (a page twice in the list counts twice, like the Windows list;
+    // an unknown page has none). The pages an export file is named after (EXP-09).
+    std::vector<std::string> pages_with_visible_takeoffs(
+        const ost_data::ProjectData &project,
+        const std::vector<std::string> &page_uids);
+
+    // Windows group_takeoffs_by_type + processing_order of process_takeoffs_to_meshes / process_meshes_for_threejs: the
+    // element takeoffs by condition type in the order area, linear, count, attachment (input order inside a type). This is
+    // the order of the meshes of the 3D view and of the HTML export (the boolean subtraction order and the vertex-snap
+    // input order).
+    std::vector<const ost_domain::Takeoff *> order_by_condition_type(
+        const ost_data::ProjectData &project,
+        const ElementTakeoffs &element_takeoffs);
+
+    // The meshes of `order` (a selection and ordering of element_takeoffs.takeoffs), one TakeoffMesh per takeoff that has
+    // a mesh with vertices and faces, in that order. See generate_takeoff_meshes for the frame and the exception.
+    std::vector<TakeoffMesh> mesh_takeoffs(
+        const ost_data::ProjectData &project,
+        const ElementTakeoffs &element_takeoffs,
+        const std::vector<const ost_domain::Takeoff *> &order,
+        bool apply_page_transform);
+
     // Meshes of all takeoffs of `selected_pages` (an empty set means every page, as the export does) whose condition
-    // layer is visible. Windows: raw OST units (the page scale factors never scale a mesh), area holes cut into their
-    // area parent (same transform as the outline), hole children not meshed on their own.
+    // layer is visible, in the order of order_by_condition_type (MSH-20). Windows: raw OST units (the page scale factors
+    // never scale a mesh), area holes cut into their area parent (same transform as the outline), hole children not
+    // meshed on their own.
     // apply_page_transform = true (3D view): each page's rotation / flip_x / flip_y is applied to its meshes
     // (_MeshGeneratorAdapter + _apply_page_transform). false (OBJ / DXF / HTML exports): meshes stay untransformed.
     // Throws std::invalid_argument exactly where Windows raises ValueError (a page with a rotation that is not a

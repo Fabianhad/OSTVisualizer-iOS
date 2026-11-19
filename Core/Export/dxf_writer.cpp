@@ -52,6 +52,10 @@ namespace ost_geometry
         }
         return RGBColor(r, g, b);
     }
+    std::array<double, 3> ios_to_dxf_point(const std::array<double, 3> &p)
+    {
+        return {p[0], -p[2], p[1]};
+    }
     DXFWriter::DXFWriter()
     {
         layers_.push_back(DXFLayer("0", RGBColor(255, 255, 255)));
@@ -123,7 +127,7 @@ namespace ost_geometry
         {
             if (edge[0] < vertices.size() && edge[1] < vertices.size())
             {
-                add_line(vertices[edge[0]], vertices[edge[1]], layer);
+                add_line(ios_to_dxf_point(vertices[edge[0]]), ios_to_dxf_point(vertices[edge[1]]), layer);
             }
         }
     }

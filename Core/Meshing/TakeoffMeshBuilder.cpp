@@ -1,8 +1,10 @@
+#include "../Geometry/strict_fp.hpp"
 #include "TakeoffMeshBuilder.hpp"
 #include "MeshFactory.hpp"
 #include "../Geometry/coord_transform.hpp"
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
@@ -188,31 +190,88 @@ namespace ost_meshing
         }
     } // namespace
 
-    std::vector<TakeoffMesh> generate_takeoff_meshes(
+    ElementTakeoffs collect_element_takeoffs(
         const ost_data::ProjectData &project,
-        const std::set<std::string> &selected_pages,
-        bool apply_page_transform)
+        const std::set<std::string> &selected_pages)
     {
-        // collect_takeoffs_for_pages(visible_only=True): the grouping only sees the selected pages' visible takeoffs.
-        std::vector<const ost_domain::Takeoff *> visible;
+        // collect_takeoffs_for_pages(visible_only=True): page by page in sorted page order (std::map sorts the uids bytewise,
+        // which is the code point order of Python's sorted()), each page's visible takeoffs in project order.
+        std::map<std::string, std::vector<const ost_domain::Takeoff *>> by_page;
         for (const auto &t : project.takeoffs)
         {
             if (!selected_pages.empty() && !selected_pages.count(t.page_uid))
                 continue;
             if (!takeoff_is_visible(project, t))
                 continue;
-            visible.push_back(&t);
+            by_page[t.page_uid].push_back(&t);
         }
-        AreaHoleGrouping grouping = group_area_takeoffs_with_holes(visible, project.conditions);
-        // Hole children are not meshed on their own; every other takeoff keeps its input order.
-        std::unordered_set<const ost_domain::Takeoff *> meshed(grouping.takeoffs.begin(), grouping.takeoffs.end());
+        ElementTakeoffs out;
+        // BaseExporter._filter_exportable_takeoffs: a known condition of type 0..3 (the other takeoffs are dropped by
+        // group_takeoffs_by_type in the views, so they never matter).
+        std::vector<const ost_domain::Takeoff *> exportable;
+        for (const auto &page : by_page)
+            for (const ost_domain::Takeoff *t : page.second)
+            {
+                ++out.collected;
+                auto cdn = project.conditions.find(t->condition_uid);
+                if (cdn == project.conditions.end())
+                    continue;
+                const int type = static_cast<int>(cdn->second.condition_type);
+                if (type < 0 || type > 3)
+                    continue;
+                exportable.push_back(t);
+            }
+        out.grouping = group_area_takeoffs_with_holes(exportable, project.conditions);
+        out.takeoffs = out.grouping.takeoffs;
+        return out;
+    }
 
+    std::vector<std::string> pages_with_visible_takeoffs(
+        const ost_data::ProjectData &project,
+        const std::vector<std::string> &page_uids)
+    {
+        // get_page_takeoffs(page_uid) filtered by is_takeoff_visible: a page is valid when one of its takeoffs is visible
+        std::unordered_set<std::string> pages_with_a_visible_takeoff;
+        for (const auto &t : project.takeoffs)
+            if (takeoff_is_visible(project, t))
+                pages_with_a_visible_takeoff.insert(t.page_uid);
+        std::vector<std::string> valid;
+        for (const std::string &page_uid : page_uids)
+            if (pages_with_a_visible_takeoff.count(page_uid))
+                valid.push_back(page_uid);
+        return valid;
+    }
+
+    std::vector<const ost_domain::Takeoff *> order_by_condition_type(
+        const ost_data::ProjectData &project,
+        const ElementTakeoffs &element_takeoffs)
+    {
+        // processing_order = [(1, area), (0, linear), (2, count), (3, attachment)]
+        static const ost_domain::ConditionType kOrder[] = {
+            ost_domain::ConditionType::Area, ost_domain::ConditionType::Linear,
+            ost_domain::ConditionType::Count, ost_domain::ConditionType::Attachment};
+        std::vector<const ost_domain::Takeoff *> out;
+        out.reserve(element_takeoffs.takeoffs.size());
+        for (ost_domain::ConditionType type : kOrder)
+            for (const ost_domain::Takeoff *t : element_takeoffs.takeoffs)
+            {
+                auto cdn = project.conditions.find(t->condition_uid);
+                if (cdn != project.conditions.end() && cdn->second.condition_type == type)
+                    out.push_back(t);
+            }
+        return out;
+    }
+
+    std::vector<TakeoffMesh> mesh_takeoffs(
+        const ost_data::ProjectData &project,
+        const ElementTakeoffs &element_takeoffs,
+        const std::vector<const ost_domain::Takeoff *> &order,
+        bool apply_page_transform)
+    {
         PageFrames frames{project, {}};
         std::vector<TakeoffMesh> out;
-        for (const ost_domain::Takeoff *takeoff : visible)
+        for (const ost_domain::Takeoff *takeoff : order)
         {
-            if (!meshed.count(takeoff))
-                continue;
             auto cdn = project.conditions.find(takeoff->condition_uid);
             if (cdn == project.conditions.end())
                 continue;
@@ -223,7 +282,7 @@ namespace ost_meshing
             std::vector<std::vector<std::pair<double, double>>> holes;
             if (condition.is_area())
             {
-                holes = holes_for_takeoff(takeoff->uid, grouping);
+                holes = holes_for_takeoff(takeoff->uid, element_takeoffs.grouping);
                 for (auto &ring : holes)
                     for (auto &p : ring)
                         p = {-p.first, -p.second};
@@ -246,6 +305,16 @@ namespace ost_meshing
             out.push_back(std::move(tm));
         }
         return out;
+    }
+
+    std::vector<TakeoffMesh> generate_takeoff_meshes(
+        const ost_data::ProjectData &project,
+        const std::set<std::string> &selected_pages,
+        bool apply_page_transform)
+    {
+        const ElementTakeoffs element_takeoffs = collect_element_takeoffs(project, selected_pages);
+        return mesh_takeoffs(project, element_takeoffs, order_by_condition_type(project, element_takeoffs),
+                             apply_page_transform);
     }
 
 }

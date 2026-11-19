@@ -35,6 +35,11 @@ namespace ost_geometry
             : start(s), end(e), layer(l) {}
     };
 
+    // A point of an iOS mesh (X, Y up, Z: the frame of every Core mesh generator) in the frame of a DXF file. The
+    // Windows DXF is Z-up, plan in XY and height in Z (-ost_x, ost_y, height); the iOS mesh frame is (X, Y, Z) =
+    // (-ost_x, height, -ost_y), so the DXF point is (X, -Z, Y).
+    std::array<double, 3> ios_to_dxf_point(const std::array<double, 3> &p);
+
     class DXFWriter
     {
     public:
@@ -45,6 +50,8 @@ namespace ost_geometry
         void add_line(const std::array<double, 3> &start,
                       const std::array<double, 3> &end,
                       const std::string &layer = "0");
+        // The meshes are in the iOS mesh frame (Y up, see ios_to_dxf_point); their edge endpoints are written in the
+        // Z-up frame of the DXF, like the Windows DXF (plan in XY, height in Z). add_line takes DXF coordinates as given.
         void add_mesh_as_lines(const CppMeshData &mesh, const std::string &layer = "0");
         void add_meshes_as_lines(const std::vector<LayeredMesh> &meshes);
         bool save(const std::string &filepath);

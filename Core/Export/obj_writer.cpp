@@ -1,16 +1,25 @@
 #include "obj_writer.hpp"
+#include "export_text.hpp"
+#include "../Domain/RenderConfig.hpp"
 #include <fstream>
-#include <cctype>
 #include <cstdio>
 
 namespace ost_geometry
 {
 
-    OBJWriter::OBJWriter() = default;
+    OBJWriter::OBJWriter() : display_mode_(ost_domain::RenderConfig::DEFAULT_MODE) {}
     OBJWriter::~OBJWriter() = default;
 
     void OBJWriter::add_mesh(const CppMeshData &mesh,
                              const std::string &group_name,
+                             float r, float g, float b)
+    {
+        add_mesh(mesh, group_name, group_name, r, g, b);
+    }
+
+    void OBJWriter::add_mesh(const CppMeshData &mesh,
+                             const std::string &group_name,
+                             const std::string &original_name,
                              float r, float g, float b)
     {
         if (!mesh.is_valid())
@@ -18,9 +27,38 @@ namespace ost_geometry
 
         MeshGroup grp;
         grp.name = sanitize_name(group_name);
+        grp.original_name = original_name;
         grp.mesh = mesh;
         grp.material = OBJMaterial(grp.name, r, g, b);
         groups_.push_back(std::move(grp));
+    }
+
+    void OBJWriter::add_group(const std::string &group_name,
+                              const std::string &original_name,
+                              float r, float g, float b,
+                              const std::vector<const CppMeshData *> &meshes)
+    {
+        MeshGroup grp;
+        grp.name = sanitize_name(group_name);
+        grp.original_name = original_name;
+        grp.material = OBJMaterial(grp.name, r, g, b);
+        // OBJMeshWriter.write_mesh per mesh: the vertices of each mesh, then its faces shifted by the vertices written
+        // before; `if not mesh_data or not mesh_data.vertices` writes nothing.
+        for (const CppMeshData *mesh : meshes)
+        {
+            if (mesh == nullptr || !mesh->is_valid())
+                continue;
+            const uint32_t offset = static_cast<uint32_t>(grp.mesh.vertices.size());
+            grp.mesh.vertices.insert(grp.mesh.vertices.end(), mesh->vertices.begin(), mesh->vertices.end());
+            for (const auto &f : mesh->faces)
+                grp.mesh.faces.push_back({f[0] + offset, f[1] + offset, f[2] + offset});
+        }
+        groups_.push_back(std::move(grp));
+    }
+
+    void OBJWriter::set_display_mode(const std::string &mode)
+    {
+        display_mode_ = mode;
     }
 
     void OBJWriter::add_layered_meshes(const std::vector<LayeredMesh> &meshes,
@@ -83,22 +121,19 @@ namespace ost_geometry
 
     std::string OBJWriter::sanitize_name(const std::string &name)
     {
-        std::string result;
-        result.reserve(name.size());
-        for (char c : name)
-        {
-            if (std::isalnum(static_cast<unsigned char>(c)) || c == '_' || c == '-')
-            {
-                result += c;
-            }
-            else if (c == ' ')
-            {
-                result += '_';
-            }
-        }
-        if (result.empty())
-            result = "mesh";
-        return result;
+        return export_text::sanitize_material_name(name);
+    }
+
+    // The text of a '# ...' comment line. Not ported, kept by user decision 2026-11-19 (EXP-16, see PORTING_BLOCKERS.md):
+    // Windows writes the condition name as it is, so a name with a line break ends the comment and the rest of the name becomes
+    // OBJ / MTL statements. iOS writes a line break as a space.
+    std::string OBJWriter::single_line(const std::string &text)
+    {
+        std::string out = text;
+        for (char &c : out)
+            if (c == '\n' || c == '\r')
+                c = ' ';
+        return out;
     }
 
     std::string OBJWriter::replace_extension(const std::string &path,
@@ -121,12 +156,15 @@ namespace ost_geometry
         if (!file.is_open())
             return false;
 
-        file << "# OBJ exported by OST Visualizer (iOS)\n";
+        // Windows OBJExporter._write_obj_file: header, mtllib, then per group '# <original name>', 'g', 'usemtl' and the
+        // vertices / faces with indices continuing across groups, a blank line after the group.
+        file << "# Created by OST Visualizer\n";
         file << "mtllib " << mtl_filename << "\n\n";
         uint32_t vertex_offset = 0;
 
         for (const auto &grp : groups_)
         {
+            file << "# " << single_line(grp.original_name) << "\n";
             file << "g " << grp.name << "\n";
             file << "usemtl " << grp.material.name << "\n";
             for (const auto &v : grp.mesh.vertices)
@@ -155,19 +193,27 @@ namespace ost_geometry
         if (!file.is_open())
             return false;
 
-        file << "# MTL exported by OST Visualizer (iOS)\n\n";
+        // Windows OBJExporter._write_mtl_file. Kd is the colour byte over 255 in double ({:.6f}).
+        file << "# Created by OST Visualizer\n";
+        file << "# Display Mode: " << single_line(display_mode_) << "\n";
+        file << "# Materials: " << groups_.size() << "\n\n";
 
         for (const auto &grp : groups_)
         {
             const auto &m = grp.material;
             file << "newmtl " << m.name << "\n";
+            file << "# " << single_line(grp.original_name) << "\n";
             char buf[128];
-            std::snprintf(buf, sizeof(buf), "Kd %.4f %.4f %.4f\n", m.r, m.g, m.b);
+            std::snprintf(buf, sizeof(buf), "Kd %.6f %.6f %.6f\n",
+                          export_text::colour_channel(m.r), export_text::colour_channel(m.g),
+                          export_text::colour_channel(m.b));
             file << buf;
-            file << "Ka 0.1000 0.1000 0.1000\n";
-            file << "Ks 0.0000 0.0000 0.0000\n";
-            file << "d 1.0000\n";
-            file << "illum 1\n\n";
+            file << "Ka 0.200000 0.200000 0.200000\n";
+            file << "Ks 0.500000 0.500000 0.500000\n";
+            file << "Ns 20.000000\n";
+            file << "Ni 1.000000\n";
+            file << "d 1.000000\n";
+            file << "illum 2\n\n";
         }
 
         return file.good();

@@ -21,6 +21,10 @@ namespace ost_domain
         std::string folder_uid;
         int page_index = 0;
 
+        // BidPages.Sequence (page order: Sequence, Name, UID) and BidPages.SheetNo (label), as Windows loads them.
+        int sequence = 0;
+        std::string sheet_no;
+
         // Image paths (populated from BidPages.ImagePath / OverlayImagePath)
         // For .osp imports, these point to Documents/OST/{bid_name}/{filename}.pdf
         std::string image_path;
@@ -34,7 +38,7 @@ namespace ost_domain
         bool overlay_resized = false;
         std::string overlay_rect; // stored as text "x,y,w,h"
 
-        // Display mode: 0=original, 1=overlay only, 2=composite
+        // Display mode (BidPages.Show): 0=original, 1=overlay only, 2=composite
         int image_show_mode = 0;
     };
 
