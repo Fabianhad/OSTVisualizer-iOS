@@ -41,6 +41,13 @@ namespace ost_schema
     // true when the column is YESNO in the Windows schema (see YESNO_COLUMNS).
     bool is_yesno_column(const std::string &table, const std::string &column);
 
+    // Columns of type DATETIME (14) and IMAGE (30) in the Windows schema (database_creator.py _TABLE_DDL). The iOS DDL types
+    // them TEXT/BLOB; the importer converts their values by the Windows type (IMP-20).
+    extern const std::vector<std::pair<const char *, const char *>> DATETIME_COLUMNS;
+    extern const std::vector<std::pair<const char *, const char *>> IMAGE_COLUMNS;
+    bool is_datetime_column(const std::string &table, const std::string &column);
+    bool is_image_column(const std::string &table, const std::string &column);
+
     std::string singular(const std::string &table_name);
 
 }

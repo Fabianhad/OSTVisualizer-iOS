@@ -10,6 +10,7 @@
 
 #include <zlib.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -19,8 +20,9 @@ namespace ost_itest
 {
     struct CabMember
     {
-        std::string name;
+        std::string name;    // the name bytes as stored (cp1252 for a legacy cabinet, UTF-8 when attribs has 0x80)
         std::string content;
+        uint16_t attribs = 0; // CFFILE attribs: 0x80 = _A_NAME_IS_UTF
     };
 
     struct CabBuildOptions
@@ -110,7 +112,7 @@ namespace ost_itest
             put16(file_table, 0); // iFolder
             put16(file_table, 0); // date
             put16(file_table, 0); // time
-            put16(file_table, 0); // attribs
+            put16(file_table, m.attribs);
             file_table += m.name;
             file_table += '\0';
             folder_data += m.content;
@@ -232,6 +234,225 @@ namespace ost_itest
             x = (x * 6364136223846793005ull + 1442695040888963407ull);
             out += static_cast<char>((x >> 33) & 0xFF);
         }
+        return out;
+    }
+
+    // ---- cabinets with several folders and free-form file tables (single pass extraction tests) ---------------------
+    //
+    // build_cab writes ONE folder and a table that follows the physical order. The single pass extractor has to cope with
+    // everything the format allows (and the Windows cabinet library accepts): members of several folders, a table that
+    // lists them in another order than their bytes, overlapping members, zero-length members anywhere. FolderMember keeps
+    // the layout of a member (its bytes are appended to its folder in the order of the members vector) apart from what
+    // its file table entry says.
+    struct FolderMember
+    {
+        std::string name;
+        std::string content;
+        uint16_t folder = 0;
+        uint16_t attribs = 0;
+        int64_t declared_offset = -1; // >= 0: uoffFolderStart written in the file table instead of the real position
+        int64_t declared_size = -1;   // >= 0: cbFile written in the file table instead of the real size
+    };
+
+    struct FolderCabOptions
+    {
+        std::vector<bool> mszip;         // per folder: true = MSZIP, false/missing = stored
+        bool checksums = true;           // real CFDATA checksums
+        size_t block_size = 32768;       // uncompressed bytes per CFDATA block
+        std::vector<size_t> table_order; // member indexes in the order the file table lists them (empty = as given)
+        int corrupt_folder = -1;         // >= 0: flip one payload byte of corrupt_block of this folder (checksum of the good block kept)
+        int corrupt_block = -1;
+    };
+
+    struct FolderCab
+    {
+        std::string bytes;
+        std::vector<std::vector<size_t>> block_offsets; // per folder: offset of every CFDATA header inside `bytes`
+    };
+
+    inline FolderCab build_cab_folders(const std::vector<FolderMember> &members, const FolderCabOptions &options)
+    {
+        size_t folder_count = 1;
+        for (const FolderMember &m : members)
+            folder_count = std::max<size_t>(folder_count, static_cast<size_t>(m.folder) + 1);
+        std::vector<std::string> folder_data(folder_count);
+        std::vector<uint32_t> real_offset(members.size());
+        for (size_t i = 0; i < members.size(); ++i)
+        {
+            std::string &data = folder_data[members[i].folder];
+            real_offset[i] = static_cast<uint32_t>(data.size());
+            data += members[i].content;
+        }
+
+        std::vector<size_t> order = options.table_order;
+        if (order.empty())
+            for (size_t i = 0; i < members.size(); ++i)
+                order.push_back(i);
+        std::string file_table;
+        for (size_t index : order)
+        {
+            const FolderMember &m = members[index];
+            put32(file_table, m.declared_size >= 0 ? static_cast<uint32_t>(m.declared_size) : static_cast<uint32_t>(m.content.size()));
+            put32(file_table, m.declared_offset >= 0 ? static_cast<uint32_t>(m.declared_offset) : real_offset[index]);
+            put16(file_table, m.folder);
+            put16(file_table, 0); // date
+            put16(file_table, 0); // time
+            put16(file_table, m.attribs);
+            file_table += m.name;
+            file_table += '\0';
+        }
+
+        const uint32_t files_offset = static_cast<uint32_t>(36 + 8 * folder_count);
+        const uint32_t data_offset = files_offset + static_cast<uint32_t>(file_table.size());
+        std::string data_section;
+        std::string folder_records;
+        FolderCab out;
+        out.block_offsets.resize(folder_count);
+        for (size_t f = 0; f < folder_count; ++f)
+        {
+            const bool mszip = f < options.mszip.size() && options.mszip[f];
+            const std::string &data = folder_data[f];
+            const uint32_t folder_start = data_offset + static_cast<uint32_t>(data_section.size());
+            size_t blocks = 0;
+            for (size_t pos = 0; pos < data.size() || (pos == 0 && blocks == 0); pos += options.block_size)
+            {
+                const std::string chunk = data.substr(pos, options.block_size);
+                std::string payload;
+                if (mszip)
+                {
+                    const std::string history = data.substr(0, pos);
+                    const std::string dictionary = history.size() > 32768 ? history.substr(history.size() - 32768) : history;
+                    payload = "CK" + deflate_block(chunk, dictionary);
+                }
+                else
+                {
+                    payload = chunk;
+                }
+                uint32_t csum = 0;
+                if (options.checksums)
+                {
+                    std::string header;
+                    put16(header, static_cast<uint32_t>(payload.size()));
+                    put16(header, static_cast<uint32_t>(chunk.size()));
+                    csum = spec_checksum(reinterpret_cast<const unsigned char *>(header.data()), 4,
+                                         spec_checksum(reinterpret_cast<const unsigned char *>(payload.data()), payload.size(), 0));
+                }
+                if (options.corrupt_folder == static_cast<int>(f) && options.corrupt_block == static_cast<int>(blocks) && !payload.empty())
+                    payload[payload.size() / 2] ^= 0x01;
+                out.block_offsets[f].push_back(data_offset + data_section.size());
+                put32(data_section, csum);
+                put16(data_section, static_cast<uint32_t>(payload.size()));
+                put16(data_section, static_cast<uint32_t>(chunk.size()));
+                data_section += payload;
+                ++blocks;
+                if (data.empty())
+                    break;
+            }
+            put32(folder_records, folder_start);
+            put16(folder_records, static_cast<uint32_t>(blocks));
+            put16(folder_records, mszip ? 1 : 0);
+        }
+
+        std::string bytes = "MSCF";
+        put32(bytes, 0);
+        put32(bytes, data_offset + static_cast<uint32_t>(data_section.size()));
+        put32(bytes, 0);
+        put32(bytes, files_offset);
+        put32(bytes, 0);
+        bytes += static_cast<char>(3); // versionMinor
+        bytes += static_cast<char>(1); // versionMajor
+        put16(bytes, static_cast<uint32_t>(folder_count));
+        put16(bytes, static_cast<uint32_t>(members.size()));
+        put16(bytes, 0);     // flags
+        put16(bytes, 12345); // setID
+        put16(bytes, 0);     // iCabinet
+        bytes += folder_records;
+        bytes += file_table;
+        bytes += data_section;
+        out.bytes = bytes;
+        return out;
+    }
+
+    // ---- cabinets that use the header areas: previous / next cabinet names, reserve areas ------------------------------
+    struct HeaderAreas
+    {
+        uint16_t flags = 0;       // 0x0001 previous cabinet names, 0x0002 next cabinet names, 0x0004 reserve areas
+        std::string previous_cabinet, previous_disk, next_cabinet, next_disk;
+        size_t header_reserve = 0;      // cbCFHeader (written when flags has 0x0004)
+        uint8_t folder_reserve = 0;     // cbCFFolder
+        uint8_t data_reserve = 0;       // cbCFData: bytes between every CFDATA header and its payload
+        bool checksum_covers_reserve = true; // the CFDATA checksum includes the reserve bytes (the format; the Windows library checks it so)
+    };
+
+    // One stored folder with one CFDATA block (checksum set) holding the members one after the other.
+    inline std::string build_cab_with_header_areas(const std::vector<CabMember> &members, const HeaderAreas &areas)
+    {
+        std::string before_folder;
+        if (areas.flags & 0x0004)
+        {
+            put16(before_folder, static_cast<uint32_t>(areas.header_reserve));
+            before_folder += static_cast<char>(areas.folder_reserve);
+            before_folder += static_cast<char>(areas.data_reserve);
+            before_folder += std::string(areas.header_reserve, '\0');
+        }
+        if (areas.flags & 0x0001)
+            before_folder += areas.previous_cabinet + '\0' + areas.previous_disk + '\0';
+        if (areas.flags & 0x0002)
+            before_folder += areas.next_cabinet + '\0' + areas.next_disk + '\0';
+
+        std::string data;
+        std::string table;
+        for (const CabMember &m : members)
+        {
+            put32(table, static_cast<uint32_t>(m.content.size()));
+            put32(table, static_cast<uint32_t>(data.size()));
+            put16(table, 0);
+            put16(table, 0);
+            put16(table, 0);
+            put16(table, m.attribs);
+            table += m.name;
+            table += '\0';
+            data += m.content;
+        }
+        const std::string reserve(areas.data_reserve, '\x5A');
+        std::string checked_header;
+        put16(checked_header, static_cast<uint32_t>(data.size()));
+        put16(checked_header, static_cast<uint32_t>(data.size()));
+        if (areas.checksum_covers_reserve)
+            checked_header += reserve;
+        const uint32_t csum = spec_checksum(reinterpret_cast<const unsigned char *>(checked_header.data()), checked_header.size(),
+                                            spec_checksum(reinterpret_cast<const unsigned char *>(data.data()), data.size(), 0));
+
+        const uint32_t folder_size = 8u + areas.folder_reserve;
+        const uint32_t files_offset = static_cast<uint32_t>(36 + before_folder.size()) + folder_size;
+        const uint32_t data_offset = files_offset + static_cast<uint32_t>(table.size());
+        std::string block;
+        put32(block, csum);
+        put16(block, static_cast<uint32_t>(data.size()));
+        put16(block, static_cast<uint32_t>(data.size()));
+        block += reserve;
+        block += data;
+
+        std::string out = "MSCF";
+        put32(out, 0);
+        put32(out, data_offset + static_cast<uint32_t>(block.size()));
+        put32(out, 0);
+        put32(out, files_offset);
+        put32(out, 0);
+        out += static_cast<char>(3);
+        out += static_cast<char>(1);
+        put16(out, 1); // cFolders
+        put16(out, static_cast<uint32_t>(members.size()));
+        put16(out, areas.flags);
+        put16(out, 12345);
+        put16(out, 0);
+        out += before_folder;
+        put32(out, data_offset);
+        put16(out, 1);
+        put16(out, 0);
+        out += std::string(areas.folder_reserve, '\0');
+        out += table;
+        out += block;
         return out;
     }
 }

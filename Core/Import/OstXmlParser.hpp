@@ -66,8 +66,16 @@ namespace ost_import
         TableMap bid_tables;
         TableMap page_tables;
         TableMap global_tables;
+        // Set by parse_ost_xml when the document has a Bid element (it may have no attributes at all: the Windows
+        // importer still imports it, only a MISSING Bid element is an error).
+        bool has_bid = false;
+        // Why parse_ost_xml returned an empty value: ElementTree's ParseError text for malformed XML ("mismatched tag:
+        // line 1, column 12"), or the Windows ValueError text "No Bid element found in OST file". Empty on success.
+        std::string error;
 
-        bool empty() const { return bid_row.empty(); }
+        // "No Bid element": the parser found none (or the XML is malformed). A hand-built value counts as having a Bid
+        // as soon as it carries a Bid row.
+        bool empty() const { return !has_bid && bid_row.empty(); }
     };
 
     OstRawData parse_ost_xml(const char *data, size_t length);

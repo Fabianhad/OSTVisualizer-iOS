@@ -3,6 +3,7 @@
 // UnicodeCaseData.hpp.
 #include "TextRules.hpp"
 #include "UnicodeCaseData.hpp"
+#include "UnicodeDecimalData.hpp"
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
@@ -249,6 +250,79 @@ namespace ost_import
                 return c >= '0' && c <= '9';
             }
 
+            // Value 0-9 of a Unicode decimal digit above ASCII (Py_UNICODE_TODECIMAL), -1 for every other code point.
+            int decimal_value(uint32_t cp)
+            {
+                const uint32_t *starts = unicode_decimal_data::DIGIT_RUN_STARTS;
+                unsigned lo = 0, hi = sizeof(unicode_decimal_data::DIGIT_RUN_STARTS) / sizeof(uint32_t);
+                while (lo < hi)
+                {
+                    const unsigned mid = (lo + hi) / 2;
+                    if (cp < starts[mid])
+                        hi = mid;
+                    else if (cp >= starts[mid] + 10)
+                        lo = mid + 1;
+                    else
+                        return static_cast<int>(cp - starts[mid]);
+                }
+                return -1;
+            }
+
+            // How CPython prepares the text of int()/float() (_PyUnicode_TransformDecimalAndSpaceToASCII): a character
+            // below 127 stays as it is (so \x1c..\x1f, which str.strip() removes, are not whitespace here), any other
+            // Unicode whitespace becomes ' ', a Unicode decimal digit becomes its ASCII digit, and anything else makes
+            // the text invalid (CPython writes '?' and stops). `valid` is false then.
+            std::string numeric_ascii(const std::string &text, bool &valid)
+            {
+                valid = true;
+                std::string out;
+                out.reserve(text.size());
+                for (const Piece &p : decode(text))
+                {
+                    if (p.raw)
+                    {
+                        valid = false;
+                        return std::string();
+                    }
+                    if (p.cp < 127)
+                    {
+                        out += static_cast<char>(p.cp);
+                    }
+                    else if (is_space(p))
+                    {
+                        out += ' ';
+                    }
+                    else
+                    {
+                        const int digit = decimal_value(p.cp);
+                        if (digit < 0)
+                        {
+                            valid = false;
+                            return std::string();
+                        }
+                        out += static_cast<char>('0' + digit);
+                    }
+                }
+                return out;
+            }
+
+            // Py_ISSPACE: the whitespace int()/float() skip around the number once the text is ASCII.
+            bool is_ascii_space(char c)
+            {
+                return c == ' ' || (c >= '\t' && c <= '\r');
+            }
+
+            std::string trim_ascii_space(const std::string &s)
+            {
+                size_t first = 0;
+                while (first < s.size() && is_ascii_space(s[first]))
+                    ++first;
+                size_t last = s.size();
+                while (last > first && is_ascii_space(s[last - 1]))
+                    --last;
+                return s.substr(first, last - first);
+            }
+
             // digits with single underscores between digits ("1_000"); false for anything else. Appends the digits
             // (without underscores) to out.
             bool read_digit_group(const std::string &s, size_t &pos, std::string &out)
@@ -274,6 +348,27 @@ namespace ost_import
             }
         }
 
+        bool py_isdecimal(const std::string &text)
+        {
+            if (text.empty())
+                return false;
+            for (const Piece &p : decode(text))
+            {
+                if (p.raw)
+                    return false;
+                if (p.cp < 0x80)
+                {
+                    if (!is_digit(static_cast<char>(p.cp)))
+                        return false;
+                }
+                else if (decimal_value(p.cp) < 0)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         std::string py_strip(const std::string &text)
         {
             const std::vector<Piece> pieces = decode(text);
@@ -290,6 +385,28 @@ namespace ost_import
             return text.substr(begin, end - begin);
         }
 
+        std::vector<std::string> py_split(const std::string &text)
+        {
+            const std::vector<Piece> pieces = decode(text);
+            std::vector<std::string> parts;
+            size_t i = 0;
+            while (i < pieces.size())
+            {
+                if (is_space(pieces[i]))
+                {
+                    ++i;
+                    continue;
+                }
+                const size_t first = i;
+                while (i < pieces.size() && !is_space(pieces[i]))
+                    ++i;
+                const size_t begin = pieces[first].start;
+                const size_t end = pieces[i - 1].start + pieces[i - 1].length;
+                parts.push_back(text.substr(begin, end - begin));
+            }
+            return parts;
+        }
+
         std::string py_lower(const std::string &text)
         {
             return map_text(text, false);
@@ -302,7 +419,11 @@ namespace ost_import
 
         NumberParse py_parse_int(const std::string &text, long long &out)
         {
-            const std::string s = py_strip(text);
+            bool prepared = false;
+            const std::string ascii = numeric_ascii(text, prepared);
+            if (!prepared)
+                return NumberParse::Invalid;
+            const std::string s = trim_ascii_space(ascii);
             size_t pos = 0;
             bool negative = false;
             if (pos < s.size() && (s[pos] == '+' || s[pos] == '-'))
@@ -312,6 +433,11 @@ namespace ost_import
             }
             std::string digits;
             if (!read_digit_group(s, pos, digits) || pos != s.size())
+                return NumberParse::Invalid;
+            // CPython 3.11 (sys.int_info.default_max_str_digits): int() of more than 4300 digits (underscores do not
+            // count, leading zeros do) is a ValueError, not a big integer. The Windows code then reads the text as
+            // unparsable (NULL / 0) where a big integer would fail the INSERT.
+            if (digits.size() > 4300)
                 return NumberParse::Invalid;
             // Magnitude as unsigned 64-bit with overflow detection.
             unsigned long long magnitude = 0;
@@ -340,7 +466,11 @@ namespace ost_import
 
         bool py_parse_float(const std::string &text, double &out)
         {
-            const std::string s = py_strip(text);
+            bool prepared = false;
+            const std::string ascii = numeric_ascii(text, prepared);
+            if (!prepared)
+                return false;
+            const std::string s = trim_ascii_space(ascii);
             size_t pos = 0;
             std::string cleaned;
             if (pos < s.size() && (s[pos] == '+' || s[pos] == '-'))

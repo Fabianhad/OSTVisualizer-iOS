@@ -8,6 +8,7 @@
 // whitespace nor a cased letter).
 #pragma once
 #include <string>
+#include <vector>
 
 namespace ost_import
 {
@@ -15,6 +16,14 @@ namespace ost_import
     {
         // str.strip() without arguments: removes leading/trailing Unicode whitespace (str.isspace()).
         std::string py_strip(const std::string &text);
+
+        // str.split() without arguments: the maximal runs of non-whitespace characters, in order (whitespace is str.isspace(),
+        // the control characters 0x1C..0x1F included); text without any non-whitespace gives no parts.
+        std::vector<std::string> py_split(const std::string &text);
+
+        // str.isdecimal(): not empty and every character is a Unicode decimal digit (Nd): ASCII 0-9 and the digits of the other scripts
+        // (Arabic-Indic, Devanagari, fullwidth, ...). Text that is not valid UTF-8 is not decimal.
+        bool py_isdecimal(const std::string &text);
 
         // str.lower(), including the Final_Sigma rule and the full (multi code point) lower-casing of U+0130.
         std::string py_lower(const std::string &text);
@@ -29,8 +38,10 @@ namespace ost_import
             Overflow, // a valid integer that does not fit in 64 bits (SQLite cannot store it)
         };
 
-        // int(text) for a str: surrounding whitespace, optional sign, ASCII digits with single underscores between
-        // digits. (Non-ASCII Unicode decimal digits, which Python also accepts, are not.)
+        // int(text) for a str: surrounding whitespace, optional sign, digits with single underscores between digits.
+        // Like CPython, Unicode decimal digits count as digits and every Unicode whitespace as ' ', but a character
+        // below 127 is taken as it is (the control characters \x1c..\x1f are NOT whitespace here). More than 4300
+        // digits are Invalid, as in CPython 3.11 (ValueError).
         NumberParse py_parse_int(const std::string &text, long long &out);
 
         // float(text) for a str that contains a '.': surrounding whitespace, optional sign, digits with an optional

@@ -22,14 +22,14 @@ namespace ost_schema
         "BidTakeoffFromUID INTEGER, "
         "BidTakeoffToUID INTEGER, "
         "Position BLOB, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Width INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidAnnoInk ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -38,7 +38,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -47,7 +47,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -56,7 +56,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -65,7 +65,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -81,7 +81,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "ParentUID INTEGER, "
         "Name TEXT, "
-        "Sequence INTEGER, "
+        "Sequence INTEGER DEFAULT 0, "
         "WasSent INTEGER, "
         "GUID TEXT)",
 
@@ -92,7 +92,7 @@ namespace ost_schema
         "BidTakeoffFromUID INTEGER, "
         "BidTakeoffToUID INTEGER, "
         "Position BLOB, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Width INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidCallOuts ("
@@ -102,14 +102,14 @@ namespace ost_schema
         "BidLayerUID INTEGER, "
         "Name BLOB, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
         "FontUnderline INTEGER, "
         "TextAlign INTEGER, "
         "Position TEXT, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Width INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidComments ("
@@ -118,7 +118,7 @@ namespace ost_schema
         "BidPageUID INTEGER, "
         "ParentCommentUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "UserName TEXT, "
         "Comment BLOB, "
         "Position TEXT, "
@@ -161,7 +161,7 @@ namespace ost_schema
         "ColorFill INTEGER, "
         "Width REAL, "
         "Height REAL, "
-        "Spacing REAL, "
+        "Spacing REAL DEFAULT 0, "
         "Thickness REAL, "
         "Rise REAL, "
         "Run REAL, "
@@ -225,7 +225,7 @@ namespace ost_schema
         "BidTakeoffToUID INTEGER, "
         "Position BLOB, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -246,16 +246,16 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB)",
 
         "CREATE TABLE IF NOT EXISTS BidHotLinks ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
-        "BidPageViewUID INTEGER, "
+        "BidPageViewUID INTEGER DEFAULT 0, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB)",
 
         "CREATE TABLE IF NOT EXISTS BidLaborActivity ("
@@ -269,7 +269,7 @@ namespace ost_schema
         "IsActive INTEGER, "
         "UsesConditionQuantity INTEGER, "
         "RuleType TEXT, "
-        "RuleValue INTEGER, "
+        "RuleValue INTEGER DEFAULT 0, "
         "UseQtyIndex INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidLaborCostCodeTotals ("
@@ -285,7 +285,7 @@ namespace ost_schema
         "CREATE TABLE IF NOT EXISTS BidLaborCostCodes ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
-        "Type INTEGER, "
+        "Type INTEGER DEFAULT 0, "
         "CostCodeUID INTEGER, "
         "UOM INTEGER, "
         "IsActive INTEGER, "
@@ -308,7 +308,7 @@ namespace ost_schema
         "Position BLOB, "
         "Rotation REAL, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -386,14 +386,14 @@ namespace ost_schema
         "Sequence REAL, "
         "Invert INTEGER, "
         "Bitonal INTEGER, "
-        "DigitizerNX1 INTEGER, "
-        "DigitizerNY1 INTEGER, "
-        "DigitizerNX2 INTEGER, "
-        "DigitizerNY2 INTEGER, "
-        "DigitizerWidth REAL, "
-        "DigitizerHeight REAL, "
-        "DigitizerResX INTEGER, "
-        "DigitizerResY INTEGER, "
+        "DigitizerNX1 INTEGER DEFAULT 0, "
+        "DigitizerNY1 INTEGER DEFAULT 0, "
+        "DigitizerNX2 INTEGER DEFAULT 0, "
+        "DigitizerNY2 INTEGER DEFAULT 0, "
+        "DigitizerWidth REAL DEFAULT 0, "
+        "DigitizerHeight REAL DEFAULT 0, "
+        "DigitizerResX INTEGER DEFAULT 0, "
+        "DigitizerResY INTEGER DEFAULT 0, "
         "WasSent INTEGER, "
         "MasterPageUID INTEGER, "
         "TypicalPageRepeats INTEGER, "
@@ -463,15 +463,15 @@ namespace ost_schema
         "ParentUID INTEGER, "
         "No INTEGER, "
         "Quantity REAL, "
-        "Count REAL, "
+        "Count REAL DEFAULT 0, "
         "Rotation REAL, "
         "Position TEXT, "
-        "GridOffsetX REAL, "
-        "GridOffsetY REAL, "
-        "GridRotation REAL, "
-        "IsNegativeQuantity INTEGER, "
+        "GridOffsetX REAL DEFAULT 0, "
+        "GridOffsetY REAL DEFAULT 0, "
+        "GridRotation REAL DEFAULT 0, "
+        "IsNegativeQuantity INTEGER DEFAULT 0, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -485,7 +485,7 @@ namespace ost_schema
         "FlipY INTEGER, "
         "GUID TEXT, "
         "NameFontName TEXT, "
-        "NameFontColor INTEGER, "
+        "NameFontColor INTEGER DEFAULT 0, "
         "NameFontSize INTEGER, "
         "NameFontBold INTEGER, "
         "NameFontItalic INTEGER, "
@@ -523,7 +523,7 @@ namespace ost_schema
         "BidLayerUID INTEGER, "
         "Name BLOB, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -534,7 +534,7 @@ namespace ost_schema
         "CREATE TABLE IF NOT EXISTS BidTransactionsHistory ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
-        "TransactionID INTEGER, "
+        "TransactionID INTEGER DEFAULT 0, "
         "SendDate TEXT, "
         "ReceiveDate TEXT, "
         "LoginNameFrom TEXT, "
@@ -549,7 +549,7 @@ namespace ost_schema
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
         "Name TEXT, "
-        "Sequence INTEGER, "
+        "Sequence INTEGER DEFAULT 0, "
         "WasSent INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidTypAreaCounts ("
@@ -604,7 +604,7 @@ namespace ost_schema
         "PrManagerUID INTEGER, "
         "JobSiteManagerUID INTEGER, "
         "SourceBidUID TEXT, "
-        "ExternalID INTEGER, "
+        "ExternalID INTEGER DEFAULT 0, "
         "QuickBidDB TEXT, "
         "BidNo INTEGER, "
         "BidType INTEGER, "
@@ -620,9 +620,9 @@ namespace ost_schema
         "PriceUsingDatabase TEXT, "
         "PriceUsingWorksheet TEXT, "
         "TakeoffIncrements REAL, "
-        "HoursPerDay INTEGER, "
-        "MeasureBase INTEGER, "
-        "WeekStartDay INTEGER, "
+        "HoursPerDay INTEGER DEFAULT 0, "
+        "MeasureBase INTEGER DEFAULT 0, "
+        "WeekStartDay INTEGER DEFAULT 0, "
         "QuantitiesInLegend INTEGER, "
         "JobSendRec INTEGER, "
         "ScaleStyle INTEGER, "
@@ -638,14 +638,14 @@ namespace ost_schema
         "EstimatedDays REAL, "
         "Percent REAL, "
         "ProjectOver REAL, "
-        "DPCMode INTEGER, "
-        "IsDPCUpdated INTEGER, "
-        "IgnoreBidAreas INTEGER, "
-        "SendImageFiles INTEGER, "
-        "HasSTSClash INTEGER, "
-        "SRPending INTEGER, "
-        "IsUnlocked INTEGER, "
-        "FullBidSent INTEGER, "
+        "DPCMode INTEGER DEFAULT 0, "
+        "IsDPCUpdated INTEGER DEFAULT 0, "
+        "IgnoreBidAreas INTEGER DEFAULT 0, "
+        "SendImageFiles INTEGER DEFAULT 0, "
+        "HasSTSClash INTEGER DEFAULT 0, "
+        "SRPending INTEGER DEFAULT 0, "
+        "IsUnlocked INTEGER DEFAULT 0, "
+        "FullBidSent INTEGER DEFAULT 0, "
         "TypicalType INTEGER, "
         "GUID TEXT, "
         "BidDate TEXT, "
@@ -688,9 +688,9 @@ namespace ost_schema
         "Type INTEGER, "
         "Name TEXT, "
         "Description TEXT, "
-        "Sequence INTEGER, "
+        "Sequence INTEGER DEFAULT 0, "
         "RuleType TEXT, "
-        "RuleValue INTEGER)",
+        "RuleValue INTEGER DEFAULT 0)",
 
         "CREATE TABLE IF NOT EXISTS DPCCalcFilter ("
         "UID INTEGER PRIMARY KEY, "
@@ -743,7 +743,7 @@ namespace ost_schema
         "ObjectUID INTEGER, "
         "BidUID INTEGER, "
         "TableName TEXT, "
-        "ChangeType INTEGER, "
+        "ChangeType INTEGER DEFAULT 0, "
         "ExtraInfo TEXT, "
         "ExtraInfo2 TEXT)",
 
@@ -760,10 +760,10 @@ namespace ost_schema
         "LoginRequired INTEGER, "
         "MeasureBase INTEGER, "
         "PriceUsing INTEGER, "
-        "QuantitiesInLegend INTEGER, "
-        "HoursPerDay INTEGER, "
-        "StartWeekOn INTEGER, "
-        "GridCountMethod INTEGER, "
+        "QuantitiesInLegend INTEGER DEFAULT 0, "
+        "HoursPerDay INTEGER DEFAULT 0, "
+        "StartWeekOn INTEGER DEFAULT 0, "
+        "GridCountMethod INTEGER DEFAULT 0, "
         "TakeoffIncrements REAL, "
         "ScaleStyle INTEGER, "
         "IsCustomScale INTEGER, "
@@ -776,13 +776,13 @@ namespace ost_schema
         "LabelHours2 TEXT, "
         "LabelHours3 TEXT, "
         "LabelHours4 TEXT, "
-        "IgnoreBidAreas INTEGER, "
-        "SendImageFiles INTEGER, "
+        "IgnoreBidAreas INTEGER DEFAULT 0, "
+        "SendImageFiles INTEGER DEFAULT 0, "
         "STSClientID TEXT, "
         "STSClientPassword INTEGER, "
-        "BackupNo INTEGER, "
-        "BackupPeriod INTEGER, "
-        "CompressPeriod INTEGER, "
+        "BackupNo INTEGER DEFAULT 2, "
+        "BackupPeriod INTEGER DEFAULT 2, "
+        "CompressPeriod INTEGER DEFAULT 3, "
         "LegendFlags INTEGER, "
         "StyleLibrarySelItemType INTEGER, "
         "StyleLibrarySelItemUID INTEGER, "
@@ -1292,6 +1292,76 @@ namespace ost_schema
     bool is_yesno_column(const std::string &table, const std::string &column)
     {
         for (const auto &entry : YESNO_COLUMNS)
+            if (table == entry.first && column == entry.second)
+                return true;
+        return false;
+    }
+
+    // Columns of type DATETIME (14) and IMAGE (30) in the Windows schema (Windows database_creator.py _TABLE_DDL). The iOS DDL
+    // types them TEXT / BLOB, but the importer converts their values by the Windows type (import_operations.py
+    // _convert_access_value, IMP-20): a DATETIME value that is not six whitespace separated integers forming a valid date
+    // becomes NULL; an IMAGE value that is empty becomes NULL. The ODBC driver reports IMAGE as "longbinary".
+    const std::vector<std::pair<const char *, const char *>> DATETIME_COLUMNS = {
+        {"BidComments", "CommentModified"},
+        {"BidEmployees", "DateAdded"},
+        {"BidLaborCostCodeTotals", "Date"},
+        {"BidNotes", "DateCreated"},
+        {"BidTimeCardStates", "Date"},
+        {"BidTransactionsHistory", "SendDate"},
+        {"BidTransactionsHistory", "ReceiveDate"},
+        {"Bids", "CreateDateTime"},
+        {"Bids", "ModDateTime"},
+        {"Bids", "LastReceiveDateTime"},
+        {"Bids", "LastSendDateTime"},
+        {"Bids", "BidDate"},
+        {"Bids", "CopyTimeStamp"},
+        {"Settings", "Created"},
+    };
+
+    const std::vector<std::pair<const char *, const char *>> IMAGE_COLUMNS = {
+        {"BidALines", "Position"},
+        {"BidAnnoInk", "Position"},
+        {"BidAnnotationClouds", "Position"},
+        {"BidAnnotationOvals", "Position"},
+        {"BidAnnotationPolygons", "Position"},
+        {"BidAnnotationRects", "Position"},
+        {"BidArrows", "Position"},
+        {"BidCallOuts", "Name"},
+        {"BidComments", "Comment"},
+        {"BidConditionFolders", "Description"},
+        {"BidConditions", "Notes"},
+        {"BidDimensions", "Position"},
+        {"BidHighlights", "Position"},
+        {"BidHotLinks", "Position"},
+        {"BidLaborCostCodes", "Notes"},
+        {"BidLegends", "Position"},
+        {"BidNamedViews", "Position"},
+        {"BidNotes", "Notes"},
+        {"BidPageFolders", "Description"},
+        {"BidPlanRooms", "Documents"},
+        {"BidProjects", "Description"},
+        {"BidTakeoffs", "Position"},
+        {"BidTexts", "Name"},
+        {"BidTypGroupViews", "Position"},
+        {"BidZones", "Notes"},
+        {"Bids", "Notes"},
+        {"Boost", "UploadURL"},
+        {"Boost", "CallbackURL"},
+        {"Locking", "Data"},
+        {"Transactions", "Data"},
+    };
+
+    bool is_datetime_column(const std::string &table, const std::string &column)
+    {
+        for (const auto &entry : DATETIME_COLUMNS)
+            if (table == entry.first && column == entry.second)
+                return true;
+        return false;
+    }
+
+    bool is_image_column(const std::string &table, const std::string &column)
+    {
+        for (const auto &entry : IMAGE_COLUMNS)
             if (table == entry.first && column == entry.second)
                 return true;
         return false;

@@ -1,4 +1,5 @@
 #include "OstXmlParser.hpp"
+#include "XmlNormalizer.hpp"
 #include "pugixml.hpp"
 #include "../Persistence/OstSchema.hpp"
 
@@ -48,21 +49,39 @@ namespace ost_import
     {
         OstRawData result;
 
-        // Attribute values are taken byte-exact as the XML parser returns them, like ElementTree in the Windows
-        // importer (ost_importer._parse_ost_xml parses the file as is; there is no pre-processing pass).
-        pugi::xml_document doc;
-        pugi::xml_parse_result parse_res = doc.load_buffer(data, length);
-        if (!parse_res)
+        // The Windows importer parses the file with ElementTree (expat, strict: ost_importer._parse_ost_xml) and takes
+        // the attribute values byte-exact. pugixml accepts nearly everything, so the bytes first go through the strict
+        // front end (IMP-M01): it rejects what expat rejects, honours the declared encoding and hands pugixml plain UTF-8.
+        NormalizedXml xml = normalize_xml(data, length);
+        if (!xml.ok)
+        {
+            result.error = xml.error;
             return result;
+        }
+
+        pugi::xml_document doc;
+        pugi::xml_parse_result parse_res = doc.load_buffer_inplace(&xml.utf8[0], xml.utf8.size(), pugi::parse_default, pugi::encoding_utf8);
+        if (!parse_res)
+        {
+            result.error = parse_res.description();
+            return result;
+        }
 
         pugi::xml_node root = doc.first_child();
         if (!root)
+        {
+            result.error = "No Bid element found in OST file";
             return result;
+        }
 
         pugi::xml_node bid_elem = root.child("Bid");
         if (!bid_elem)
+        {
+            result.error = "No Bid element found in OST file";
             return result;
+        }
 
+        result.has_bid = true;
         result.bid_row = attrs_to_row(bid_elem);
 
         for (const char *section : ost_schema::BID_SECTIONS)
