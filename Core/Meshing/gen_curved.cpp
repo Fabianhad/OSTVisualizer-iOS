@@ -1,3 +1,4 @@
+#include "../Geometry/strict_fp.hpp"
 #include "MeshGenerator.hpp"
 #include "mesh_helpers.hpp"
 #include <vector>
@@ -10,6 +11,13 @@
 namespace ost_meshing
 {
 
+    // Triangles of a curved wall / curved drop stub (rings ib, ob, it, ot of n curve points each), outward-facing (positive
+    // signed volume, like the Windows OBJ, EXP-13: the table used to be stored the other way round, inside-out).
+    // Every quad is split along the Windows diagonal (linear_geom.cpp get_curved_mesh_faces). The iOS rings are
+    // the Windows rings on the other side of the curve (the perpendicular offset points the other way in the iOS (x, z)
+    // frame): iOS ib / ob / it / ot sit where Windows ob / ib / ot / it sit, with the same curve index. The inner and
+    // outer wall quads already had the Windows diagonal; the bottom, the top and the two end quads are split the other
+    // way than the old iOS table. On a sloped wall the bottom and top quads are not planar, so this is the geometry.
     static void add_curved_faces(ost_geometry::CppMeshData &mesh, int n)
     {
         auto u = [](int v) -> uint32_t
@@ -18,26 +26,37 @@ namespace ost_meshing
 
         for (int i = 0; i < n - 1; i++)
         {
-            mesh.faces.push_back({u(ib + i), u(it + i + 1), u(ib + i + 1)});
-            mesh.faces.push_back({u(ib + i), u(it + i), u(it + i + 1)});
-            mesh.faces.push_back({u(ob + i), u(ob + i + 1), u(ot + i + 1)});
-            mesh.faces.push_back({u(ob + i), u(ot + i + 1), u(ot + i)});
-            mesh.faces.push_back({u(ib + i), u(ib + i + 1), u(ob + i + 1)});
-            mesh.faces.push_back({u(ib + i), u(ob + i + 1), u(ob + i)});
-            mesh.faces.push_back({u(it + i), u(ot + i), u(ot + i + 1)});
-            mesh.faces.push_back({u(it + i), u(ot + i + 1), u(it + i + 1)});
+            mesh.faces.push_back({u(ib + i), u(ib + i + 1), u(it + i + 1)});
+            mesh.faces.push_back({u(ib + i), u(it + i + 1), u(it + i)});
+            mesh.faces.push_back({u(ob + i), u(ot + i + 1), u(ob + i + 1)});
+            mesh.faces.push_back({u(ob + i), u(ot + i), u(ot + i + 1)});
+            mesh.faces.push_back({u(ib + i), u(ob + i), u(ib + i + 1)});
+            mesh.faces.push_back({u(ib + i + 1), u(ob + i), u(ob + i + 1)});
+            mesh.faces.push_back({u(it + i), u(it + i + 1), u(ot + i)});
+            mesh.faces.push_back({u(ot + i), u(it + i + 1), u(ot + i + 1)});
         }
 
-        mesh.faces.push_back({u(ib), u(ob), u(ot)});
-        mesh.faces.push_back({u(ib), u(ot), u(it)});
-        mesh.faces.push_back({u(ib + n - 1), u(it + n - 1), u(ot + n - 1)});
-        mesh.faces.push_back({u(ib + n - 1), u(ot + n - 1), u(ob + n - 1)});
+        mesh.faces.push_back({u(ib), u(it), u(ob)});
+        mesh.faces.push_back({u(ob), u(it), u(ot)});
+        mesh.faces.push_back({u(ib + n - 1), u(ob + n - 1), u(it + n - 1)});
+        mesh.faces.push_back({u(it + n - 1), u(ob + n - 1), u(ot + n - 1)});
     }
 
     namespace
     {
         // ---- Windows cpp_extensions/src/linear_geom/linear_geom.cpp, verbatim, in the Windows XY frame ----
         constexpr double kInf = std::numeric_limits<double>::infinity();
+
+        // The Windows `static_cast<int>(double)` of calc_adaptive_segs (MSVC x64): truncation toward zero, and INT_MIN for a
+        // value outside the int range, +-inf and NaN (the CPU's "integer indefinite"; Windows then clamps it to 6). The
+        // conversion is undefined in C++ and AppleClang arm64 saturates instead (+huge -> INT_MAX, which clamps to 64, and
+        // NaN -> 0), so an out-of-range wall would get another segment count than on Windows. Defined here, not left to the CPU.
+        int truncate_like_windows(double v)
+        {
+            if (!(v >= -2147483648.0 && v < 2147483648.0))
+                return std::numeric_limits<int>::min();
+            return static_cast<int>(v);
+        }
 
         double perp_slope(double dx, double dy)
         {
@@ -66,8 +85,8 @@ namespace ost_meshing
         bool control_is_at_an_end(double x1, double y1, double x2, double y2, double cx, double cy)
         {
             constexpr double STRAIGHT_CHORD_EPSILON = 1e-9;
-            double nearest = std::min(std::hypot(cx - x1, cy - y1), std::hypot(cx - x2, cy - y2));
-            return nearest <= STRAIGHT_CHORD_EPSILON * std::hypot(x2 - x1, y2 - y1);
+            double nearest = std::min(ost_fp::hypot(cx - x1, cy - y1), ost_fp::hypot(cx - x2, cy - y2));
+            return nearest <= STRAIGHT_CHORD_EPSILON * ost_fp::hypot(x2 - x1, y2 - y1);
         }
 
         std::vector<std::pair<double, double>> straight_chord_pts(
@@ -119,9 +138,9 @@ namespace ost_meshing
             }
             if (found)
             {
-                double r1 = std::hypot(ctr_x - x1, ctr_y - y1);
-                double r2 = std::hypot(ctr_x - x2, ctr_y - y2);
-                double rc = std::hypot(ctr_x - cx, ctr_y - cy);
+                double r1 = ost_fp::hypot(ctr_x - x1, ctr_y - y1);
+                double r2 = ost_fp::hypot(ctr_x - x2, ctr_y - y2);
+                double rc = ost_fp::hypot(ctr_x - cx, ctr_y - cy);
                 if (std::abs(r1 - r2) < 0.1 && std::abs(r1 - rc) < 0.1)
                 {
                     double r = r1;
@@ -170,15 +189,17 @@ namespace ost_meshing
     int calc_curve_segments(double x1, double z1, double x2, double z2,
                             double cx, double cz)
     {
-        double chord_d = std::hypot(x2 - x1, z2 - z1);
-        double curve_d = (std::hypot(cx - x1, cz - z1) + std::hypot(x2 - cx, z2 - cz)) * 0.8;
-        int base_s = std::clamp(static_cast<int>(std::max(chord_d, curve_d) / 5.0), 6, 64);
+        double chord_d = ost_fp::hypot(x2 - x1, z2 - z1);
+        double curve_d = (ost_fp::hypot(cx - x1, cz - z1) + ost_fp::hypot(x2 - cx, z2 - cz)) * 0.8;
+        int base_s = std::clamp(truncate_like_windows(std::max(chord_d, curve_d) / 5.0), 6, 64);
         if (chord_d > 0)
         {
             double dx = x2 - x1, dz = z2 - z1;
             double t = std::clamp(((cx - x1) * dx + (cz - z1) * dz) / (dx * dx + dz * dz), 0.0, 1.0);
-            double offset = std::hypot(cx - (x1 + t * dx), cz - (z1 + t * dz));
-            base_s += static_cast<int>(offset / 5.0);
+            double offset = ost_fp::hypot(cx - (x1 + t * dx), cz - (z1 + t * dz));
+            // The sum wraps like the Windows int addition (two's complement) instead of overflowing signed.
+            base_s = static_cast<int>(static_cast<unsigned>(base_s) +
+                                      static_cast<unsigned>(truncate_like_windows(offset / 5.0)));
         }
         return std::clamp(base_s, 6, 64);
     }
@@ -196,7 +217,7 @@ namespace ost_meshing
         int n = static_cast<int>(curve_pts.size());
         if (n < 2)
             return mesh;
-        double chord_len = std::hypot(x2 - x1, z2 - z1);
+        double chord_len = ost_fp::hypot(x2 - x1, z2 - z1);
         auto slope = compute_slope(rise, run, chord_len);
 
         double half_t = thickness * 0.5;
@@ -222,8 +243,16 @@ namespace ost_meshing
                 tx = ((px - curve_pts[i - 1].first) + (curve_pts[i + 1].first - px)) * 0.5;
                 tz = ((pz - curve_pts[i - 1].second) + (curve_pts[i + 1].second - pz)) * 0.5;
             }
-            double tlen = std::hypot(tx, tz);
-            if (tlen > 0) // Windows gen_curved_wall_pts: any non-zero tangent is normalised (also a numerically tiny one)
+            double tlen = ost_fp::hypot(tx, tz);
+            // Windows gen_curved_wall_pts: exactly 0 is left alone (the wall pinches to the centre line), any other
+            // tangent is normalised, a numerically tiny one too. The 7-value zero-length chord with a stored control
+            // point (a Bezier loop out and back along one segment) has an apex tangent that is pure rounding residue:
+            // -4.44e-16 when every operation is rounded (Windows, MSVC, this file built with strict_fp.hpp) but exactly 0
+            // when the compiler fuses u*u*x1 + 2*u*t*cx + t*t*x2 into fma (AppleClang arm64 -Os without the pragma): the
+            // wall then lost its half-width at that one sample (first CI run, CurvedMesh.CentreLineMatchesTheWindows
+            // MeshOnTheOracleCases, zero_len_7 sample 3: 0 instead of 3). The rule must stay `> 0` together with strict
+            // arithmetic: an epsilon or a fallback direction here would differ from Windows.
+            if (tlen > 0)
             {
                 tx /= tlen;
                 tz /= tlen;
@@ -271,20 +300,17 @@ namespace ost_meshing
             return mesh;
 
         int n_full = static_cast<int>(full_mesh.vertices.size() / 4);
+        // Windows measures the stub length on the centre-line points of the wall itself (all_pts, sqrt(dx**2 + dy**2)),
+        // not on the midpoints of the offset rings: those carry rounding noise, and `arc_len >= thickness` flips on
+        // exact cases (a 21,72 chord with thickness 25 keeps one sample more or less than Windows).
+        const auto centre = generate_curve_points(x1, z1, x2, z2, cx, cz, calc_curve_segments(x1, z1, x2, z2, cx, cz));
         double arc_len = 0.0;
         int k = 0;
         for (int i = n_full - 2; i >= 0; --i)
         {
-            const auto &ib0 = full_mesh.vertices[i];
-            const auto &ob0 = full_mesh.vertices[n_full + i];
-            const auto &ib1 = full_mesh.vertices[i + 1];
-            const auto &ob1 = full_mesh.vertices[n_full + i + 1];
-
-            double px0 = (ib0[0] + ob0[0]) * 0.5;
-            double pz0 = (ib0[2] + ob0[2]) * 0.5;
-            double px1 = (ib1[0] + ob1[0]) * 0.5;
-            double pz1 = (ib1[2] + ob1[2]) * 0.5;
-            arc_len += std::hypot(px1 - px0, pz1 - pz0);
+            double dx = centre[static_cast<size_t>(i) + 1].first - centre[static_cast<size_t>(i)].first;
+            double dz = centre[static_cast<size_t>(i) + 1].second - centre[static_cast<size_t>(i)].second;
+            arc_len += std::sqrt(dx * dx + dz * dz);
             if (arc_len >= thickness)
             {
                 k = i;

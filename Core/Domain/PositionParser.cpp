@@ -1111,6 +1111,10 @@ namespace ost_domain
         // converts the exact int). False where Python raises OverflowError (value beyond the float range).
         bool feet_digits_to_inches(const std::string &digits, double &out)
         {
+            // Python 3.11 int(str) refuses more than 4300 decimal digits (sys.int_info.default_max_str_digits, leading
+            // zeros included) with a ValueError, which the Windows MDB reader catches (-> (0.0, False)).
+            if (digits.size() > 4300)
+                return false;
             std::string product;
             int carry = 0;
             for (size_t i = digits.size(); i-- > 0;)
@@ -1467,6 +1471,21 @@ namespace ost_domain
         return py_float(decode_utf8(text), out);
     }
 
+    std::u32string py_decode_utf8(const std::string &text)
+    {
+        return decode_utf8(text);
+    }
+
+    bool py_is_space(char32_t c)
+    {
+        return is_space(c);
+    }
+
+    int py_decimal_value(char32_t c)
+    {
+        return decimal_value(c);
+    }
+
     // -------------------------------------------------------------------------------------------------------------
     // Elevations
     // -------------------------------------------------------------------------------------------------------------
@@ -1579,5 +1598,15 @@ namespace ost_domain
             return true;
         }
         return true;
+    }
+
+    void derive_elevation_from_name(const std::string &name, double &z_inches, bool &is_top)
+    {
+        // bid_data_reader.py:896-906: `except ValueError: z_value, is_top = 0.0, False`
+        if (!extract_z_value_from_name(name, z_inches, is_top))
+        {
+            z_inches = 0.0;
+            is_top = false;
+        }
     }
 }

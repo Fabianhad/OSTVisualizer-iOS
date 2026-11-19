@@ -1030,6 +1030,14 @@ namespace ost_domain
     // Groups takeoffs by condition, sums per-takeoff quantities for each condition.
     // Matches desktop compute_page_quantities().
 
+    // Parent tokens that make a takeoff a root in the page quantities: '', '0' and the literal
+    // 'None' (Windows condition_quantity_service.py compute_page_quantities). Only the page
+    // quantities use this 3-token set; Takeoff::is_hole() keeps '' and '0' (user decision, QTY-18).
+    inline bool is_quantity_root_parent(const std::string &parent_uid)
+    {
+        return parent_uid.empty() || parent_uid == "0" || parent_uid == "None";
+    }
+
     inline std::unordered_map<std::string, QuantityResult> compute_page_quantities(
         const std::unordered_map<std::string, Condition> &conditions,
         const std::vector<Takeoff> &takeoffs)
@@ -1044,7 +1052,7 @@ namespace ost_domain
         std::unordered_map<std::string, std::vector<const Takeoff *>> holes_by_parent;
         for (const auto &t : takeoffs)
         {
-            if (t.is_hole())
+            if (!is_quantity_root_parent(t.parent_uid))
                 holes_by_parent[t.parent_uid].push_back(&t);
         }
 
@@ -1071,7 +1079,7 @@ namespace ost_domain
             {
                 // Only AREA takeoffs with a parent are holes (accounted for under their parent);
                 // every other condition type counts every takeoff, e.g. an attachment placed on an area.
-                if (cdn.is_area() && t->is_hole())
+                if (cdn.is_area() && !is_quantity_root_parent(t->parent_uid))
                     continue;
 
                 // Gather the area holes and attachment dimensions of this takeoff's children.

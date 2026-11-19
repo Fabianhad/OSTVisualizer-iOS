@@ -1,3 +1,4 @@
+#include "../Geometry/strict_fp.hpp"
 #include "MeshGenerator.hpp"
 #include "mesh_helpers.hpp"
 
@@ -12,7 +13,7 @@ namespace ost_meshing
         ost_geometry::CppMeshData mesh;
 
         double dx = x2 - x1, dz = z2 - z1;
-        double h_len = std::hypot(dx, dz);
+        double h_len = ost_fp::hypot(dx, dz);
         if (h_len < 0.001)
             return mesh;
 
@@ -49,7 +50,7 @@ namespace ost_meshing
             {x2 + px, yt_e, z2 + pz},
         };
 
-        add_box_faces(mesh);
+        add_box_faces(mesh, wall_windows_to_ios());
         return mesh;
     }
 
@@ -64,7 +65,7 @@ namespace ost_meshing
             return mesh;
 
         double dx = x2 - x1, dz = z2 - z1;
-        double seg_len = std::hypot(dx, dz);
+        double seg_len = ost_fp::hypot(dx, dz);
         if (seg_len < 0.001)
             return mesh;
 
@@ -122,7 +123,7 @@ namespace ost_meshing
             {ex + px, yt_e, ez + pz},
         };
 
-        add_box_faces(mesh);
+        add_box_faces(mesh, wall_windows_to_ios());
         return mesh;
     }
 

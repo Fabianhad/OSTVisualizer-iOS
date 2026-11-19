@@ -39,6 +39,13 @@ namespace ost_domain
     // overflow gives +-inf and underflow 0.0. Returns false where Python raises ValueError.
     bool parse_python_float(const std::string &text, double &out);
 
+    // The Python text primitives behind the above, for other Domain code that ports a Windows regex or strip()
+    // (DimensionFormat.cpp): UTF-8 -> code points (an invalid byte becomes U+FFFD), str.isspace() (== the regex \s)
+    // and the value 0..9 of a Unicode decimal digit (str.isdecimal() == the regex \d), or -1.
+    std::u32string py_decode_utf8(const std::string &text);
+    bool py_is_space(char32_t c);
+    int py_decimal_value(char32_t c);
+
     // ---------------------------------------------------------------------------------------------------------
     // Condition-name elevations ("Wall @T 12' 6 1/2\"")
     // ---------------------------------------------------------------------------------------------------------
@@ -80,4 +87,10 @@ namespace ost_domain
     // denominator, e.g. "Wall @B 1/0\""): the Windows MDB reader then logs a warning and stores (0.0, false).
     bool extract_z_value_from_name(const std::string &name, double &z_inches, bool &is_top,
                                    std::string *error = nullptr);
+
+    // The elevation a condition carries in memory, DERIVED FROM ITS NAME: the one derivation shared by the loader (ProjectStore load,
+    // bid_data_reader.py:896-906) and by a Save of the Edit Condition dialog (condition_to_save, COND-ELEV-01), so that the condition
+    // a Save leaves in memory has the is_top and z_value a reload gives. = extract_z_value_from_name, and (0.0, false) for a name
+    // Windows cannot read (the ValueError the Windows reader catches, logs and replaces by (0.0, False)).
+    void derive_elevation_from_name(const std::string &name, double &z_inches, bool &is_top);
 }

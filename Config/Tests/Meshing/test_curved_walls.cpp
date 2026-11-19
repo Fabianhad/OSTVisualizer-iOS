@@ -7,8 +7,10 @@
 #include "WindowsOracles.hpp"
 
 #include "Domain/UomService.hpp"
+#include "Geometry/strict_fp.hpp"
 
 #include <cmath>
+#include <limits>
 #include <string>
 
 using namespace mesh_test;
@@ -106,6 +108,46 @@ TEST(CurvedSegments, MatchesWindowsCalcCurveSegsOnTheOracleTable)
     {
         SCOPED_CONTEXT("case " + std::to_string(i++));
         CHECK_EQ(segs_w(c.x1, c.y1, c.x2, c.y2, c.cx, c.cy), c.segs);
+    }
+}
+
+TEST(CurvedSegments, OutOfRangeAndNonFiniteDistancesGiveTheWindowsCount)
+{
+    // Windows calc_adaptive_segs does static_cast<int>(distance / 5): undefined in C++ for a value outside the int range,
+    // +-inf and NaN. MSVC x64 gives INT_MIN there (Windows clamps it to 6; the sum base + INT_MIN or a sum past INT_MAX
+    // wraps and clamps to 6 as well), AppleClang arm64 saturates (+huge -> INT_MAX -> 64, NaN -> 0). Counts computed by
+    // running ost_linear_geom.calc_curve_segs (x1, y1, x2, y2, cx, cy) read-only; the same on every compiler here.
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    struct Case
+    {
+        double p[6];
+        int segs;
+    };
+    const Case cases[] = {
+        {{0, 0, 1e12, 0, 5e11, 1e11}, 6},        // chord / 5 far past INT_MAX
+        {{0, 0, 1e10, 0, 5e9, 0}, 64},           // 2e9: still in range
+        {{0, 0, 1.1e10, 0, 5e9, 0}, 6},          // 2.2e9: out of range
+        {{0, 0, 100, 0, 50, 1e11}, 6},           // offset / 5 out of range
+        {{0, 0, 100, 0, 50, 2e10}, 6},           //
+        {{0, 0, 100, 0, 50, 1e10}, 64},          // offset / 5 = 2e9 in range: 6 + 2e9 clamps to 64
+        {{0, 0, 1e308, 0, 5e307, 1e308}, 6},     //
+        {{0, 0, inf, 0, 5, 5}, 6},               //
+        {{0, 0, 100, 0, nan, 5}, 6},             //
+        {{0, 0, 100, 0, 50, inf}, 6},            //
+        {{0, 0, 1e10, 0, 5e9, 1e10}, 64},        //
+        {{0, 0, 100, 0, 50, 10737417000.0}, 64}, // offset / 5 = 2147483400: the sum 6 + 2147483400 still fits
+        {{0, 0, 100, 0, 50, 10737418000.0}, 64}, //
+        {{0, 0, 100, 0, 50, 10737418210.0}, 6},  // offset / 5 = 2147483642: 6 + that passes INT_MAX and wraps negative
+        {{0, 0, 100, 0, 50, 10737418220.0}, 6},  //
+        {{0, 0, 100, 0, 50, 10737418235.0}, 6},  //
+        {{0, 0, 100, 0, 50, 10737418240.0}, 6},  // offset / 5 = 2^31: out of range
+    };
+    int i = 0;
+    for (const auto &c : cases)
+    {
+        SCOPED_CONTEXT("case " + std::to_string(i++));
+        CHECK_EQ(segs_w(c.p[0], c.p[1], c.p[2], c.p[3], c.p[4], c.p[5]), c.segs);
     }
 }
 
@@ -375,6 +417,41 @@ TEST(CurvedMesh, CentreLineMatchesTheWindowsMeshOnTheOracleCases)
     }
 }
 
+TEST(CurvedMesh, SevenValueOffsetOnTheSegmentCountBoundaryMatchesWindows)
+{
+    // The 7-value form rebuilds the control point as chord midpoint + perpendicular offset, so an offset that is a
+    // multiple of 5 puts int(offset / 5) of the segment count exactly on a boundary and the last bit of the control point
+    // decides between n and n + 1 segments. Windows rounds every operation; a compiler that fuses a * b + c (AppleClang on
+    // arm64) gave 4 vertices more on these inputs. Expected: the vertex count of the Windows MeshFactory curved wall
+    // (4 * (segments + 1)) for integer chords with an offset of 5, 20, 25 and 30.
+    struct Case
+    {
+        double p[7];
+        size_t vertices;
+    };
+    const Case cases[] = {
+        {{57.0, 17.0, 20.0, 43.0, 8.0, 60.0, 20.0}, 52},
+        {{-11.0, 46.0, -12.0, 57.0, 18.0, -3.0, 5.0}, 28},
+        {{26.0, 10.0, 7.0, 22.0, 53.0, -37.0, 25.0}, 52},
+        {{42.0, -19.0, -19.0, 24.0, -11.0, -39.0, 20.0}, 72},
+        {{-14.0, 14.0, -33.0, 21.0, 6.0, 32.0, 30.0}, 64},
+        {{18.0, 36.0, -37.0, -11.0, 41.0, -18.0, 30.0}, 84},
+    };
+    for (const auto &c : cases)
+    {
+        SCOPED_CONTEXT("offset " + std::to_string(c.p[6]) + " chord from " + std::to_string(c.p[0]) + "," +
+                       std::to_string(c.p[1]));
+        Condition cond = make_condition("c", ConditionType::Linear);
+        cond.height = 96.0;
+        cond.thickness = 6.0;
+        Takeoff t = make_takeoff("t", "c", "p", {c.p[0], c.p[1], c.p[2], c.p[3], c.p[4], c.p[5], c.p[6]});
+        t.curve = 0;
+        auto r = ost_meshing::create_mesh_for_takeoff(t, cond, 1.0);
+        REQUIRE(r.valid);
+        CHECK_EQ(r.mesh.vertices.size(), c.vertices);
+    }
+}
+
 TEST(CurvedMesh, MajorArcRouteLengthThroughTheFactory)
 {
     // MSH-06 plan: centre (500,500), R = 100, start 0, control 250, end 251: Windows centre line 437.7 (analytic
@@ -398,4 +475,128 @@ TEST(CurvedMesh, MajorArcRouteLengthThroughTheFactory)
         len += std::hypot(bx - ax, bz - az);
     }
     CHECK_NEAR(len, 437.7, 0.5);
+}
+
+// ---------------------------------------------------------------- plain hypot (second review)
+TEST(StrictFp, HypotIsTheSquareRootOfTheSumOfSquaresAndSurvivesTheExtremes)
+{
+    // ost_fp::hypot replaces std::hypot in the meshing code (the MSVC CRT of the Windows build returns exactly
+    // sqrt(x * x + y * y); other libms round the last bit differently and moved the curved wall segment count).
+    CHECK_EQ(ost_fp::hypot(3.0, 4.0), 5.0);
+    CHECK_EQ(ost_fp::hypot(-6.0, 8.0), 10.0);
+    CHECK_EQ(ost_fp::hypot(0.0, 0.0), 0.0);
+    CHECK_EQ(ost_fp::hypot(0.0, -7.5), 7.5);
+    const double xs[] = {0.1, 12.345, -3.7, 1e5 / 3.0, 1e-3};
+    for (double x : xs)
+        for (double y : xs)
+            CHECK_EQ(ost_fp::hypot(x, y), std::sqrt(x * x + y * y));
+    // where the plain form overflows / underflows / is not a number, std::hypot decides
+    CHECK_EQ(ost_fp::hypot(1e200, 1e200), std::hypot(1e200, 1e200));
+    CHECK(std::isfinite(ost_fp::hypot(1e200, 1e200)));
+    CHECK_EQ(ost_fp::hypot(1e-200, 1e-200), std::hypot(1e-200, 1e-200));
+    CHECK(ost_fp::hypot(1e-200, 1e-200) > 0.0);
+    CHECK(std::isnan(ost_fp::hypot(std::nan(""), 1.0)));
+    CHECK(std::isinf(ost_fp::hypot(std::numeric_limits<double>::infinity(), 1.0)));
+}
+
+// ---------------------------------------------------------------- drop stub length (second review)
+TEST(CurvedDropStub, StubLengthIsMeasuredOnTheCentreLineLikeWindows)
+{
+    // Windows MeshGenerator.generate_curved_drop_stub_mesh measures the stub length on the centre-line points of the
+    // wall (sqrt(dx**2 + dy**2), `arc_len >= thickness`). Chords whose steps add up to exactly the thickness sit on that
+    // threshold; the midpoints of the offset rings carry rounding noise and kept one sample more or less than Windows
+    // (24 / 24 / 16 vertices instead of 28 / 20 / 12). Expected vertices: the Windows stub of each case (Windows frame),
+    // compared as a set (the iOS offset rings are the mirror image of the Windows ones).
+    struct Case
+    {
+        const char *name;
+        double p[6];
+        double thickness, drop, z_offset, height, rise, run;
+        size_t faces;
+        std::vector<V3> windows;
+    };
+    const Case cases[] = {
+        {"7-24-25 chord x3, control at the start, thickness 25",
+         {5.0, 13.0, 26.0, 85.0, 5.0, 13.0}, 25.0, 12.0, 96.0, 1.0, 0.0, 1.0, 52,
+         {
+            {-29.6, 52.7, 97.0},
+            {-31.0, 57.5, 97.0},
+            {-32.4, 62.3, 97.0},
+            {-33.8, 67.1, 97.0},
+            {-35.2, 71.9, 97.0},
+            {-36.599999999999994, 76.69999999999999, 97.0},
+            {-38.0, 81.5, 97.0},
+            {-5.600000000000001, 59.7, 97.0},
+            {-7.0, 64.5, 97.0},
+            {-8.399999999999999, 69.3, 97.0},
+            {-9.8, 74.1, 97.0},
+            {-11.200000000000003, 78.9, 97.0},
+            {-12.599999999999998, 83.69999999999999, 97.0},
+            {-13.999999999999998, 88.5, 97.0},
+            {-29.6, 52.7, 109.0},
+            {-31.0, 57.5, 109.0},
+            {-32.4, 62.3, 109.0},
+            {-33.8, 67.1, 109.0},
+            {-35.2, 71.9, 109.0},
+            {-36.599999999999994, 76.69999999999999, 109.0},
+            {-38.0, 81.5, 109.0},
+            {-5.600000000000001, 59.7, 109.0},
+            {-7.0, 64.5, 109.0},
+            {-8.399999999999999, 69.3, 109.0},
+            {-9.8, 74.1, 109.0},
+            {-11.200000000000003, 78.9, 109.0},
+            {-12.599999999999998, 83.69999999999999, 109.0},
+            {-13.999999999999998, 88.5, 109.0}
+         }},
+        {"3-4-5 chord x3, control near the middle, thickness 10, negative drop with slope",
+         {-18.0, 11.0, -9.0, 23.0, -13.5, 17.0}, 10.0, -1.5, 5.0, 10.0, 1.0, 1.0, 36,
+         {
+            {11.000000000000002, 12.0, 8.5},
+            {9.500000000000002, 13.999999999999998, 11.0},
+            {8.0, 16.0, 13.5},
+            {6.5, 18.0, 16.0},
+            {5.0, 20.0, 18.5},
+            {19.0, 18.000000000000004, 8.5},
+            {17.5, 20.0, 11.0},
+            {16.0, 22.0, 13.5},
+            {14.5, 24.0, 16.0},
+            {13.0, 26.0, 18.5},
+            {11.000000000000002, 12.0, 10.0},
+            {9.500000000000002, 13.999999999999998, 12.5},
+            {8.0, 16.0, 15.0},
+            {6.5, 18.0, 17.5},
+            {5.0, 20.0, 20.0},
+            {19.0, 18.000000000000004, 10.0},
+            {17.5, 20.0, 12.5},
+            {16.0, 22.0, 15.0},
+            {14.5, 24.0, 17.5},
+            {13.0, 26.0, 20.0}
+         }},
+        {"12-5-13 chord x5, control off the chord, thickness 10",
+         {13.0, -14.0, 73.0, 11.0, 43.0, -1.5}, 10.0, 12.0, 0.0, 1.0, 0.0, 0.0, 20,
+         {
+            {-65.6923076923077, 2.538461538461539, 1.0},
+            {-70.3076923076923, 4.461538461538463, 1.0},
+            {-74.92307692307692, 6.384615384615384, 1.0},
+            {-61.84615384615385, 11.76923076923077, 1.0},
+            {-66.46153846153847, 13.692307692307693, 1.0},
+            {-71.07692307692308, 15.615384615384617, 1.0},
+            {-65.6923076923077, 2.538461538461539, 13.0},
+            {-70.3076923076923, 4.461538461538463, 13.0},
+            {-74.92307692307692, 6.384615384615384, 13.0},
+            {-61.84615384615385, 11.76923076923077, 13.0},
+            {-66.46153846153847, 13.692307692307693, 13.0},
+            {-71.07692307692308, 15.615384615384617, 13.0}
+         }},
+    };
+    for (const auto &c : cases)
+    {
+        SCOPED_CONTEXT(c.name);
+        // MeshFactory frame: (x, z) = (-x_ost, -y_ost)
+        Mesh m = ost_meshing::generate_curved_drop_stub_mesh(-c.p[0], -c.p[1], -c.p[2], -c.p[3], -c.p[4], -c.p[5],
+                                                             c.thickness, c.drop, c.z_offset, c.height, c.rise, c.run);
+        REQUIRE_EQ(m.vertices.size(), c.windows.size());
+        CHECK_EQ(m.faces.size(), c.faces);
+        CHECK(vertex_sets_equal(m.vertices, to_ios_all(c.windows), 1e-9));
+    }
 }

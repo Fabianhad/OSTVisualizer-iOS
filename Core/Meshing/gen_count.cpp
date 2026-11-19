@@ -1,3 +1,4 @@
+#include "../Geometry/strict_fp.hpp"
 #include "MeshGenerator.hpp"
 #include "mesh_helpers.hpp"
 #include <array>
@@ -17,7 +18,7 @@ namespace ost_meshing
         double hw = width / 2.0, hd = depth / 2.0;
         double corners[4][2] = {
             {-hw, -hd}, {hw, -hd}, {hw, hd}, {-hw, hd}};
-        if (std::abs(rotation) > 1e-9)
+        if (rotation != 0.0) // Windows calc_count_mesh_verts: `rotation != 0`, no tolerance (a 1e-10 rad turn is applied)
         {
             double cos_r = std::cos(rotation), sin_r = std::sin(rotation);
             for (int ci = 0; ci < 4; ci++)
@@ -37,7 +38,7 @@ namespace ost_meshing
             mesh.vertices[i + 4] = {tx, y_t, tz};
         }
 
-        add_box_faces(mesh);
+        add_box_faces(mesh, count_box_windows_to_ios());
         return mesh;
     }
 
@@ -62,7 +63,7 @@ namespace ost_meshing
             double px = rx * std::cos(a);
             double pz = rx * std::sin(a);
 
-            if (std::abs(rotation) > 1e-9)
+            if (rotation != 0.0) // Windows calc_circ_pts: `rot != 0`, no tolerance
             {
                 double cos_r = std::cos(rotation), sin_r = std::sin(rotation);
                 double rpx = px * cos_r - pz * sin_r;
@@ -93,10 +94,16 @@ namespace ost_meshing
             uint32_t ujn = static_cast<uint32_t>(j + n);
             uint32_t ubc = static_cast<uint32_t>(bc);
             uint32_t utc = static_cast<uint32_t>(tc);
-            mesh.faces.push_back({ubc, uj, ui});
-            mesh.faces.push_back({utc, uin, ujn});
-            mesh.faces.push_back({ui, uj, ujn});
-            mesh.faces.push_back({ui, ujn, uin});
+            // Outward-facing winding (positive signed volume), what the Windows OBJ has for a circle (EXP-13): the points
+            // run towards +z with the angle, so the bottom cap (centre, i, j) and the top cap (centre, j, i) are seen
+            // from outside counter-clockwise.
+            mesh.faces.push_back({ubc, ui, uj});
+            mesh.faces.push_back({utc, ujn, uin});
+            // The side quad is split along the Windows diagonal (get_radial_mesh_faces: bottom point k to top point k + 1).
+            // iOS point i is the Windows point (n - i) % n (the circle runs the other way round in the iOS (x, z) frame),
+            // so the Windows diagonal is iOS bottom point j to top point i.
+            mesh.faces.push_back({ui, uin, uj});
+            mesh.faces.push_back({uj, uin, ujn});
         }
 
         return mesh;

@@ -259,6 +259,35 @@ TEST(ElevationCore, NamesWithAValidElevationSucceed)
     CHECK_EQ(top, false);
 }
 
+TEST(ElevationCore, AFeetRunOfMoreThan4300DigitsIsAValueErrorLeadingZerosCounting)
+{
+    // Not in the Windows tests: values computed by running Windows extract_z_value_from_name (Python 3.11.4).
+    // int(feet_str) refuses more than 4300 digits (sys.int_info.default_max_str_digits) with a ValueError, leading
+    // zeros included; the Windows MDB reader catches it and stores (0.0, False). 4300 digits are still read.
+    const std::string at_limit(4299, '0');
+    const std::string over_limit(4300, '0');
+    double z = 0.0;
+    bool top = false;
+    CHECK(extract_z_value_from_name("Wall @T " + at_limit + "5' 0\"", z, top));
+    CHECK_EQ(z, 60.0);
+    CHECK_EQ(top, true);
+    CHECK(extract_z_value_from_name("Wall @T " + at_limit + "5'x", z, top));
+    CHECK_EQ(z, 60.0);
+    CHECK_EQ(top, true);
+    CHECK_FALSE(extract_z_value_from_name("Wall @T " + over_limit + "5' 0\"", z, top));
+    CHECK_EQ(z, 0.0);
+    CHECK_EQ(top, false);
+    CHECK_FALSE(extract_z_value_from_name("Wall @T " + over_limit + "5'x", z, top));
+    CHECK_FALSE(extract_z_value_from_name("Wall @T -" + over_limit + "5'x", z, top));
+    // only int() has the limit: float() parts (inches, fractions) and the metric values do not
+    CHECK(extract_z_value_from_name("Wall @T 5' " + over_limit + "6\"", z, top));
+    CHECK_EQ(z, 66.0);
+    CHECK(extract_z_value_from_name("Wall @T " + over_limit + "6\"", z, top));
+    CHECK_EQ(z, 6.0);
+    CHECK(extract_z_value_from_name("Wall @T " + over_limit + "6 m", z, top));
+    CHECK_EQ(z, 236.2204724409449);
+}
+
 // ---------------------------------------------------------------------------------------------------------
 // ImperialElevationParsingTests / MetricElevationParsingTests
 // ---------------------------------------------------------------------------------------------------------

@@ -5,13 +5,13 @@
 //
 // Items: QTY-01 (non-area takeoffs with a parent_uid), QTY-02 (attachment footprint/perimeter),
 // QTY-03 (child filtering by condition type and page), QTY-04 (rounding forwarded from the
-// condition, applied per takeoff before the sign), QTY-17 (unsupported condition types).
+// condition, applied per takeoff before the sign), QTY-17 (unsupported condition types),
+// QTY-18 (the literal parent token 'None' is a root parent in the page quantities, as '' and '0'
+// are; user decision: only compute_page_quantities uses this 3-token set, Takeoff::is_hole()
+// keeps its 2-token rule).
 //
 // Not ported on purpose:
-//  - tests that need only_condition_uids / compute_takeoff_cubic_yards / log capture (no iOS API);
-//  - the literal parent token 'None' (QTY-18 is a needs-decision item: the iOS 2-token root rule
-//    is kept; see ConditionQuantityRootSentinelTests and the 'none-parent' takeoff of
-//    test_backouts_are_subtracted_only_from_their_parent_and_never_counted_as_primaries).
+//  - tests that need only_condition_uids / compute_takeoff_cubic_yards / log capture (no iOS API).
 #include "QtyHelpers.hpp"
 
 #include <cmath>
@@ -143,7 +143,7 @@ TEST(Qty01_NonAreaParents, ImportedAttachmentCountAndLinearOnAnAreaScenario)
 }
 
 // Port of tests/domain/services/test_condition_quantity_service.py::ConditionQuantityServiceExactTests::test_backouts_are_subtracted_only_from_their_parent_and_never_counted_as_primaries
-// without the 'none-parent' takeoff (parent token 'None': QTY-18, needs a user decision).
+// (QTY-18: the 'none-parent' takeoff, parent token 'None', is a root like the blank parent).
 TEST(Qty01_NonAreaParents, BackoutsAreSubtractedOnlyFromTheirParentAndNeverCountedAsPrimaries)
 {
     CondMap conditions = cond_map({exact_area_condition()});
@@ -151,10 +151,11 @@ TEST(Qty01_NonAreaParents, BackoutsAreSubtractedOnlyFromTheirParentAndNeverCount
         make_takeoff("p1", "a", {0, 0, 10, 0, 10, 10, 0, 10}, "pg"),
         make_takeoff("p2", "a", {0, 0, 10, 0, 10, 10, 0, 10}, "pg"),
         make_takeoff("h", "a", {0, 0, 2, 0, 2, 2, 0, 2}, "pg", "p1"),
+        make_takeoff("none-parent", "a", {0, 0, 1, 0, 1, 1, 0, 1}, "pg", "None"),
         make_takeoff("blank-parent", "a", {0, 0, 1, 0, 1, 1, 0, 1}, "pg", ""),
     };
-    // p1 (100 - 4) + p2 (100) + one root-like blank parent of 1.
-    CHECK_EQ(at(compute_page_quantities(conditions, takeoffs), "a").q1, 96.0 + 100.0 + 1.0);
+    // p1 (100 - 4) + p2 (100) + two root-like parents of 1 each.
+    CHECK_EQ(at(compute_page_quantities(conditions, takeoffs), "a").q1, 96.0 + 100.0 + 1.0 + 1.0);
 }
 
 // ============================================================================================
@@ -605,7 +606,6 @@ TEST(Qty00_PageRegression, AnAreaTakeoffWhoseParentIsNotOnThePageIsNotCounted)
 }
 
 // Port of tests/domain/services/test_condition_quantity_service.py::ConditionQuantityRootSentinelTests::test_a_takeoff_with_a_blank_uid_does_not_adopt_the_blank_parent_roots_as_holes
-// (the other test of that class needs the parent token 'None': QTY-18, needs a user decision).
 TEST(Qty00_PageRegression, ATakeoffWithABlankUidDoesNotAdoptTheBlankParentRootsAsHoles)
 {
     Condition condition = make_condition("a", ConditionType::Area, 11, UOM_SQUARE_INCHES);
@@ -615,6 +615,127 @@ TEST(Qty00_PageRegression, ATakeoffWithABlankUidDoesNotAdoptTheBlankParentRootsA
         make_takeoff("r2", "a", {0, 0, 2, 0, 2, 2, 0, 2}, "pg", ""),
     };
     CHECK_EQ(at(compute_page_quantities(cond_map({condition}), takeoffs), "a").q1, 100.0 + 4.0 + 4.0);
+}
+
+// ============================================================================================
+// QTY-18: the parent token 'None' is a root parent in compute_page_quantities ('', '0', 'None').
+// Takeoff::is_hole() keeps the 2-token rule ('', '0'); that is the user's decision.
+// ============================================================================================
+
+// Port of tests/domain/services/test_condition_quantity_service.py::ConditionQuantityRootSentinelTests::test_root_sentinel_parents_never_make_a_takeoff_the_hole_of_a_takeoff_named_like_the_sentinel
+TEST(Qty18_NoneParentToken, RootSentinelParentsNeverMakeATakeoffTheHoleOfATakeoffNamedLikeTheSentinel)
+{
+    Condition condition = make_condition("a", ConditionType::Area, 11, UOM_SQUARE_INCHES);
+    std::vector<Takeoff> takeoffs = {
+        make_takeoff("0", "a", SQUARE_10, "pg", ""),
+        make_takeoff("None", "a", SQUARE_10, "pg", ""),
+    };
+    const char *parents[] = {"0", "None", "0"};
+    for (int i = 0; i < 3; ++i)
+        takeoffs.push_back(make_takeoff("r" + std::to_string(i), "a", {0, 0, 2, 0, 2, 2, 0, 2}, "pg", parents[i]));
+    // Windows 212.0 (the 'None' root r1 counts; iOS had 204 because it was skipped as a hole).
+    CHECK_EQ(at(compute_page_quantities(cond_map({condition}), takeoffs), "a").q1, 100.0 + 100.0 + 3 * 4.0);
+}
+
+// Windows (read-only run of compute_page_quantities): only the exact token 'None' is a root.
+// Other spellings are real parent uids; their takeoff is a hole of a takeoff that does not
+// exist, so it is not counted (Windows 100.0 with the 100 SQ IN root p).
+TEST(Qty18_NoneParentToken, OnlyTheExactTokenNoneIsARootParent)
+{
+    Condition condition = make_condition("a", ConditionType::Area, 11, UOM_SQUARE_INCHES);
+    for (const char *token : {"none", "NONE", "None ", " None", "null", "True"})
+    {
+        SCOPED_CONTEXT(std::string("parent '") + token + "'");
+        std::vector<Takeoff> takeoffs = {
+            make_takeoff("p", "a", SQUARE_10, "pg", "0"),
+            make_takeoff("x", "a", {0, 0, 1, 0, 1, 1, 0, 1}, "pg", token),
+        };
+        CHECK_EQ(at(compute_page_quantities(cond_map({condition}), takeoffs), "a").q1, 100.0);
+    }
+}
+
+// Windows: a 'None'-parent takeoff alone counts (100.0); a negative one subtracts (100 - 4 = 96.0).
+TEST(Qty18_NoneParentToken, ANoneParentAreaTakeoffCountsAndKeepsItsSign)
+{
+    Condition condition = make_condition("a", ConditionType::Area, 11, UOM_SQUARE_INCHES);
+    CHECK_EQ(at(compute_page_quantities(cond_map({condition}), {make_takeoff("x", "a", SQUARE_10, "pg", "None")}), "a").q1,
+             100.0);
+    std::vector<Takeoff> takeoffs = {
+        make_takeoff("p", "a", SQUARE_10, "pg", "0"),
+        make_takeoff("n", "a", {0, 0, 2, 0, 2, 2, 0, 2}, "pg", "None", true),
+    };
+    CHECK_EQ(at(compute_page_quantities(cond_map({condition}), takeoffs), "a").q1, 100.0 - 4.0);
+}
+
+// Windows: a 'None'-parent root can still own holes (96.0), and its holes are found by its uid.
+TEST(Qty18_NoneParentToken, ANoneParentRootStillOwnsItsHoles)
+{
+    Condition condition = make_condition("a", ConditionType::Area, 11, UOM_SQUARE_INCHES);
+    std::vector<Takeoff> takeoffs = {
+        make_takeoff("p", "a", SQUARE_10, "pg", "None"),
+        make_takeoff("h", "a", {0, 0, 2, 0, 2, 2, 0, 2}, "pg", "p"),
+    };
+    CHECK_EQ(at(compute_page_quantities(cond_map({condition}), takeoffs), "a").q1, 96.0);
+    // The hole is on another page than its parent: not subtracted (Windows 100.0).
+    takeoffs[0].page_uid = "pg1";
+    takeoffs[1].page_uid = "pg2";
+    CHECK_EQ(at(compute_page_quantities(cond_map({condition}), takeoffs), "a").q1, 100.0);
+}
+
+// Windows: an attachment whose parent token is 'None' is nobody's child: it does not shrink an
+// area takeoff that happens to be named 'None' (area calc 12 = area minus attachment footprint,
+// Windows 100.0), while an attachment under a real parent does (94.0 = 100 - 2*3) and the
+// attachment condition counts each takeoff once either way (1.0).
+TEST(Qty18_NoneParentToken, AnAttachmentWithTheNoneParentTokenIsNotAdoptedByATakeoffNamedNone)
+{
+    Condition area = make_condition("a", ConditionType::Area, 12, UOM_SQUARE_INCHES);
+    Condition attachment = make_condition("att", ConditionType::Attachment, CALC_COUNT, 0);
+    attachment.width = 2;
+    attachment.depth = 3;
+    {
+        std::vector<Takeoff> takeoffs = {
+            make_takeoff("None", "a", SQUARE_10, "pg", ""),
+            make_takeoff("c", "att", {5, 5}, "pg", "None"),
+        };
+        PageResult r = compute_page_quantities(cond_map({area, attachment}), takeoffs);
+        CHECK_EQ(at(r, "a").q1, 100.0);
+        CHECK_EQ(at(r, "att").q1, 1.0);
+    }
+    {
+        std::vector<Takeoff> takeoffs = {
+            make_takeoff("p", "a", SQUARE_10, "pg", "0"),
+            make_takeoff("c", "att", {5, 5}, "pg", "p"),
+        };
+        PageResult r = compute_page_quantities(cond_map({area, attachment}), takeoffs);
+        CHECK_EQ(at(r, "a").q1, 100.0 - 6.0);
+        CHECK_EQ(at(r, "att").q1, 1.0);
+    }
+}
+
+// Windows: non-area conditions count every takeoff whatever its parent token (12.0).
+TEST(Qty18_NoneParentToken, NonAreaConditionsCountEveryTakeoffWithANoneParent)
+{
+    Condition linear = make_condition("l", ConditionType::Linear, 1, 1);
+    std::vector<Takeoff> takeoffs = {
+        make_takeoff("1", "l", {0, 0, 5, 0}, "", "None"),
+        make_takeoff("2", "l", {0, 0, 7, 0}, "", "1"),
+    };
+    CHECK_EQ(at(compute_page_quantities(cond_map({linear}), takeoffs), "l").q1, 12.0);
+}
+
+// User decision (QTY-18 a): the 'None' root set belongs to the page quantities only; the
+// Takeoff::is_hole() predicate (used by rendering, export and persistence) keeps '' and '0'.
+TEST(Qty18_NoneParentToken, TakeoffIsHoleKeepsItsTwoTokenRule)
+{
+    Takeoff t;
+    t.parent_uid = "";
+    CHECK_FALSE(t.is_hole());
+    t.parent_uid = "0";
+    CHECK_FALSE(t.is_hole());
+    t.parent_uid = "None";
+    CHECK(t.is_hole());
+    t.parent_uid = "p";
+    CHECK(t.is_hole());
 }
 
 // Port of tests/domain/services/test_condition_quantity_service.py::ChildKindAndRoundingBoundaryTests::test_a_takeoff_without_geometry_totals_zero

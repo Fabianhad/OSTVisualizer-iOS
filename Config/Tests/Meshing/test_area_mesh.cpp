@@ -214,3 +214,27 @@ TEST(AreaTessellation, WindingSenseAndTopologyAreNotChangedByTheFrameFix)
         CHECK_NEAR(signed_volume(m), area * 1.0, 1e-9 * std::max(1.0, area));
     }
 }
+
+TEST(AreaTessellation, SelfIntersectingHoleTriangulatesLikeWindowsOnEveryCompiler)
+{
+    // Second review. Windows MeshFactory area (thickness 24, is_top) with the 4-point outline
+    // [25.463,5.389, 11.48,2.136, 8.779,-1.244, 12.365,-6.719] and a hole [14.908,1.6, 15.055,1.173, 13.215,0.283,
+    // 13.581,-0.226] whose edges 2 and 4 cross: earcut gives 2 outline + 1 hole triangles per cap (22 faces in all).
+    // The ear tests of such input sit on the last bit; a compiler that fuses a * b + c (AppleClang on arm64) found a
+    // complete 7-triangle cap (30 faces). The face list is the one the Windows pipeline returns.
+    Condition c = make_condition("a", ConditionType::Area);
+    c.thickness = 24.0;
+    c.is_top = true;
+    const std::vector<double> outer{25.463, 5.389, 11.48, 2.136, 8.779, -1.244, 12.365, -6.719};
+    const Ring hole{{-14.908, -1.6}, {-15.055, -1.173}, {-13.215, -0.283}, {-13.581, 0.226}}; // iOS frame (-x, -y)
+    Takeoff t = make_takeoff("t", "a", "p", outer);
+    auto r = ost_meshing::create_mesh_for_takeoff(t, c, 1.0, {hole});
+    REQUIRE(r.valid);
+    const std::vector<std::array<uint32_t, 3>> windows{
+        {3, 2, 1}, {9, 10, 8}, {3, 1, 0}, {5, 6, 7}, {12, 14, 13}, {4, 5, 7}, {0, 1, 5}, {0, 5, 4}, {1, 2, 6}, {1, 6, 5}, {2, 3, 7},
+        {2, 7, 6}, {3, 0, 4}, {3, 4, 7}, {8, 12, 13}, {8, 13, 9}, {9, 13, 14}, {9, 14, 10}, {10, 14, 15}, {10, 15, 11}, {11, 15, 12},
+        {11, 12, 8}};
+    CHECK_EQ(r.mesh.vertices.size(), static_cast<size_t>(16));
+    CHECK_EQ(r.mesh.faces.size(), windows.size());
+    CHECK(triangle_set(r.mesh.faces) == triangle_set(windows));
+}

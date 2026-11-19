@@ -1,3 +1,4 @@
+#include "../Geometry/strict_fp.hpp"
 #include "MeshGenerator.hpp"
 #include "mesh_helpers.hpp"
 #include "../Geometry/earcut_impl.hpp"

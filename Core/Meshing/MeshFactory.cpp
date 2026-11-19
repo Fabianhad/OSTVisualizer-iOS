@@ -1,10 +1,14 @@
+#include "../Geometry/strict_fp.hpp"
 #include "MeshFactory.hpp"
 #include "MeshGenerator.hpp"
 #include "mesh_helpers.hpp"
 #include "../Geometry/boolean_ops.hpp"
 #include "../Geometry/mesh_repair.hpp"
+#include "../Domain/CoreLog.hpp"
 #include <cmath>
 #include <algorithm>
+#include <exception>
+#include <optional>
 #include <utility>
 
 namespace ost_meshing
@@ -19,6 +23,48 @@ namespace ost_meshing
         r.valid = !r.mesh.vertices.empty();
         return r;
     }
+
+    // module_geometry.cpp boolean_union_py: the native union, then remove_degenerate_faces on its result.
+    static std::optional<ost_geometry::CppMeshData> native_drop_stub_union(const ost_geometry::CppMeshData &wall,
+                                                                           const ost_geometry::CppMeshData &stub)
+    {
+        auto combined = ost_geometry::boolean_union(wall, stub);
+        if (combined.has_value())
+            ost_geometry::remove_degenerate_faces(*combined);
+        return combined;
+    }
+
+    ost_geometry::CppMeshData union_with_drop_stub(const ost_domain::Takeoff &takeoff,
+                                                   ost_geometry::CppMeshData wall,
+                                                   const ost_geometry::CppMeshData &stub,
+                                                   const DropStubUnionFn &union_fn)
+    {
+        // Windows _union_with_drop_stub: `except Exception` keeps the wall and logs "raised" with the exception; a
+        // missing or face-less union keeps the wall and logs "failed". Exactly one warning, naming the takeoff uid.
+        std::optional<ost_geometry::CppMeshData> combined;
+        try
+        {
+            combined = union_fn ? union_fn(wall, stub) : native_drop_stub_union(wall, stub);
+        }
+        catch (const std::exception &e)
+        {
+            ost_log::warning("Drop stub union raised for takeoff " + takeoff.uid + "; keeping the wall mesh", e.what());
+            return wall;
+        }
+        catch (...)
+        {
+            ost_log::warning("Drop stub union raised for takeoff " + takeoff.uid + "; keeping the wall mesh",
+                             "unknown exception");
+            return wall;
+        }
+        if (!combined.has_value() || combined->faces.empty())
+        {
+            ost_log::warning("Drop stub union failed for takeoff " + takeoff.uid + "; keeping the wall mesh");
+            return wall;
+        }
+        return std::move(*combined);
+    }
+
     static MeshResult create_linear(const ost_domain::Takeoff &t,
                                     const ost_domain::Condition &c,
                                     double sr)
@@ -48,7 +94,7 @@ namespace ost_meshing
                 double offset = -t.position[6] * sr;
                 double mx = (x1 + x2) * 0.5, mz = (z1 + z2) * 0.5;
                 double dx = x2 - x1, dz = z2 - z1;
-                double len = std::hypot(dx, dz);
+                double len = ost_fp::hypot(dx, dz);
                 if (len > 0)
                 {
                     dx /= len;
@@ -67,14 +113,7 @@ namespace ost_meshing
                                                            y_offset, height,
                                                            rise, run);
                 if (stub.is_valid())
-                {
-                    auto combined = ost_geometry::boolean_union(mesh, stub);
-                    if (combined.has_value())
-                    {
-                        ost_geometry::remove_degenerate_faces(*combined);
-                        return make_result(std::move(*combined), c);
-                    }
-                }
+                    mesh = union_with_drop_stub(t, std::move(mesh), stub);
             }
             return make_result(std::move(mesh), c);
         }
@@ -89,14 +128,7 @@ namespace ost_meshing
                                                 y_offset, height,
                                                 rise, run);
             if (stub.is_valid())
-            {
-                auto combined = ost_geometry::boolean_union(mesh, stub);
-                if (combined.has_value())
-                {
-                    ost_geometry::remove_degenerate_faces(*combined);
-                    return make_result(std::move(*combined), c);
-                }
-            }
+                mesh = union_with_drop_stub(t, std::move(mesh), stub);
         }
         return make_result(std::move(mesh), c);
     }
