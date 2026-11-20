@@ -1,6 +1,7 @@
 #import "UndoRedoController.h"
 #include "../../../Core/Domain/NegativeChange.hpp"
 #include "../../../Core/Domain/TakeoffDeletion.hpp"
+#include "../../../Core/Domain/TakeoffSelection.hpp"
 #include "../../../Core/Domain/UndoHistory.hpp"
 
 enum class UndoAction { Move, MoveGroup, Place, Delete, SetNegative };
@@ -184,9 +185,10 @@ static BOOL applyRedo(id<UndoRedoDelegate> delegate, UndoEntry &entry) {
     return NO;
 
   // The selected takeoff and every descendant at any depth, parents first
-  // (Windows expand_takeoff_uids_with_descendants, UND-08).
+  // (Windows expand_takeoff_uids_with_descendants, UND-08), and nothing else:
+  // the Core decision of the Delete button (TakeoffSelection.hpp).
   std::vector<ost_domain::Takeoff> deletedTakeoffs =
-      ost_domain::collect_takeoffs_for_deletion(takeoffs, {selectedUID});
+      ost_domain::takeoffs_to_delete(takeoffs, selectedUID);
   if (deletedTakeoffs.empty())
     return NO;
 

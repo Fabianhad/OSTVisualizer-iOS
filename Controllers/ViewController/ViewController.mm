@@ -2,6 +2,7 @@
 #include "../../Core/Domain/BrowserRules.hpp"
 #include "../../Core/Domain/NegativeChange.hpp"
 #include "../../Core/Domain/QuantityPages.hpp"
+#include "../../Core/Domain/TakeoffSelection.hpp"
 #include "../../Core/Geometry/coord_transform.hpp"
 #include "../../Core/Geometry/drag_rules.hpp"
 #import "../../Rendering/BgfxView.h"
@@ -396,9 +397,19 @@ static const int kToolbar2DOnlyTag = 40000;
   [self _highlightModeLabels];
 
   if (_is2DMode) {
+    // The 3D view picks takeoffs of any selected page: one that is not on the page shown now is dropped, so that Delete can
+    // never act on a takeoff the user does not see (RPV-16, TakeoffSelection.hpp keep_selection_on_page).
+    const std::string pickedInThe3DView = _selectedTakeoffUID;
+    [self _applySelectionState:ost_domain::keep_selection_on_page(
+                                   _projectService.project.takeoffs,
+                                   [self _selectionState],
+                                   _projectService.selected2DPageUID)];
+    if (_selectedTakeoffUID != pickedInThe3DView)
+      [_planView clearTapSelection];
     BOOL resetZoom = !_hasShown2DView;
     _hasShown2DView = YES;
     [self _loadCurrentPageIntoPlanViewResetZoom:resetZoom];
+    [self _syncSelection];
   }
   // The totals follow the view that is open now (QTY-11, QTY-15)
   [self _updateConditionQuantities];
@@ -409,13 +420,8 @@ static const int kToolbar2DOnlyTag = 40000;
 // the previous page. A placement in progress survives the switch (Windows
 // preserve_place), so the condition being placed stays selected then.
 - (void)_clearSelectionForPageSwitch {
-  _selectedTakeoffUID.clear();
-  _activeHandleIndex = -1;
-  if (_editMode != ost_domain::EditMode::PlaceTakeoff) {
-    _placeConditionUID.clear();
-    _selectedConditionUID = nil;
-    _fab.placeModeAvailable = NO;
-  }
+  [self _applySelectionState:ost_domain::clear_selection_for_page_switch(
+                                 [self _selectionState])];
   [_planView clearTapSelection];
   _renderer.selectedConditionUID = _selectedConditionUID;
   _renderer.selectedTakeoffUID = nil;
@@ -764,7 +770,33 @@ static const int kToolbar2DOnlyTag = 40000;
     [_conditionsVC selectConditionWithUID:_selectedConditionUID animated:YES];
   }
 
+  [self _updateDeleteButton];
   [self _refreshOverlays];
+}
+
+// The selection of the 2D view as one value for the Core rules (TakeoffSelection.hpp) and back. The condition that is highlighted
+// and the condition the placement tool places are kept apart there, as the Windows sidebar projection keeps them.
+- (ost_domain::SelectionState)_selectionState {
+  ost_domain::SelectionState state;
+  state.mode = _editMode;
+  state.takeoff_uid = _selectedTakeoffUID;
+  state.condition_uid = _selectedConditionUID
+                            ? std::string(_selectedConditionUID.UTF8String)
+                            : std::string();
+  state.place_condition_uid = _placeConditionUID;
+  state.active_handle = _activeHandleIndex;
+  return state;
+}
+
+- (void)_applySelectionState:(const ost_domain::SelectionState &)state {
+  _selectedTakeoffUID = state.takeoff_uid;
+  _selectedConditionUID =
+      state.condition_uid.empty()
+          ? nil
+          : [NSString stringWithUTF8String:state.condition_uid.c_str()];
+  _placeConditionUID = state.place_condition_uid;
+  _activeHandleIndex = state.active_handle;
+  _fab.placeModeAvailable = !_placeConditionUID.empty();
 }
 
 - (void)_updateConditionQuantities {
@@ -789,7 +821,14 @@ static const int kToolbar2DOnlyTag = 40000;
   _redoButton.enabled = _undoRedoController.canRedo;
   _undoButton.alpha = _undoButton.enabled ? 1.0 : 0.3;
   _redoButton.alpha = _redoButton.enabled ? 1.0 : 0.3;
-  BOOL hasSelection = !_selectedTakeoffUID.empty();
+  [self _updateDeleteButton];
+}
+
+// Delete is on while a takeoff that exists is selected. A highlighted condition is not a selection of takeoffs (Windows
+// plan_view.has_selection), so it never enables Delete.
+- (void)_updateDeleteButton {
+  BOOL hasSelection = ost_domain::delete_enabled(
+      _projectService.project.takeoffs, [self _selectionState]);
   _deleteButton.enabled = hasSelection;
   _deleteButton.alpha = hasSelection ? 1.0 : 0.3;
 }
@@ -892,7 +931,11 @@ static const int kToolbar2DOnlyTag = 40000;
 }
 
 - (void)_handleDeleteTakeoff {
-  if (_selectedTakeoffUID.empty())
+  // Delete removes the selected takeoff and its descendants (UND-08) and nothing else: it takes no mode and no condition
+  // (Windows delete_selected / on_elements_deleted), and it never deletes a condition. The selection after a successful delete is
+  // set by undoRedoClearSelection (nothing selected, no condition highlighted, a running placement keeps its tool).
+  if (!ost_domain::delete_enabled(_projectService.project.takeoffs,
+                                  [self _selectionState]))
     return;
   // A failed delete keeps the selection (Windows selects the takeoffs again)
   if (![_undoRedoController deleteSelection:_selectedTakeoffUID
@@ -900,8 +943,6 @@ static const int kToolbar2DOnlyTag = 40000;
     [self _presentSaveFailure];
     return;
   }
-  _placeConditionUID.clear();
-  _fab.placeModeAvailable = NO;
 }
 
 #pragma mark - UndoRedoDelegate
@@ -935,20 +976,18 @@ static const int kToolbar2DOnlyTag = 40000;
 // another page stays unselected, so that Delete can never act on a takeoff the
 // user does not see (RPV-16, UND-10).
 - (void)undoRedoSelectTakeoff:(const std::string &)uid {
-  for (const auto &tk : _projectService.project.takeoffs) {
-    if (tk.uid != uid)
-      continue;
-    if (tk.page_uid != _projectService.selected2DPageUID)
-      return;
-    _selectedTakeoffUID = uid;
-    _activeHandleIndex = -1;
-    return;
-  }
+  [self _applySelectionState:ost_domain::select_after_history(
+                                 _projectService.project.takeoffs,
+                                 [self _selectionState], uid,
+                                 _projectService.selected2DPageUID)];
+  [self _syncSelection];
 }
 
+// Windows delete_selected / _redo_delete: nothing is selected afterwards and no condition stays highlighted, so the overlay draws
+// no group selection on the other takeoffs of the condition.
 - (void)undoRedoClearSelection {
-  _selectedTakeoffUID.clear();
-  _activeHandleIndex = -1;
+  [self _applySelectionState:ost_domain::clear_selection([self _selectionState])];
+  [self _syncSelection];
 }
 
 - (void)undoRedoDidModify {
@@ -962,22 +1001,9 @@ static const int kToolbar2DOnlyTag = 40000;
 
 - (void)planView:(PlanView *)planView
     didTapTakeoff:(const std::string &)takeoffUID {
-  _selectedTakeoffUID = takeoffUID;
-  _activeHandleIndex = -1;
-
-  _placeConditionUID.clear();
-  for (const auto &tk : _projectService.project.takeoffs) {
-    if (tk.uid == takeoffUID) {
-      _placeConditionUID = tk.condition_uid;
-      break;
-    }
-  }
-  _fab.placeModeAvailable = !_placeConditionUID.empty();
-
-  _selectedConditionUID =
-      _placeConditionUID.empty()
-          ? nil
-          : [NSString stringWithUTF8String:_placeConditionUID.c_str()];
+  [self _applySelectionState:ost_domain::select_takeoff(
+                                 _projectService.project.takeoffs,
+                                 [self _selectionState], takeoffUID)];
 
   [self _syncSelection];
   [self _updateUndoRedoButtons];
@@ -993,11 +1019,8 @@ static const int kToolbar2DOnlyTag = 40000;
 - (void)planView:(PlanView *)planView
     didTapEmptySpaceAtCanvasPoint:(CGPoint)point {
   if (!_selectedTakeoffUID.empty() || _selectedConditionUID) {
-    _selectedTakeoffUID.clear();
-    _placeConditionUID.clear();
-    _selectedConditionUID = nil;
-    _activeHandleIndex = -1;
-    _fab.placeModeAvailable = NO;
+    [self _applySelectionState:ost_domain::clear_selection(
+                                   [self _selectionState])];
 
     [self _syncSelection];
     [self _updateUndoRedoButtons];
