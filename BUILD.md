@@ -107,7 +107,7 @@ Only the part up to the unit tests has ever run on GitHub: the run of 2026-11-16
 |---|---|
 | Select Xcode | `Xcode 16.4`, iphoneos SDK `18.5`, Apple clang 17 |
 | Install XcodeGen and ldid | versions printed, `ldid` found |
-| Unit tests (host build) | ctest: `100% tests passed, 0 tests failed out of 12`; each area prints `TESTS: n PASSED: n FAILED: 0` with the counts in `Config/Tests/README.md` (1598 in total) |
+| Unit tests (host build) | ctest: `100% tests passed, 0 tests failed out of 12`; each area prints `TESTS: n PASSED: n FAILED: 0` with the counts in `Config/Tests/README.md` (1599 in total) |
 | Verify libmanifold.a is arm64 | `arm64` |
 | Validate plists | `Config/Info.plist: OK`, `Config/Entitlements.fakesign.plist: OK` |
 | Build bgfx (cache miss only) | `ls` shows the four `.a` files in `deps/bgfx/.build/ios-arm64/bin` |
@@ -129,7 +129,7 @@ Only the part up to the unit tests has ever run on GitHub: the run of 2026-11-16
 |---|---|---|
 | Select Xcode | `$XCODE_APP is not installed on this runner image` | The runner image no longer has Xcode 16.4. Change `XCODE_APP` and `runs-on` together and bump `BGFX_RECIPE_VERSION` (the bgfx makefiles hard-code clang paths verified only with 16.4). |
 | Install XcodeGen and ldid | `brew` error or `command -v ldid` fails | Network or Homebrew problem on the runner; re-run. |
-| Unit tests (host build) | A test or an area fails | Run the same three commands locally (`Config/Tests/README.md`, `--filter`). A failing port is an iOS Core bug or a Windows ambiguity: never edit an expected value or a tolerance to pass; see `PORTING_BLOCKERS.md`. A failure in Meshing or Geometry that does not reproduce on MSVC is probably fused multiply-add on arm64 in a file that does not include `Core/Geometry/strict_fp.hpp`. `no tests were found` means the CMake configure found no `test_*.cpp`. |
+| Unit tests (host build) | A test or an area fails | Run the same three commands locally (`Config/Tests/README.md`, `--filter`). A failing port is an iOS Core bug or a Windows ambiguity: never edit an expected value or a tolerance to pass; see `PORTING_BLOCKERS.md`. A failure in Meshing or Geometry that does not reproduce on MSVC is probably fused multiply-add on arm64 in a file that does not include `Core/Geometry/strict_fp.hpp`; if that is excluded, suspect a result decided by the last bit of a libm function (`atan2`, `sin`, `cos`): one such tie is recorded in `PORTING_BLOCKERS.md`, "Not reproducible on iOS". `no tests were found` means the CMake configure found no `test_*.cpp`. |
 | Verify libmanifold.a is arm64 | wrong architecture list | `Libs/Manifold/lib/libmanifold.a` must contain arm64 only. |
 | Validate plists | `plutil -lint` error | XML syntax in `Config/Info.plist` or `Config/Entitlements.fakesign.plist` (a stray character in a comment is enough). |
 | Build bgfx libraries | `make` fails | The generated makefiles expect Xcode 16.4 at `/Applications/Xcode.app`, `SDKROOT` exported in the same step, and bx and bimg next to bgfx. Check the three SHAs. |

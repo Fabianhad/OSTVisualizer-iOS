@@ -12,6 +12,7 @@
 #include "Geometry/page_transform.hpp"
 #include "Geometry/takeoff_footprint.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <string>
@@ -699,8 +700,16 @@ TEST(MarkerAnchor, PolygonAreaCentroid)
 
 // Windows (run read-only): the marker of a triangle count shape sits at the polygon centroid, depth / 6 below the position
 // point (here 30 px = 10 pt); the marker of a curved linear band is the Windows path centroid of the curved band, computed on
-// the scene path (px) like Windows and then moved to the canvas (a centroid outside the band falls back on a nearest-point
-// search whose ties are decided by the arithmetic of the coordinates it runs on).
+// the scene path (px) like Windows and then moved to the canvas. That band is mirror symmetric about x = 75 and its centroid
+// lies outside it, so the marker comes from the nearest-point search. Its two best grid centres (x = 72.5756 and its mirror
+// 77.4244) are mirror images; in the doubles their squared distances to the centroid come out bit-identical on Windows (and
+// on MSVC and on clang x86-64), so the first one wins, and a last-bit change in the arc points breaks the tie. The only
+// calls in that path whose result can differ between platforms are std::atan2 / cos / sin (the Windows CRT against Apple's
+// libm; inferred, not observed on arm64: no fused multiply-add is emitted for these files, checked on an aarch64-macos
+// build with zig clang 22, and nudging one of those 53 results by one ulp flips the winner in 23 of 106 cases, to the value
+// CI reported, 20 of the 23 bit for bit and the rest within 2 ulp). Windows gives the first one; the first GitHub run on
+// AppleClang arm64 gave the second. The test accepts either side, and the rule itself (the first candidate of the Windows
+// order wins an exact tie) is pinned without any libm call in AnExactTieKeepsTheFirstCandidateOfTheWindowsOrder.
 TEST(MarkerAnchor, CountTriangleAndCurvedBand)
 {
     ost_footprint::PageFrame frame;
@@ -716,7 +725,18 @@ TEST(MarkerAnchor, CountTriangleAndCurvedBand)
     const auto b = ost_footprint::canvas_marker_anchor(takeoff_at({0.0, 0.0, 100.0, 0.0, 50.0, 30.0}, 0.0, 0),
                                                        linear_condition(4.0), {}, frame);
     REQUIRE(b.has_value());
-    CHECK_NEAR((*b)[0], 72.57559944723074, 1e-9);
+    {
+        // the two tie candidates are mirror images about the band axis x = 75: the Windows one and 150 minus it
+        constexpr double kWindowsX = 72.57559944723074;
+        constexpr double kMirrorX = 150.0 - kWindowsX;
+        SCOPED_CONTEXT("anchor x = " + std::to_string((*b)[0]) + ", the candidates are " + std::to_string(kWindowsX) +
+                       " (Windows) and " + std::to_string(kMirrorX) + " (mirror)");
+        // values first: CHECK_NEAR binds its arguments to references, so a std::min of two temporaries would dangle
+        const double off_windows = std::fabs((*b)[0] - kWindowsX);
+        const double off_mirror = std::fabs((*b)[0] - kMirrorX);
+        const double off_nearest = off_windows < off_mirror ? off_windows : off_mirror;
+        CHECK_NEAR(off_nearest, 0.0, 1e-9);
+    }
     CHECK_NEAR((*b)[1], 42.582710586809235, 1e-9);
 
     // on a page turned by 90 degrees the marker is the same point turned with the page: (x, y) -> (y, W - x)
@@ -740,6 +760,26 @@ TEST(MarkerAnchor, CountTriangleAndCurvedBand)
     const bool in_hole = (*d)[0] > 36 && (*d)[0] < 108 && (*d)[1] > 36 && (*d)[1] < 108;
     CHECK(in_outline);
     CHECK_FALSE(in_hole);
+}
+
+// Windows _nearest_interior_anchor is min(candidates, key=squared distance): on an exact tie the FIRST candidate of its order
+// wins (the C++ keeps the first on a strict <). A U that opens upwards, 8 wide with a 4 x 5 notch, is mirror symmetric about
+// x = 4 and its input coordinates are dyadic numbers: the centroid (4, 3.318...) lies in the notch, outside the polygon, and the
+// grid centres (3.875, 2.875) and (4.125, 2.875) have bit-identical squared distances. No libm call is involved, so every
+// IEEE platform gives the same point; it is also the point an independent Python replica of the Windows search gives (CPython
+// floats, same candidate order). Taking the last of two tied candidates (<= instead of <) would answer 4.125.
+TEST(MarkerAnchor, AnExactTieKeepsTheFirstCandidateOfTheWindowsOrder)
+{
+    const auto anchor = ost_footprint::negative_marker_anchor({{0, 0}, {8, 0}, {8, 8}, {6, 8}, {6, 3}, {2, 3}, {2, 8}, {0, 8}});
+    REQUIRE(anchor.has_value());
+    CHECK_NEAR((*anchor)[0], 3.875, 1e-15);
+    CHECK_NEAR((*anchor)[1], 2.875, 1e-15);
+    // the same shape twice as large: the answer scales
+    const auto big =
+        ost_footprint::negative_marker_anchor({{0, 0}, {16, 0}, {16, 16}, {12, 16}, {12, 6}, {4, 6}, {4, 16}, {0, 16}});
+    REQUIRE(big.has_value());
+    CHECK_NEAR((*big)[0], 7.75, 1e-15);
+    CHECK_NEAR((*big)[1], 5.75, 1e-15);
 }
 
 // Port of test_area_with_hole_uses_anchor_inside_visible_fill: the anchor of an area with a backout hole lies inside the
