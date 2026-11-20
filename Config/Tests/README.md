@@ -2,7 +2,7 @@
 
 C++17 tests of the platform-independent `Core/` (plus `Rendering/MeshLoader.cpp`). They are built with CMake for the host (MSVC on Windows during development, AppleClang on the macOS runner of `.github/workflows/build.yml`). No UIKit, no simulator, no device.
 
-What they cover: the logic that was moved out of the Objective-C++ files into `Core/` and brought in line with the Windows app (quantities, meshing, geometry, import, persistence, conditions, browser, export, settings, formatting, parsers). What they do not cover: the Objective-C/Objective-C++ layer (`Controllers/`, `PlanView/`, `Services/`, `Rendering/*.mm`, `SceneDelegate.mm`), UIKit behaviour, CoreGraphics PDF drawing, bgfx/Metal rendering and the shaders. Those files are only compiled by the CI `xcodebuild` step, which has not run on the current code.
+What they cover: the logic that was moved out of the Objective-C++ files into `Core/` and brought in line with the Windows app (quantities, meshing, geometry, import, persistence, conditions, browser, export, settings, formatting, parsers). What they do not cover: the Objective-C/Objective-C++ layer (`Controllers/`, `PlanView/`, `Services/`, `Rendering/*.mm`, `SceneDelegate.mm`), UIKit behaviour, CoreGraphics PDF drawing, bgfx/Metal rendering and the shaders. Those files are only compiled by the CI `xcodebuild` step (Release, iphoneos, unsigned), which compiled and linked them without an error on 2026-11-20 UTC (the first compile against the real SDK); nothing in them has been run.
 
 Where they live: `Config/Tests/`, not a top-level `Tests/`. Nyxian compiles every `.cpp` outside the top-level `Config/` and `Resources/` folders, and the tests contain their own `main()`; moving them out of `Config/` breaks an on-device Nyxian build with duplicate symbols (see `BUILD.md`).
 
@@ -32,7 +32,7 @@ These numbers are a snapshot of the run named above: re-run the tests for the cu
 
 ## Run
 
-Same as CI (from the repository root):
+Same as CI, except that CI gives `--parallel` a job count (see `BUILD.md`), from the repository root:
 
 ```sh
 cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug

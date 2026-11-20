@@ -1,7 +1,7 @@
 {
   "last_updated": "2026-11-19",
-  "phase": "Phases 0 to 3 done and the open blockers closed by the user decisions of 2026-11-19: all 220 parity records have a final status (172 fixed, 25 fixed-ui-unverified, 21 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 1 no-longer-divergent, 0 open); 25 decisions recorded (21 keep iOS, 4 code changes with tests); Core host-tested (1598 tests), Objective-C wired and syntax-checked only; first full CI run, real-SDK compile and device checks still to do; nothing committed by this job",
-  "overall_status": "parity_fixes_done_host_tested_ui_build_and_device_unverified",
+  "phase": "Phases 0 to 3 done and the open blockers closed by the user decisions of 2026-11-19: all 220 parity records have a final status (172 fixed, 25 fixed-ui-unverified, 21 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 1 no-longer-divergent, 0 open); 25 decisions recorded (21 keep iOS, 4 code changes with tests); Core host-tested (1598 tests on 2026-11-19, 1599 since 5dc7b2b), Objective-C wired, syntax-checked against stubs and since compiled and linked against the real iPhoneOS 18.5 SDK on CI (runs of 2026-11-20 UTC, every workflow step passes); install, device run and device checks still to do; committed and pushed after the job (7 commits, then the two fix(build) commits)",
+  "overall_status": "parity_fixes_done_host_tested_ci_built_ui_and_device_unverified",
   "status_vocabulary": [
     "Implemented-matches-Windows",
     "Implemented-matches-Windows-except-decisions",
@@ -10,12 +10,12 @@
     "Not implemented",
     "Obsolete"
   ],
-  "status_notes": "Implemented-diverges (Phase 1 vocabulary) is replaced by Implemented-matches-Windows-except-decisions: every parity id of a system is fixed, or kept different on purpose (wont-fix, or a recorded decision of 2026-11-16 or 2026-11-19 that keeps the iOS behaviour or deliberately deviates from the literal Windows behaviour). UI verification is a separate flag (ui_check_ids per system, ui_unverified at top level). Item statuses: fixed, fixed-ui-unverified, wont-fix, cannot-reproduce, no-longer-divergent (item_status); blocked-needs-decision is no longer used since 2026-11-19 (count 0, the 8 former items are wont-fix).",
+  "status_notes": "Implemented-diverges (Phase 1 vocabulary) is replaced by Implemented-matches-Windows-except-decisions: every parity id of a system is fixed, or kept different on purpose (wont-fix, or a recorded decision of 2026-11-16 or 2026-11-19 that keeps the iOS behaviour or deliberately deviates from the literal Windows behaviour). UI verification is a separate flag (ui_check_ids per system, ui_unverified at top level). Item statuses: fixed, fixed-ui-unverified, wont-fix, cannot-reproduce, no-longer-divergent (item_status); blocked-needs-decision is no longer used since 2026-11-19 (count 0, the 8 former items are wont-fix). Implemented-unverified (no run was possible) is kept for the Build, CI and tests system although the GitHub pipeline ran green on 2026-11-20 UTC: nothing was installed or run on a device.",
   "verification_scope": {
     "ios_repo": "OSTVisualizer (this repository)",
     "ios_branch": "ios-parity-sync",
-    "ios_head": "42b46c3",
-    "ios_working_tree": "Uncommitted: the Core fixes, the Objective-C wiring, the host tests under Config/Tests, PARITY_DIVERGENCES.json, the status documents and the changes of the decisions job of 2026-11-19 (four code changes with tests). HEAD is level with origin/ios-parity-sync; nothing of this job is committed (the user commits).",
+    "ios_head": "42b46c3 (HEAD when the documents were written; GitHub Actions later ran on 292c406, 5dc7b2b and 787a57d)",
+    "ios_working_tree": "Uncommitted when written: the Core fixes, the Objective-C wiring, the host tests under Config/Tests, PARITY_DIVERGENCES.json, the status documents and the changes of the decisions job of 2026-11-19 (four code changes with tests). HEAD was level with origin/ios-parity-sync; nothing of this job was committed when this was written (the user commits); it was committed and pushed afterwards (7 commits, 9decbb5 to 292c406) and the two fix(build) commits 5dc7b2b and 787a57d followed.",
     "windows_repo": "OSTVisualizerLicense (read-only reference)",
     "windows_head": "6d4786f",
     "windows_working_tree": "clean; HEAD 6d4786f (2026-11-17) holds the same 18 paths that were uncommitted in the Windows tree at the 2026-11-16 re-baseline (export boolean rule, drop-stub fallback); checked again read-only on 2026-11-19 (HEAD 6d4786f, no changed or untracked file)",
@@ -26,19 +26,21 @@
       "fresh Obj-C syntax check on 2026-11-19",
       "names of the new tests of the four code changes checked in Config/Tests on 2026-11-19",
       "the log of the GitHub run of 2026-11-16",
+      "the GitHub logs of the runs of 2026-11-20 UTC (44642251350, 44654559214, 44661853681) and the IPA artifact of the two green runs, inspected locally (nothing executed)",
       "project.yml, build.yml, BUILD.md, Config/*",
       "Windows reference files (read-only; the cited file:line of the possible Windows defects were verified by the research of 2026-11-19, seven of them spot-checked again read-only)"
     ],
-    "build_run_performed": false,
+    "build_run_performed": true,
+    "build_run_performed_note": "Not on the authoring machine (no Xcode). On GitHub Actions the app was built (xcodebuild, Release, iphoneos, unsigned), fake-signed with ldid and packaged: runs 44654559214 and 44661853681, 2026-11-20 UTC.",
     "device_run_performed": false,
     "ci_build_defined": true,
-    "ci_build_run": false,
-    "ci_build_run_note": "One run started on 2026-11-16 and failed in the host unit tests (before the fix); no run completed and none exists for the current code.",
+    "ci_build_run": true,
+    "ci_build_run_note": "Runs 44654559214 (5dc7b2b) and 44661853681 (787a57d), 2026-11-20 UTC, passed every step. Earlier runs failed in the host unit tests: 2026-11-16 (Meshing, fused multiply-add) and 44642251350 (Geometry marker anchor tie); both fixed.",
     "host_test_harness": true,
     "host_harness_selftests": 10,
     "ios_behavior_tests": 1588,
     "ios_behavior_tests_before_job": 0,
-    "ios_behavior_tests_note": "1598 host tests in 12 areas = 10 harness self-tests + 1588 iOS behaviour tests; 1606 with -DOST_TEST_BOOLEAN=ON. They cover the platform-independent Core only. Before the decisions job of 2026-11-19 the suite held 1576 (1584 with the boolean option); that job added 22 tests (Conditions +16, Settings +6).",
+    "ios_behavior_tests_note": "1598 host tests in 12 areas = 10 harness self-tests + 1588 iOS behaviour tests; 1606 with -DOST_TEST_BOOLEAN=ON (counts of 2026-11-19; since 5dc7b2b 1599 and 1607, 1589 behaviour tests, Geometry 172). They cover the platform-independent Core only. Before the decisions job of 2026-11-19 the suite held 1576 (1584 with the boolean option); that job added 22 tests (Conditions +16, Settings +6).",
     "objc_syntax_check": {
       "files": 27,
       "ok": 27,
@@ -48,7 +50,7 @@
       "what_it_is": "clang -fsyntax-only (ARC, C++17, build include paths and defines) of every platform .m/.mm against hand-written stub Foundation/UIKit/QuartzCore/CoreGraphics headers that are not in the repo",
       "what_it_is_not": "a build against the real Apple SDK; it says nothing about ARC runtime behaviour, layout or UI"
     },
-    "notes": "Host tests and syntax checks only. Xcode, xcodebuild, XcodeGen, ldid, macOS, simulator and device are unavailable on the authoring machine. Runtime behaviour on iOS, build reproducibility, device performance and real-file fixture parity are unverified.",
+    "notes": "Host tests and syntax checks on the authoring machine, where Xcode, xcodebuild, XcodeGen, ldid, macOS, simulator and device are unavailable; GitHub Actions added the AppleClang arm64 host run, the real-SDK build, fake-signing and IPA packaging (2026-11-20 UTC, see not_verified.github). Runtime behaviour on iOS, device performance and real-file fixture parity are unverified; build reproducibility is observed once (the executables of the two green CI runs are byte-identical).",
     "host_tests_before_2026_11_19": {
       "total": 1576,
       "with_boolean": 1584
@@ -59,7 +61,7 @@
     "host-run": "iOS Core C++ compiled and tested on the host (MSVC, and clang with fused multiply-add) against expected values from the Windows tests or from running the Windows Python/native modules read-only",
     "syntax-check": ".m/.mm files compiled with -fsyntax-only against hand-written stubs",
     "read": "both sides read and arithmetic re-implemented",
-    "ci": "one GitHub run (2026-11-16), stopped at the host unit tests",
+    "ci": "GitHub Actions runs (2026-11-20 UTC): host tests on AppleClang arm64, xcodebuild against the real SDK, fake-signing, IPA packaging and structure checks of the IPA; nothing is run",
     "device": "none"
   },
   "phases": [
@@ -67,7 +69,7 @@
       "phase": "0: CI/IPA pipeline and host harness",
       "when": "2026-11-15 (commits a950f9a, c73b6d0); decisions 2026-11-16",
       "delivered": "project.yml (XcodeGen), .github/workflows/build.yml (macos-15, Xcode 16.4: host unit tests, libmanifold arm64 check, plist lint, bgfx/bx/bimg from pinned SHAs, minos check of the five prebuilt libraries, xcodegen, xcodebuild unsigned Release, bundle checks, ldid fake-signing with Config/Entitlements.fakesign.plist, IPA upload), BUILD.md, Config/Info.plist, Config/Tests (CMake host harness, 10 self-tests). Minimum iOS 16.0 and -Os (GCC_OPTIMIZATION_LEVEL s) everywhere by user decision; Info.plist additions kept (empty UILaunchScreen, iPhone and iPad).",
-      "state": "Pushed. First CI run 2026-11-16 stopped at the unit-test step."
+      "state": "Pushed. CI: the first run (2026-11-16) stopped at the unit-test step; the runs of 2026-11-20 UTC passed every step (see not_verified.github)."
     },
     {
       "phase": "1: parity map",
@@ -79,25 +81,31 @@
       "phase": "2: documentation",
       "when": "2026-11-15, synced 2026-11-18 and 2026-11-19",
       "delivered": "PORTING_MAP.md, PORTING_PLAN.md, PORTING_STATUS.*, PORTING_BLOCKERS.md, PARITY_MAP.md rewritten from the code on 2026-11-15; the status documents were rewritten again on 2026-11-18 to match the final results and on 2026-11-19 to record the decisions, the code changes, the possible Windows defects and the new counts.",
-      "state": "Phase 2 committed; the syncs of 2026-11-18 and 2026-11-19 are uncommitted."
+      "state": "Phase 2 committed; the syncs of 2026-11-18 and 2026-11-19 were uncommitted when written and were committed afterwards (292c406)."
     },
     {
       "phase": "3a: Core fixes (host-testable C++)",
       "when": "2026-11-15 to 2026-11-17",
       "delivered": "Test first: Windows tests ported to Config/Tests/<Area> with the same inputs and expected values, watched fail on the iOS code, then fixed. 12 test areas. New Core modules hold logic that used to live in .mm files. Wave 1 (commit 42ad10d) was stopped early; the rest was finished after the re-baseline. The host tests were green at the end of this wave; the final counts are in tests.",
-      "state": "Uncommitted except wave 1."
+      "state": "Committed afterwards (wave 1 earlier, 42ad10d)."
     },
     {
       "phase": "3b: Objective-C wiring wave",
       "when": "2026-11-17 and 2026-11-18",
       "delivered": "Six clusters (U1 services, U2a placement and drag numerics, U2b plan view visuals, U3 ViewController, U4 conditions UI, U5 import and browser) wired the Core results into the platform layer: 108 wiring entries for 57 item ids, 108 done, 0 open. COND-PLACE-01 was finished last.",
-      "state": "Uncommitted. .mm only syntax-checked against hand-written stubs."
+      "state": "Committed afterwards. .mm syntax-checked against hand-written stubs, then compiled and linked against the real SDK on CI (2026-11-20 UTC, no errors); never run."
     },
     {
       "phase": "4: close-out of the open blockers",
       "when": "2026-11-19",
       "delivered": "The user decided every formal blocked item and every candidate: 21 keep-iOS decisions recorded (no code change; the 8 former blocked-needs-decision items DBP-04, BRW-09, EXP-12, EXP-13, EXP-16, IMP-20, LP-24 and RPV-29 became wont-fix) and 4 code changes with host tests: COND-STYLE-02 (metric type defaults on a style change in a metric bid, deliberate deviation from the literal Windows behaviour), COND-ELEV-01 (is_top and z_value derived from the saved name, deliberate deviation), DLG-FINITE-01 (whitespace-only Rise and Run rejected like Windows; only this half), UND-09 (Count as Negative Quantity changes only the pressed takeoff in one undoable entry). The DBP-33 decision text was corrected (NameFontColor is a Windows default). For every kept item that looks like a Windows defect the Windows file:line was researched read-only (18 records). Host tests 1576 -> 1598 (1584 -> 1606 with Manifold).",
-      "state": "Uncommitted. Host-tested on MSVC and clang+FMA; the .mm changes (EditConditionViewController, ViewController, UndoRedoController) are only syntax-checked against hand-written stubs."
+      "state": "Committed afterwards. Host-tested on MSVC and clang+FMA; the .mm changes (EditConditionViewController, ViewController, UndoRedoController) were syntax-checked against hand-written stubs and have since been compiled on CI against the real SDK (never run)."
+    },
+    {
+      "phase": "5: first green CI runs",
+      "when": "2026-11-20 UTC (runs; after the documents of 2026-11-19 were written)",
+      "delivered": "The work was pushed (7 commits, 42b46c3..292c406) and Build IPA ran on it. Run 44642251350 failed in the host tests (Geometry MarkerAnchor.CountTriangleAndCurvedBand, an exact mirror tie decided by the last bit of libm results; cause inferred, not observed on arm64). 5dc7b2b (tests and docs only) made the assertion accept either side and added the libm-free test MarkerAnchor.AnExactTieKeepsTheFirstCandidateOfTheWindowsOrder (suite 1599, 1607 with Manifold). Run 44654559214 was the first run through every step. 787a57d bounded the host-test build to the runner core count (host-test step 55 min 20 s -> 168 s). Run 44661853681 succeeded in 4 min 8 s. The IPA artifact was parsed locally (nothing executed).",
+      "state": "Done; no app code changed by the two fix(build) commits. Nothing installed or run on a device; what CI cannot check is in not_verified.github.ci_cannot_check."
     },
     {
       "phase": "Independent review",
@@ -107,7 +115,7 @@
     }
   ],
   "summary": {
-    "overall": "Import, browse, view, edit and export exist in source and the existing features were brought in line with the Windows app: all 220 parity records have a final status and the open decisions were closed on 2026-11-19 (21 keep iOS, 4 code changes). The Core is host-tested; the Objective-C layer is wired but only syntax-checked; the first full CI run, the real-SDK compile and every device check are still to do.",
+    "overall": "Import, browse, view, edit and export exist in source and the existing features were brought in line with the Windows app: all 220 parity records have a final status and the open decisions were closed on 2026-11-19 (21 keep iOS, 4 code changes). The Core is host-tested; the Objective-C layer is wired, was syntax-checked against stubs and has since been compiled and linked against the real SDK on CI (the whole workflow passes, 2026-11-20 UTC); the install, any run on a device and every device check are still to do.",
     "divergences": {
       "total": 220,
       "original": 216,
@@ -170,18 +178,19 @@
       "bid business workflows"
     ],
     "primary_remaining_work": [
-      "first complete GitHub Actions run on the new code (unit tests on AppleClang, bgfx, xcodegen, xcodebuild, ldid, IPA)",
-      "compile of the .mm files against the real SDK and fixing what it finds (B-010)",
+      "install and launch of the fake-signed IPA on a device (CI built, fake-signed and packaged it; structure and hashes were checked locally, acceptance by the installer is not known)",
+      "the warnings of the real-SDK build in first-party code (6 -Wundeclared-selector, 3 protocol warnings, 2 Info.plist warnings; none is an error; the Info.plist keys are the owner decision; B-010)",
       "device checks: the 25 fixed-ui-unverified ids and the app in general",
       "the 3 questions the user has not decided (condition number above the int range, two COND-PLACE-01 notes; needs_my_decision.candidates) and the possible Windows defects for the Windows side (decisions_2026_11_19.possible_windows_defects)",
       "real .ost/.osp files for comparison with Windows (none in either repository)",
       "OST/OSP export (B-009) and PDF annotation export (B-004), if the MVP needs them"
     ],
     "additional_risks": [
-      "build.yml and project.yml never ran past the unit-test step",
-      "the Meshing FMA fix is verified only on a clang+FMA host build, not on AppleClang arm64",
+      "CI compiles only the Release configuration for iphoneos: the Debug settings were only read back and no iOS Simulator slice was built",
+      "the libm cause of the marker-anchor tie on arm64 is inferred, not observed: on a device the marker of an exactly mirror-symmetric curved band may sit one grid cell (4.85 points at the test scale) on the other side of its axis than on Windows",
       "HTML export needs network for three.js (unpkg.com)",
-      "Nyxian entitlements and fake-sign entitlements unvalidated on a device"
+      "Nyxian entitlements and fake-sign entitlements unvalidated on a device (the CI artifact was checked for structure and hashes only)",
+      "the CI host tests use the Manifold stub: real Manifold on AppleClang is not exercised by them"
     ],
     "decisions_2026_11_19": {
       "recorded": 25,
@@ -587,7 +596,7 @@
         "total": 66
       }
     },
-    "notes": "fixed = Core logic fixed and host-tested, wiring done where the item needed it; fixed-ui-unverified = the same, and part of the result is UIKit/CoreGraphics behaviour that was only syntax-checked; wont-fix = closed by a user decision (the 8 items that were blocked-needs-decision were decided on 2026-11-19 and are wont-fix; blocked-needs-decision has count 0); the meshing and export-formats owner areas include the four re-baseline records RB-01 to RB-04 under fixed.",
+    "notes": "fixed = Core logic fixed and host-tested, wiring done where the item needed it; fixed-ui-unverified = the same, and part of the result is UIKit/CoreGraphics behaviour that CI has compiled but nobody has seen running; wont-fix = closed by a user decision (the 8 items that were blocked-needs-decision were decided on 2026-11-19 and are wont-fix; blocked-needs-decision has count 0); the meshing and export-formats owner areas include the four re-baseline records RB-01 to RB-04 under fixed.",
     "changes_2026_11_19": {
       "blocked-needs-decision -> wont-fix": [
         "DBP-04",
@@ -1284,9 +1293,16 @@
       }
     ],
     "run_date": "2026-11-19",
+    "since_commit_5dc7b2b": {
+      "total": 1599,
+      "total_with_boolean": 1607,
+      "ios_behavior_tests": 1589,
+      "geometry": 172,
+      "note": "5dc7b2b added MarkerAnchor.AnExactTieKeepsTheFirstCandidateOfTheWindowsOrder (Geometry 171 -> 172); all tests pass on MSVC and on clang with FMA (zig clang 22, x86-64). On CI the host tests run on AppleClang 17 arm64 with the Manifold stub: ctest 100% of 12 areas in runs 44654559214 and 44661853681. The counts above are the snapshot of run_date."
+    },
     "fixtures": "Config/Tests/Fixtures holds 12 files: 10 oracle tables recorded from the Windows side and 2 cabinets (makecab_mszip.cab, makecab_two_folders.cab). The repo contains no real .ost or .osp project; the import tests build their XML and packages in code.",
     "location_reason": "Tests live in Config/Tests, not a top-level Tests/: Nyxian compiles every .c/.cpp/.m/.mm/.swift file outside the top-level Config/ and Resources/ folders (per BUILD.md, from Nyxian's public source; the installed Nyxian was not inspected), and the tests have their own main() and a boolean stub.",
-    "how_to_run": "cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug; cmake --build build/tests --parallel; ctest --test-dir build/tests --output-on-failure (add -DOST_TEST_BOOLEAN=ON for real Manifold), as CI does",
+    "how_to_run": "cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug; cmake --build build/tests --parallel $(sysctl -n hw.ncpu) (on macOS; CI bounds the parallelism since 787a57d, a bare --parallel is an unlimited make -j that took 55 min instead of 168 s on the runner); ctest --test-dir build/tests --output-on-failure (add -DOST_TEST_BOOLEAN=ON for real Manifold), as CI does",
     "host_tests_before_2026_11_19": {
       "total": 1576,
       "with_boolean": 1584
@@ -1311,7 +1327,7 @@
       "check": "Host unit tests, clang 22 via zig (x86-64 with FMA3, -Os, -ffp-contract=on, Debug flags like CI)",
       "result": "1598 of 1598 pass (1606 of 1606 with -DOST_TEST_BOOLEAN=ON)",
       "proves": "numeric results are stable under fused multiply-add (cause of the CI failure of 2026-11-16)",
-      "does_not_prove": "AppleClang on arm64 (this only approximates it)"
+      "does_not_prove": "AppleClang on arm64 (this only approximates it; CI has since run AppleClang arm64, and this x86-64 proxy did not predict the marker-anchor failure, whose cause is inferred to be a libm last-bit difference)"
     },
     {
       "check": "Objective-C syntax check: -fsyntax-only of every platform .m/.mm (ARC, C++17, same include paths and defines as the build) against hand-written stub Foundation/UIKit/QuartzCore/CoreGraphics headers",
@@ -1324,15 +1340,40 @@
       "result": "clean at HEAD 6d4786f before and after (re-checked read-only on 2026-11-19)",
       "proves": "the Windows source of truth was only read",
       "does_not_prove": "-"
+    },
+    {
+      "check": "GitHub Actions Build IPA (macos-15-arm64, Xcode 16.4, iPhoneOS 18.5 SDK, Apple clang 17.0.0): runs 44654559214 (5dc7b2b) and 44661853681 (787a57d), 2026-11-20 UTC",
+      "result": "success in both: host unit tests (ctest 100% of 12 areas, Manifold stub), libmanifold arm64 check, plist lint, bgfx build or cache, minos check (16.0), xcodegen with the -Os and 16.0 readback, xcodebuild Release iphoneos unsigned (BUILD SUCCEEDED, 88 translation units, no error), bundle checks, ldid fake-sign, IPA upload; the downloaded IPA was parsed locally (arm64 Mach-O, minos 16.0, ad hoc signature with all 1233 page hashes recomputed equal, entitlements get-task-allowed only)",
+      "proves": "the Core tests pass on AppleClang arm64; every Objective-C and Objective-C++ file compiles and links against the real iPhoneOS 18.5 SDK; the IPA is well formed",
+      "does_not_prove": "install or launch on a device, anything at runtime (rendering, picking, memory), real Manifold on AppleClang through the host tests, the Debug configuration, acceptance of the fake signature by the owner installer"
     }
   ],
   "not_verified": {
     "github": {
-      "last_run": "2026-11-16 00:48 UTC, macos-15-arm64 image, Xcode 16.4 / iPhoneOS 18.5 SDK, Apple clang 17.0.0, code as pushed on 2026-11-15",
-      "result": "checkout, Xcode selection, Homebrew install of xcodegen 2.46.0 and ldid 2.1.5_2 and the host-test configure and build worked; the unit tests failed (Meshing 75 of 76: CurvedMesh.CentreLineMatchesTheWindowsMeshOnTheOracleCases, zero_len_7 sample 3, a result that differed between MSVC and AppleClang). The job stopped there.",
-      "cause_and_fix": "fused multiply-add on arm64. The Core meshing code, the earcut instantiation and some geometry code are now compiled without FMA contraction (Core/Geometry/strict_fp.hpp, #pragma clang fp contract(off), plus ost_fp::hypot). Checked on the clang+FMA host build only.",
-      "never_run": [
-        "unit tests on AppleClang with the current code (1598 tests)",
+      "last_run": "2026-11-20 UTC: run 44661853681 on 787a57d (success, 4 min 8 s); the first run through every step was 44654559214 on 5dc7b2b (success, 57 min 47 s); earlier failures: 43782525569 (2026-11-16, 42b46c3) and 44642251350 (292c406). Runner image macos-15-arm64, Xcode 16.4 (16F6), iPhoneOS 18.5 SDK, Apple clang 17.0.0, cmake 4.4.5",
+      "result": "Both green runs passed every step: host unit tests (ctest 100% of 12 areas, AppleClang 17 arm64, Debug, Manifold stub), libmanifold arm64 check, plist lint, bgfx/bx/bimg (built in 25 s on the cache miss of 44654559214, restored from the cache in 44661853681), minos check, xcodegen with the -Os and 16.0 readback, xcodebuild Release iphoneos unsigned (BUILD SUCCEEDED, 61 s and 50 s; every Objective-C and Objective-C++ file compiled against the real SDK with no error), bundle checks, ldid fake-sign, IPA upload (artifact OST-Visualizer-ipa, 1,963,627 bytes, 30 days). Failed runs: 2026-11-16 in Meshing 75 of 76 (CurvedMesh.CentreLineMatchesTheWindowsMeshOnTheOracleCases, zero_len_7 sample 3), 44642251350 in Geometry MarkerAnchor.CountTriangleAndCurvedBand (x 77.4244 against 72.5756).",
+      "cause_and_fix": "Meshing (2026-11-16): fused multiply-add on arm64; the Core meshing code, the earcut instantiation and some geometry code are compiled without FMA contraction (Core/Geometry/strict_fp.hpp, #pragma clang fp contract(off), plus ost_fp::hypot); Meshing passes on CI since. Geometry (44642251350): the two best grid centres of the marker-anchor search of a mirror-symmetric curved band tie bit for bit on the x86-64 builds and a last-bit change in the atan2, cos and sin results breaks the tie; cause inferred, not observed on arm64 (no fused multiply-add is emitted for the two files involved, checked on an aarch64-macos build with zig clang 22; nudging one libm result by one ulp flips the answer in 23 of 106 cases). Fixed in the test only (5dc7b2b): the assertion accepts the Windows x or its mirror and MarkerAnchor.AnExactTieKeepsTheFirstCandidateOfTheWindowsOrder pins the rule; no app code changed. Duration (44654559214): a bare cmake --build --parallel is an unlimited make -j (about 60, then about 110 compiler processes at once; the runner is documented as 3 cores and about 7 GB RAM, documented, not measured), the host-test step took 55 min 20 s; 787a57d bounds it to the core count (168 s in 44661853681); same sources, flags and tests, byte-identical executable.",
+      "ci_observations": [
+        "Toolchain: Xcode 16.4 (16F6), iPhoneOS18.5.sdk, Apple clang 17.0.0 target arm64-apple-darwin24.6.0, cmake 4.4.5",
+        "libmanifold.a thin arm64, platform iOS, minos 16.0 (15 objects ok); libbgfxRelease 22, libbxRelease 22, libbimgRelease 24 and libbimg_decodeRelease 1 objects, all arm64, platform iOS, minos 16.0",
+        "Config/Info.plist and Config/Entitlements.fakesign.plist pass plutil -lint; XcodeGen generated one target; GCC_OPTIMIZATION_LEVEL = s and IPHONEOS_DEPLOYMENT_TARGET = 16.0 read back for Debug and Release",
+        "xcodebuild Release iphoneos unsigned: BUILD SUCCEEDED; 88 translation units compiled by 4 clang response files, each with -Os and no other -O level; one link with clang++; first compile of every Objective-C and Objective-C++ file against the real SDK: no errors",
+        "Warnings in first-party code (none is an error): 6 -Wundeclared-selector (PlanView.mm:180 and :186, ViewController.mm:310-312, EditConditionViewController+TableView.mm:154; the six methods are defined in category or class files, only not declared where referenced), 1 -Wprotocol (EditConditionViewController.mm:62; the class extension adopts UITableViewDataSource and the category implements it), 2 -Wobjc-protocol-method-implementation in the same category (no duplicate implementation exists), ld: ignoring duplicate libraries -lc++, and 2 Info.plist warnings from Config/Info.plist (opening files without declaring in-place support: no LSSupportsOpeningDocumentsInPlace or UISupportsDocumentBrowser key; not all interface orientations supported: iPad multitasking). Left as they are: adding Info.plist keys would change app behaviour (the owner decision). 88 further warnings are in third-party code (bgfx.h and Manifold linalg.h -Wdocumentation, sqlite3.c -Wshorten-64-to-32)",
+        "App bundle OST Visualizer.app: executable OST Visualizer, bundle id com.fabian.ostvisualizer, MinimumOSVersion 16.0, arm64 only, no .sc files; ldid fake-sign from Config/Entitlements.fakesign.plist (get-task-allowed only, no memory, jetsam or extended-virtual-addressing key); IPA uploaded as OST-Visualizer-ipa (1,963,627 bytes, 30 days)",
+        "Downloaded IPA inspected locally, nothing executed (both runs identical): zip intact, one Payload/OST Visualizer.app (executable 5,115,376 bytes, Info.plist, PkgInfo); thin arm64 MH_EXECUTE Mach-O, minos 16.0, sdk 18.5; ad hoc signature (SHA-1 and SHA-256 CodeDirectory, all 1233 page hashes recomputed and equal, entitlements blob matches its slot, no CMS signature), entitlements get-task-allowed only. -Os cannot be read from a binary: it is taken from the CI-logged settings and the 4 clang response files",
+        "Workflow: concurrency group per ref with cancel-in-progress (a newer push to the same ref cancels the run in progress); every run carries the annotation that Node.js 20 actions are deprecated and checkout@v4, cache@v4 and upload-artifact@v4 are forced to Node.js 24 (a warning, not a failure; a later bump of the action versions may be needed)"
+      ],
+      "ci_cannot_check": [
+        "Install and launch of the fake-signed IPA on a device (and with iRAM+ applying memory entitlements afterwards, which the owner does); anything at runtime: crashes, Metal/bgfx rendering and shaders on a GPU, picking, frame time and memory, large projects",
+        "The 25 fixed-ui-unverified device checks; .ost/.osp open-in and the document picker",
+        "Real Manifold on AppleClang through the host tests (the CI host tests use the stub); Manifold on device",
+        "Debug configuration: only its settings were read back, only Release was compiled; no iOS Simulator slice was built",
+        "The libm cause of the marker-anchor tie is inferred, not observed on arm64; on a device the marker of an exactly mirror-symmetric curved band may sit one grid cell (4.85 points at the test scale) on the other side of its axis than on Windows",
+        "Whether the fake signature is accepted by the owner installer (only the structure and hashes were checked)",
+        "Representative real .ost/.osp project files (the repo holds only synthetic oracles and two CAB files)"
+      ],
+      "steps_first_passed_on_ci_2026_11_20_utc": [
+        "unit tests on AppleClang with the current code (ctest 100% of 12 areas; the suite holds 1599 tests since 5dc7b2b)",
         "libmanifold arm64 check and plist lint",
         "bgfx, bx, bimg build from the pinned SHAs and the Actions cache",
         "minos check of the five prebuilt libraries against 16.0",
@@ -1343,11 +1384,11 @@
         "IPA packaging and upload"
       ]
     },
-    "real_sdk_compile": "No .m/.mm file has been compiled by Xcode, including everything changed in the wiring wave.",
+    "real_sdk_compile": "Done on CI (2026-11-20 UTC): xcodebuild compiled every .m/.mm file, including everything changed in the wiring wave, against the real iPhoneOS 18.5 SDK and linked the app with no error; the first-party warnings are in ci_observations. Debug was not compiled and no Simulator slice was built.",
     "device": "Nothing was run on a device: fake-signed IPA install, import by open-in and document picker, bgfx/Metal rendering (OIT, picking readback, selection highlight), gestures, PDF drawing, share sheet, iPad popovers, memory and frame time; the 25 fixed-ui-unverified ids (ui_unverified), among them the three changed on 2026-11-19 (COND-STYLE-02, COND-ELEV-01, UND-09).",
     "other": [
       "HTML viewer needs network (unpkg.com, three@0.150.0)",
-      "Manifold robustness and time with many negatives and drop stubs; libmanifold as linked on arm64",
+      "Manifold robustness and time with many negatives and drop stubs, and libmanifold at runtime on arm64 (it links into the app on CI: arm64, minos 16.0; the CI host tests use the Manifold stub)",
       "representative real .ost/.osp files (none in the repo) compared with Windows rows",
       "Nyxian on-device build (Config/Project.plist, not re-run) and its entitlements",
       "iRAM+ still recognises the app after a reinstall",
@@ -1373,7 +1414,7 @@
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
       "notes": "n/a (Windows is Python/Qt).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "import_ost",
@@ -1385,7 +1426,7 @@
         "Core/Import/* (typed values, validation, transforms)",
         "Core/Persistence/ProjectStore/Components/ProjectStore+Import*.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "IMP-01",
         "IMP-02",
@@ -1411,7 +1452,7 @@
       ],
       "ui_check_ids": [],
       "notes": "Windows import rules ported and host-tested: BidNo, backslash rule, UID '0', page settings, typed values, UID remap, atomic import, validation, source-UID fields, employees and pay classes.",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "import_osp",
@@ -1423,7 +1464,7 @@
         "Core/Import/OspPackage.cpp",
         "Core/Import/CabMemberName.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "IMP-12",
         "IMP-13",
@@ -1445,7 +1486,7 @@
       ],
       "ui_check_ids": [],
       "notes": "Own CAB reader (stored and MSZIP via zlib). Package structure, image reference resolution, staging without overwriting and abort-on-write-failure follow the Windows importer; member names are decoded like Windows.",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "sqlite_schema",
@@ -1456,7 +1497,7 @@
         "Core/Persistence/ProjectStore/ProjectStore.cpp (create_schema)",
         "Core/Persistence/OstDatabase.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "DBP-33",
         "DBP-34",
@@ -1475,7 +1516,7 @@
       ],
       "ui_check_ids": [],
       "notes": "Phase 1 compared table and column names by script: the 64 Windows tables, same column order, same seed rows (26 SchemaRegistry versions, four default layers); iOS adds _AppMeta and _AppPreferences (66 tables). Since then DBP-33 added the Windows column DEFAULT values to the DDL; the script comparison was not re-run after that.",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "store_behaviour",
@@ -1485,7 +1526,7 @@
         "Core/Persistence/ProjectStore/ProjectStore.cpp",
         "Core/Persistence/ProjectStore/Components/ProjectStore+{Import,Load,Folders,Takeoffs,Conditions,Integrity}.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "DBP-11",
         "DBP-12",
@@ -1521,7 +1562,7 @@
         "BRW-16"
       ],
       "notes": "Failed SQL now propagates (DBP-11), cascades and ownership checks follow Windows, UIDs are allocated like Windows, nested page folders load, load refuses invalid data (DBP-31, BRW-16).",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: DBP-31, BRW-16."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: DBP-31, BRW-16."
     },
     {
       "id": "project_browser",
@@ -1532,7 +1573,7 @@
         "Core/Domain/BrowserRules.cpp",
         "Core/Persistence/ProjectStore/Components/ProjectStore+Folders.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "BRW-01",
         "BRW-02",
@@ -1559,7 +1600,7 @@
         "BRW-08"
       ],
       "notes": "Folder and bid order, trash, restore, Deleted Bids identity (UID '1'), delete confirmation and folder rules follow Windows.",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: BRW-02, BRW-08."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: BRW-02, BRW-08."
     },
     {
       "id": "edit_persistence",
@@ -1571,7 +1612,7 @@
         "ProjectStore+Conditions.cpp",
         "ProjectStore+Folders.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "DBP-07",
         "DBP-14",
@@ -1598,7 +1639,7 @@
         "COND-UPD-03"
       ],
       "notes": "Takeoff position text, insert, delete, negative flag; condition update (changed columns only, NULL for cleared fields), duplicate, delete with full cascade, RefNo shift; layer Show; folders and trash; render config (_AppPreferences). No page write, layer insert/rename/delete, condition create or annotation write exists (searched).",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: COND-UPD-03."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: COND-UPD-03."
     },
     {
       "id": "domain_model",
@@ -1609,7 +1650,7 @@
         "Core/Data/ProjectData.hpp",
         "ProjectStore+Load.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "LP-20",
         "QTY-13",
@@ -1637,7 +1678,7 @@
         "DBP-31"
       ],
       "notes": "Loads Bids, BidProjects (name), BidPages, BidLayers, CdnTypes, BidConditionFolders, BidConditions, BidTakeoffs, BidPageFolders and, for the saved selected page (LP-12), BidSettings. Other tables are stored but not modelled (annotations, areas, cover-sheet data, named views, hot links, employees).",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: DBP-31."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: DBP-31."
     },
     {
       "id": "text_parsing",
@@ -1648,7 +1689,7 @@
         "Core/Domain/{DimensionFormat,NumberText}.cpp",
         "Controllers/EditConditionViewController/Components/EditConditionHelpers.mm"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "ELV-01",
         "ELV-02",
@@ -1671,7 +1712,7 @@
         "POS-M01"
       ],
       "notes": "The Windows elevation grammar replaces the hand-written parser (ELV-01 to ELV-06, host-tested against oracle tables); position text is written and parsed like Windows (DBP-07, DBP-08). DLG-FINITE-01 (whitespace-only Rise or Run is refused like Windows) is decided and done; the condition number above the int range is still open.",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: POS-M01."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: POS-M01."
     },
     {
       "id": "quantities",
@@ -1684,7 +1725,7 @@
         "Controllers/ConditionsViewController.mm",
         "Controllers/ViewController/ViewController.mm (_updateConditionQuantities)"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "QTY-01",
         "QTY-02",
@@ -1709,7 +1750,7 @@
         "QTY-15"
       ],
       "notes": "Attachment aggregation, rounding (round_quantity / round_up), metric UOM codes 11-16, curved length, slope factor, page scope and number formatting follow Windows (QTY-01 to QTY-19, QTY-22, QTY-23).",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: QTY-15."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: QTY-15."
     },
     {
       "id": "mesh_pipeline",
@@ -1720,7 +1761,7 @@
         "Core/Meshing/TakeoffMeshBuilder.cpp",
         "Core/Meshing/MeshFactory.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "MSH-01",
         "MSH-02",
@@ -1732,7 +1773,7 @@
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
       "notes": "Meshes are built in raw OST units with the page rotation and flip applied; hole classification and mesh order follow Windows (MSH-01, MSH-02, MSH-14, MSH-20). The Obj-C service calls the Core builder.",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "mesh_linear",
@@ -1742,14 +1783,14 @@
         "Core/Meshing/gen_linear.cpp",
         "Core/Meshing/mesh_helpers.hpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [],
       "blocked_needs_decision_ids": [],
       "kept_by_decision_ids": [],
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
       "notes": "Matches at generator level; the drop-stub union is a boolean step that keeps the plain wall and logs a warning when the union fails (MSH-19b, RB-04).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "mesh_curved",
@@ -1758,7 +1799,7 @@
       "ios_paths": [
         "Core/Meshing/gen_curved.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "MSH-05",
         "MSH-06",
@@ -1768,8 +1809,8 @@
       "kept_by_decision_ids": [],
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
-      "notes": "Segment count, arc side and straight-chord rule follow Windows (MSH-05 to MSH-07). The clang build with FMA is part of the evidence (the CI failure of 2026-11-16 was in this area).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "notes": "Segment count, arc side and straight-chord rule follow Windows (MSH-05 to MSH-07). The clang build with FMA is part of the evidence (the CI failure of 2026-11-16 was in this area; since the strict-FP fix the Meshing area passes on CI with AppleClang on arm64).",
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "mesh_area",
@@ -1780,7 +1821,7 @@
         "Core/Geometry/earcut.hpp",
         "Core/Geometry/earcut_impl.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "GEO-05",
         "GEO-14",
@@ -1794,7 +1835,7 @@
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
       "notes": "Slope direction (GEO-05) and tessellation frame (GEO-14) follow Windows. Face winding stays outward-facing by decision.",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "mesh_count",
@@ -1804,7 +1845,7 @@
         "Core/Meshing/gen_count.cpp",
         "Core/Meshing/MeshFactory.cpp (create_count)"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "MSH-08",
         "MSH-09",
@@ -1817,7 +1858,7 @@
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
       "notes": "All eight shapes follow Windows (table below; MSH-08 to MSH-11, MSH-13).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "booleans",
@@ -1830,7 +1871,7 @@
         "Services/ExportService.mm",
         "Core/Meshing/ExportMeshSet.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "MSH-14",
         "MSH-15",
@@ -1843,8 +1884,8 @@
       "kept_by_decision_ids": [],
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
-      "notes": "One rule for the 3D view and all exports, as in the Windows tree at 6d4786f: a negative cuts only positives of the same condition type, a fully consumed positive is dropped, an export without a surviving mesh fails before writing (MSH-14 to MSH-16, MSH-19, MSH-19b, EXP-05, RB-01 to RB-04). Host tests with real Manifold need -DOST_TEST_BOOLEAN=ON (1606 pass).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "notes": "One rule for the 3D view and all exports, as in the Windows tree at 6d4786f: a negative cuts only positives of the same condition type, a fully consumed positive is dropped, an export without a surviving mesh fails before writing (MSH-14 to MSH-16, MSH-19, MSH-19b, EXP-05, RB-01 to RB-04). Host tests with real Manifold need -DOST_TEST_BOOLEAN=ON (1606 pass on 2026-11-19, 1607 since 5dc7b2b); the CI host tests use the Manifold stub, so real Manifold on AppleClang is not exercised by them (libmanifold.a itself links into the app on CI: arm64, minos 16.0).",
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "renderer_3d",
@@ -1874,7 +1915,7 @@
       ],
       "ui_check_ids": [],
       "notes": "Replaced technology (Windows: OpenGL/Qt). Lighting constants and directions are the Windows ones; grayscale and alpha rules follow Windows (COL-02, COL-03). Never run on a GPU or device. The normal flip towards the viewer in the shaders stays (RPV-29, decided 2026-11-19).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "plan_view",
@@ -1888,7 +1929,7 @@
         "Core/Geometry/page_transform.hpp",
         "Core/Geometry/{page_view,takeoff_footprint,coord_transform}.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "LP-15",
         "LP-16",
@@ -1925,7 +1966,7 @@
         "RPV-32"
       ],
       "notes": "PDF page index, page size, rotation and flip, attachments and holes in 2D and handle visuals follow Windows; the minimum interactive sizes use the constant ost_footprint::kInteractivePdfRenderScale, accepted on 2026-11-19 (RPV-26: 8/3 pt count item, 2/3 pt linear band); the negative marker anchor and its position on rotated or flipped pages stay as decided (RPV-27). Overlay image fields are still loaded but not drawn.",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: LP-16, GEO-06, RPV-17, RPV-31, RPV-32."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: LP-16, GEO-06, RPV-17, RPV-31, RPV-32."
     },
     {
       "id": "ui_conditions",
@@ -1936,7 +1977,7 @@
         "Controllers/EditConditionViewController/*",
         "Core/Domain/{ConditionChoices,ConditionFormRules,ConditionStyleChange,ConditionTree,DimensionFormat}.cpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "COND-DEL-01",
         "COND-UPD-01",
@@ -1977,7 +2018,7 @@
         "COND-ELEV-01"
       ],
       "notes": "List order and folders, edit form rules (a whitespace-only Rise or Run is refused like Windows), layer and type pickers, style change (a metric bid persists the metric type defaults, a deliberate deviation from the literal Windows behaviour), trim/curved exclusion, metric bids, the elevation derived from the saved name so memory equals a reload (deliberate deviation) and save-failure reporting follow Windows; iOS-only Connect / Tolerance / Snap-to-Linear controls kept by decision. Condition create and condition-folder CRUD do not exist.",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: COND-PLACE-01, COND-UPD-03, COND-LAYER-01, COND-TRIM-01, UI-M01, COND-STYLE-02, COND-ELEV-01."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: COND-PLACE-01, COND-UPD-03, COND-LAYER-01, COND-TRIM-01, UI-M01, COND-STYLE-02, COND-ELEV-01."
     },
     {
       "id": "ui_layers_pages",
@@ -1989,7 +2030,7 @@
         "Core/Data/PageNavigation.cpp",
         "Services/ProjectService.mm"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "LP-08",
         "LP-10",
@@ -2015,7 +2056,7 @@
         "RPV-16"
       ],
       "notes": "Page order, folder selection, 2D re-tap, initial page, Comments layer and layer merge follow Windows; hiding a layer suspends an active placement and showing it restores it (COND-PLACE-01).",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: RPV-16."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: RPV-16."
     },
     {
       "id": "export",
@@ -2027,7 +2068,7 @@
         "Core/Meshing/ExportMeshSet.cpp",
         "Controllers/ViewController/Components/ViewController+Export.mm"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "EXP-01",
         "EXP-02",
@@ -2074,7 +2115,7 @@
         "EXP-21"
       ],
       "notes": "Axes, holes, per-condition groups and naming, colours with grayscale and opacity, escaped HTML payload, file names, nothing-to-export handling and the Three.js shading constants follow Windows; the export error wording stays the iOS one and the pages follow the sorted selection order (EXP-21, EXP-09, kept 2026-11-19). The HTML viewer imports three@0.150.0 from unpkg.com, so viewing it needs network.",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: EXP-21."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: EXP-21."
     },
     {
       "id": "undo_redo",
@@ -2084,7 +2125,7 @@
         "Controllers/ViewController/Components/UndoRedoController.mm",
         "Core/Domain/UndoHistory.hpp"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "UND-01",
         "UND-02",
@@ -2111,7 +2152,7 @@
         "UND-10"
       ],
       "notes": "History bounded to 50 entries like Windows, one entry for a grouped move, and one entry for Count as Negative Quantity, which changes only the pressed takeoff (a condition selected in the sidebar widens nothing; UND-09, decided 2026-11-19); failed writes do not advance history, deleting a condition clears the history, undo of a delete selects the restored takeoff. Condition, layer and folder edits are not undoable (Windows has no undo for them either).",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: UND-03, UND-07, UND-09, UND-10."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: UND-03, UND-07, UND-09, UND-10."
     },
     {
       "id": "camera",
@@ -2136,7 +2177,7 @@
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
       "notes": "Platform-adapted gestures (one-finger orbit, pan-mode toggle on the floating button, pinch zoom); fit/reset framing and zoom limits use the Windows constants (CAM-01, CAM-03, CAM-04).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "snapping",
@@ -2148,7 +2189,7 @@
         "Core/Geometry/{placement_snap,drag_rules,geom_utils}.cpp",
         "Core/Domain/Bid.hpp (snap_increments_ost)"
       ],
-      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover, except the ids in kept_by_decision_ids (iOS behaviour kept on purpose by user decision); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "RPV-04",
         "RPV-05",
@@ -2181,7 +2222,7 @@
         "RPV-M07"
       ],
       "notes": "15 degree angle snap, length-only grid snap gated by threshold, half-to-even rounding, group drag and area edge-handle rules follow Windows. No endpoint, midpoint, PDF-line or right-angle snapping exists.",
-      "needs_verification": "UIKit/CoreGraphics part syntax-checked against stubs only; device check needed for: RPV-M07."
+      "needs_verification": "UIKit/CoreGraphics part compiled and linked on CI against the real SDK, never run; device check needed for: RPV-M07."
     },
     {
       "id": "render_settings",
@@ -2193,7 +2234,7 @@
         "Controllers/DatabaseViewController.mm (_settingsTapped)",
         "ViewController.mm (_applyRenderConfig)"
       ],
-      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring syntax-checked only",
+      "matches_windows": "Yes for the cases the host tests cover (Core); platform wiring compiled and linked on CI, never run",
       "parity_ids": [
         "SET-01",
         "SET-02",
@@ -2208,7 +2249,7 @@
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
       "notes": "Modes Solid / Original / Transparent (default Original, invalid stored values become the default) plus grayscale, stored in _AppPreferences; negative ColorFill and alpha rules follow Windows. One mode for 2D and 3D (Windows has separate 2D and 3D modes: not implemented).",
-      "needs_verification": "Objective-C wiring (if any) syntax-checked against hand-written stubs only; not compiled by Xcode, not run on a device."
+      "needs_verification": "Objective-C wiring (if any) syntax-checked against stubs, then compiled and linked against the real SDK by xcodebuild on CI (2026-11-20 UTC, no errors); not run on a device."
     },
     {
       "id": "build_ci_tests",
@@ -2230,8 +2271,8 @@
       "kept_by_decision_ids": [],
       "decided_2026_11_19_ids": [],
       "ui_check_ids": [],
-      "notes": "Host tests run on MSVC and clang. The workflow got as far as the unit-test step once (2026-11-16). XcodeGen, xcodebuild, ldid and the bgfx build have never run.",
-      "needs_verification": "XcodeGen, xcodebuild, ldid, the bgfx build and the IPA step have never run on the current code (one CI run, 2026-11-16, stopped at the host unit tests)."
+      "notes": "Host tests run on MSVC, on clang and, on CI, on AppleClang 17 arm64. Since the runs of 2026-11-20 UTC the workflow passes every step: unit tests, bgfx build, XcodeGen, xcodebuild (Release iphoneos, unsigned), ldid fake-signing and IPA packaging. The IPA was never installed or run on a device, so the status stays Implemented-unverified.",
+      "needs_verification": "Install and launch of the fake-signed IPA on a device and everything at runtime; the Debug configuration (only its settings were read back) and an iOS Simulator slice were never built; real Manifold on AppleClang is not exercised by the CI host tests (Manifold stub)."
     }
   ],
   "count_shapes": [
@@ -2446,7 +2487,7 @@
           "Config/Info.plist",
           "Config/Entitlements.fakesign.plist"
         ],
-        "state": "Committed (a950f9a) and edited since (16.0, -Os, minos check; uncommitted). XcodeGen spec has one app target (iphoneos, arm64, min iOS 16.0, -Os in the base settings and in both configurations, gnu++17, links libmanifold plus four bgfx libraries and the system frameworks). The workflow (macos-15, Xcode 16.4) runs the host unit tests, checks libmanifold.a is arm64, lints plists, restores or builds bgfx/bx/bimg from pinned SHAs, fails if any of the five prebuilt libraries has a Mach-O minos above 16.0, runs xcodegen, reads -Os and the 16.0 deployment target back from the generated project, runs xcodebuild (Release, unsigned), checks the bundle, fake-signs with ldid (only get-task-allowed; fails on any memory/jetsam entitlement), zips OST-Visualizer.ipa and uploads it (30 days). Triggers: every push and manual dispatch. One run so far (2026-11-16), stopped at the unit tests."
+        "state": "Committed (a950f9a), edited since (16.0, -Os, minos check: 9decbb5) and run on GitHub. XcodeGen spec has one app target (iphoneos, arm64, min iOS 16.0, -Os in the base settings and in both configurations, gnu++17, links libmanifold plus four bgfx libraries and the system frameworks). The workflow (macos-15, Xcode 16.4) runs the host unit tests, checks libmanifold.a is arm64, lints plists, restores or builds bgfx/bx/bimg from pinned SHAs, fails if any of the five prebuilt libraries has a Mach-O minos above 16.0, runs xcodegen, reads -Os and the 16.0 deployment target back from the generated project, runs xcodebuild (Release, unsigned), checks the bundle, fake-signs with ldid (only get-task-allowed; fails on any memory/jetsam entitlement), zips OST-Visualizer.ipa and uploads it (30 days). Triggers: every push and manual dispatch. Runs: 2026-11-16 and 44642251350 (2026-11-20 UTC) stopped at the unit tests; 44654559214 and 44661853681 passed every step and uploaded the IPA artifact OST-Visualizer-ipa; the host-test build is bounded to the core count (787a57d)."
       },
       {
         "name": "Dependency workflows (older)",
@@ -2458,8 +2499,8 @@
       }
     ],
     "ci_build_defined": true,
-    "ci_build_run": false,
-    "ci_build_run_note": "No run has completed. One run started on 2026-11-16 and failed in the host unit tests, before the fix; there is no run on the current code.",
+    "ci_build_run": true,
+    "ci_build_run_note": "Runs 44654559214 (5dc7b2b) and 44661853681 (787a57d), 2026-11-20 UTC, passed every step. Earlier runs failed in the host unit tests (2026-11-16 Meshing, 44642251350 Geometry) and were fixed.",
     "host_test_harness": {
       "path": "Config/Tests",
       "description": "Config/Tests (CMake, C++17): builds Core/*.cpp, sqlite3.c, pugixml.cpp and Rendering/MeshLoader.cpp as ost_core, with a header-only harness (TestHarness.hpp, TestMain.cpp). Area folders Config/Tests/<Area>/test_*.cpp are picked up by CMake glob. Boolean ops are a throwing stub unless -DOST_TEST_BOOLEAN=ON; zlib is downloaded on Windows; non-MSVC compilers get -Os on top of the Debug flags. Run as CI does: cmake -S Config/Tests -B build/tests, cmake --build, ctest.",
@@ -2482,8 +2523,9 @@
       "ios_behavior_tests_before_job": 0,
       "total_tests": 1598,
       "total_tests_with_boolean": 1606,
+      "total_tests_note": "Counts of 2026-11-19; since 5dc7b2b the suite holds 1599 tests (1607 with the boolean option) and 1589 behaviour tests; see tests.since_commit_5dc7b2b.",
       "fixtures": "Config/Tests/Fixtures holds 12 files: 10 oracle tables recorded from the Windows side and 2 cabinets (makecab_mszip.cab, makecab_two_folders.cab). The repo contains no real .ost or .osp project; the import tests build their XML and packages in code.",
-      "result": "MSVC and clang+FMA: 1598 of 1598 (1606 of 1606 with -DOST_TEST_BOOLEAN=ON), fresh runs on 2026-11-19. The AppleClang run on the new code has not happened.",
+      "result": "MSVC and clang+FMA: 1598 of 1598 (1606 of 1606 with -DOST_TEST_BOOLEAN=ON), fresh runs on 2026-11-19. On CI (AppleClang 17 arm64, Manifold stub) ctest passed 100% of 12 areas in runs 44654559214 and 44661853681; since 5dc7b2b the suite holds 1599 tests (1607 with the boolean option).",
       "parity_measurements": "Phase 1 compared the iOS Core C++ (MSVC host build) with the Windows Python/native modules using throw-away harnesses outside the repo; the committed tests now carry the expected values."
     },
     "dependencies": [
@@ -3501,7 +3543,7 @@
       "RPV-32",
       "UND-10"
     ],
-    "meaning": "Core part host-tested; the UIKit/CoreGraphics part is wired in the .mm files and was only syntax-checked against hand-written stubs. Never seen running.",
+    "meaning": "Core part host-tested; the UIKit/CoreGraphics part is wired in the .mm files, was syntax-checked against hand-written stubs and has since been compiled and linked against the real SDK on CI (no errors). Never seen running.",
     "device_checks": [
       {
         "ids": "GEO-06, LP-16",
@@ -3600,10 +3642,10 @@
     },
     {
       "id": "B-010",
-      "name": "No Xcode build, no real-SDK compile and no device run on record",
+      "name": "No device run on record (the Xcode build and the real-SDK compile are done on CI)",
       "status": "Needs verification",
-      "current_state": "The authoring machine is Windows (no Xcode, xcodebuild, XcodeGen, ldid, macOS or device). The .m/.mm files were only syntax-checked against hand-written stubs (27 of 27 files, 0 errors, 4 baseline warnings). The one GitHub run (2026-11-16) stopped at the host unit tests; every later step (bgfx build, xcodegen, xcodebuild, ldid, IPA) has never run, and no run exists for the current code.",
-      "impact": "Unknown whether project.yml generates a project that compiles and links against the real SDK, and whether the app runs; the UI part of 25 items (ui_unverified) has never been seen.",
+      "current_state": "The authoring machine is Windows (no Xcode, xcodebuild, XcodeGen, ldid, macOS or device). The .m/.mm files were syntax-checked against hand-written stubs (27 of 27 files, 0 errors, 4 baseline warnings). GitHub Actions has since built the current code: runs 44654559214 (5dc7b2b) and 44661853681 (787a57d), 2026-11-20 UTC, passed every step: host tests on AppleClang arm64, bgfx build, XcodeGen, xcodebuild (Release iphoneos, unsigned: BUILD SUCCEEDED, every Objective-C and Objective-C++ file compiled and linked against the real iPhoneOS 18.5 SDK with no error; warnings in not_verified.github.ci_observations), ldid fake-signing and IPA packaging. Still open: install and launch on a device and everything at runtime (not_verified.github.ci_cannot_check).",
+      "impact": "Unknown whether the fake-signed app installs and starts, and whether the fixed-ui-unverified behaviour is right (the UI part of 25 items, ui_unverified, has never been seen); that project.yml generates a project that compiles and links against the real SDK is now known.",
       "windows_evidence": [],
       "ios_evidence": [
         "project.yml",
@@ -3652,7 +3694,7 @@
       "name": "Manifold / boolean operations",
       "status": "Replaced (dependency)",
       "verified_reason": "Libs/Manifold/include and lib/libmanifold.a are tracked, project.yml and Config/Project.plist link -lmanifold, Core/Geometry/boolean_ops.cpp differs from the Windows file only in include lines and a stale TODO comment on line 1, ProjectService.mm and ExportService.mm call boolean_difference_batch through the Core export/view builders.",
-      "remaining_caveat": "Link and runtime on iOS not verified (B-010). The orchestration follows Windows (MSH-14 to MSH-16, MSH-19, MSH-19b, EXP-05, RB-01 to RB-04); host tests with real Manifold need -DOST_TEST_BOOLEAN=ON (1606 pass)."
+      "remaining_caveat": "libmanifold.a links into the app on CI (arm64, minos 16.0); runtime on iOS not verified (B-010). The orchestration follows Windows (MSH-14 to MSH-16, MSH-19, MSH-19b, EXP-05, RB-01 to RB-04); host tests with real Manifold need -DOST_TEST_BOOLEAN=ON (1606 pass on 2026-11-19, 1607 since 5dc7b2b; the CI host tests use the stub)."
     },
     {
       "id": "B-003",
@@ -3693,8 +3735,8 @@
       "id": "B-011",
       "name": "No iOS behaviour tests or fixtures",
       "status": "Resolved",
-      "verified_reason": "Config/Tests holds 1598 host tests in 12 areas (10 harness self-tests + 1588 iOS behaviour tests; 0 behaviour tests before the parity job), with 10 oracle files and 2 CAB fixtures under Config/Tests/Fixtures.",
-      "remaining_caveat": "Core only: the Objective-C/UIKit layer has no automated test, the repo still has no real .ost/.osp project, and the CI run of the new tests has not happened (B-010)."
+      "verified_reason": "Config/Tests held 1598 host tests in 12 areas on 2026-11-19 (10 harness self-tests + 1588 iOS behaviour tests; 0 behaviour tests before the parity job); 1599 since 5dc7b2b, with 10 oracle files and 2 CAB fixtures under Config/Tests/Fixtures.",
+      "remaining_caveat": "Core only: the Objective-C/UIKit layer has no automated test, the repo still has no real .ost/.osp project, and on CI the tests run only with the Manifold stub (AppleClang 17 arm64, 12 of 12 areas pass), so the 9 boolean-dependent tests are not part of the CI run."
     },
     {
       "id": "B-012",
@@ -3856,16 +3898,16 @@
       "gap": "Build and signing configuration",
       "status": "Needs verification",
       "parity_ids": [],
-      "current_state": "Config/Entitlements.plist (Nyxian) carries 25 com.nyxian.pe.* keys; the CI path signs with a minimal get-task-allowed set; minimum iOS 16.0 everywhere; C/C++/Objective-C built with -Os. See B-010."
+      "current_state": "Config/Entitlements.plist (Nyxian) carries 25 com.nyxian.pe.* keys; the CI path signs with a minimal get-task-allowed set (checked on the CI artifact: ad hoc ldid signature, entitlements get-task-allowed only; acceptance by the owner installer is not known); minimum iOS 16.0 everywhere; C/C++/Objective-C built with -Os (CI-logged settings and clang response files). See B-010."
     }
   ],
   "needs_manual_validation": [
-    "First complete GitHub Actions run on the current code: unit tests on AppleClang, libmanifold arm64 check, bgfx build from the pinned SHAs, minos check, xcodegen, xcodebuild, bundle checks, ldid fake-signing, IPA packaging (only the host-test configure/build ever ran, on 2026-11-16; it failed at the unit tests).",
-    "Compilation of every Objective-C/Objective-C++ file (Controllers, PlanView, Services, Rendering/*.mm, SceneDelegate.mm) against the real SDK by Xcode; so far only -fsyntax-only against hand-written stubs.",
+    "CI build gaps: the Debug configuration (only its settings were read back; only Release was compiled), an iOS Simulator slice (not built) and real Manifold on AppleClang through the host tests (the CI host tests use the stub). The full workflow itself passed on 2026-11-20 UTC (44654559214, 44661853681).",
+    "Warnings of the real-SDK build in first-party code (6 -Wundeclared-selector, 1 -Wprotocol, 2 -Wobjc-protocol-method-implementation, 2 Info.plist warnings; none is an error; adding Info.plist keys would change app behaviour, the owner decision). The compilation itself passed on CI.",
     "Install and launch of the fake-signed IPA on a device; .ost/.osp open-in and document-picker import.",
     "On-device behaviour of the 25 fixed-ui-unverified ids (see ui_unverified).",
     "bgfx/Metal on device: rendering, OIT passes, picking readback, selection highlight, frame time and memory on large projects; the RPV-29 shader flip is kept by decision, and any shader change would need shaderc and a Metal device.",
-    "Manifold on device: link of libmanifold.a, runtime robustness and time with many negatives and drop stubs.",
+    "Manifold on device: runtime robustness and time with many negatives and drop stubs (libmanifold.a links into the app on CI; real Manifold on AppleClang is not exercised by the CI host tests).",
     "Representative real .ost and .osp files compared with Windows rows and loaded fields (none in the repo).",
     "PDF background scaling, rotation, multi-page files and extracted OSP paths on a device.",
     "Export on device: share sheet, large outputs, write failures; the HTML viewer needs network (unpkg.com).",
@@ -3882,6 +3924,7 @@
     "'No .xcodeproj, CI or test target': no longer accurate, see Corrections.",
     "'No Phase 3 fix has been made yet; every item is open': obsolete, see item_status.",
     "'Phase 0 files are uncommitted': obsolete, Phase 0 was committed and pushed on 2026-11-15 (a950f9a, c73b6d0).",
-    "'Minimum iOS 14.8' and '-O0 tests': obsolete, minimum is 16.0 and -Os everywhere."
+    "'Minimum iOS 14.8' and '-O0 tests': obsolete, minimum is 16.0 and -Os everywhere.",
+    "'The first full CI run is still to be seen' and 'build.yml never ran past the unit-test step': obsolete, runs 44654559214 and 44661853681 (2026-11-20 UTC) passed every step."
   ]
 }
