@@ -10,7 +10,7 @@ What the job does, in order (the step names are the ones in the Actions log):
 2. Select Xcode and show the toolchain (`/Applications/Xcode_16.4.app`).
 3. Install XcodeGen and ldid (`brew install xcodegen ldid`).
 4. Show cmake version.
-5. Unit tests (host build): `cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug`, `cmake --build build/tests --parallel`, `ctest --test-dir build/tests --output-on-failure --no-tests=error`. A failing test stops the job before any library or app build.
+5. Unit tests (host build): `cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug`, `cmake --build build/tests --parallel "$(sysctl -n hw.ncpu)"`, `ctest --test-dir build/tests --output-on-failure --no-tests=error`. A failing test stops the job before any library or app build. The build gets a job count on purpose: a bare `--parallel` is an unlimited `make -j` with the Makefile generator, which started about 60 and then about 110 compiler processes at once on the 3-core runner and made this step take about 55 minutes instead of a few (first full run, 2026-11-20).
 6. Verify `libmanifold.a` is arm64.
 7. Validate plists (`plutil -lint` on `Config/Info.plist` and `Config/Entitlements.fakesign.plist`).
 8. bgfx, bx and bimg libraries: restore from the Actions cache or, on a cache miss, check out the three pinned sources, build `ios-arm64-release`, copy the four libraries to `Libs/bgfx/bgfx/.build/ios-arm64/bin`; then "Verify bgfx libraries" (each is arm64 only).
@@ -74,6 +74,8 @@ cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug
 cmake --build build/tests --parallel
 ctest --test-dir build/tests --output-on-failure --no-tests=error
 ```
+
+On a machine with little memory give `--parallel` a number (`--parallel 4`): with the Makefile generator a bare `--parallel` is an unlimited `make -j`, and about 110 compiler processes at once swap a 7 GB machine (the CI step passes `"$(sysctl -n hw.ncpu)"`).
 
 Windows (MSVC), from an "x64 Native Tools Command Prompt for VS" (or after running `vcvars64.bat`):
 

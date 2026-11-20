@@ -99,7 +99,10 @@ jobs:
         run: |
           set -euo pipefail
           cmake -S Config/Tests -B build/tests -DCMAKE_BUILD_TYPE=Debug
-          cmake --build build/tests --parallel
+          # A bounded job count: a bare --parallel is an unlimited "make -j" with the Unix Makefiles generator. On this
+          # 3-core runner it started about 60 and then about 110 compiler processes at once (run 44654559214) and the
+          # build took about 55 minutes; the tests themselves run in about 70 seconds.
+          cmake --build build/tests --parallel "$(sysctl -n hw.ncpu)"
           ctest --test-dir build/tests --output-on-failure --no-tests=error
 
       - name: Verify libmanifold.a is arm64
