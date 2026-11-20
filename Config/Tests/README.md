@@ -8,7 +8,7 @@ Where they live: `Config/Tests/`, not a top-level `Tests/`. Nyxian compiles ever
 
 ## Counts
 
-Before the parity job there were 0 iOS behaviour tests (only the 10-test harness self-test existed). A fresh run on 2026-11-19 on MSVC (Debug) gives 1598 tests, all passing, in 12 areas (1588 behaviour tests plus the 10 harness self-tests), and 1606 with `-DOST_TEST_BOOLEAN=ON`. The same 1598 (1606 with booleans) pass on a clang build (zig clang 22, x86-64, `-Os -g`, `-mfma -ffp-contract=on`; see "FMA and arm64" below). The first CI fix (2026-11-20) added one test, so the suite now has 1599 tests (1607 with booleans, all passing on MSVC and on the clang build); the counts in the other documents are those of 2026-11-19.
+Before the parity job there were 0 iOS behaviour tests (only the 10-test harness self-test existed). A fresh run on 2026-11-19 on MSVC (Debug) gives 1598 tests, all passing, in 12 areas (1588 behaviour tests plus the 10 harness self-tests), and 1606 with `-DOST_TEST_BOOLEAN=ON`. The same 1598 (1606 with booleans) pass on a clang build (zig clang 22, x86-64, `-Os -g`, `-mfma -ffp-contract=on`; see "FMA and arm64" below). The first CI fix (2026-11-20) added one test (1599), and the fixes of the two device bugs added 33 (selection and Delete 16, scene rendering 11, the scene of a realistic bid 6): the suite now has 1632 tests (1640 with booleans, all passing on MSVC and on the clang build); the counts in the other documents are those of 2026-11-19.
 
 | Area | Tests | Covers |
 |---|---:|---|
@@ -19,14 +19,14 @@ Before the parity job there were 0 iOS behaviour tests (only the 10-test harness
 | Geometry | 172 | Page transform and canvas mapping, takeoff footprints, placement snapping, drag rules, hole/attachment validation, polygon predicates |
 | Harness | 10 | The harness itself (`Support/TestHarness.hpp`); must stay free of iOS behaviour tests |
 | Import | 304 | .ost XML front end and parser, import transform and writer, column types, master data, raw integrity, OSP package, CAB reader and member names, text rules, digests |
-| Meshing | 101 (104 with booleans) | Wall, curved wall, area and count shape meshes, hole grouping, boolean pass contract, drop stub, geometric equivalence |
+| Meshing | 107 (110 with booleans) | Wall, curved wall, area and count shape meshes, hole grouping, boolean pass contract, drop stub, geometric equivalence, a realistic bid in front of the camera (bounds, frustum, far plane, pass of every mesh) |
 | Parsers | 114 | Elevation text, position text, condition colour |
 | Persistence | 278 | Schema defaults, load rules and errors, write validation, UID allocation, takeoff insert/delete/positions, delete cascades, layer merge and bulk, page navigation, DB wrapper |
 | Quantities | 134 | UOM tables and normalisation, curve lengths, page and view quantities |
-| Settings | 74 | Render config, camera framing and limits, undo history, takeoff restore and descendants, Count as Negative Quantity on the pressed takeoff |
-| Total | 1599 (1607 with booleans) | |
+| Settings | 101 | Render config, camera framing and limits, undo history, takeoff restore and descendants, Count as Negative Quantity on the pressed takeoff, the selection of the 2D view and what Delete removes (and its data safety), the render pass of a mesh and the clip planes |
+| Total | 1632 (1640 with booleans) | |
 
-With `-DOST_TEST_BOOLEAN=ON` the Export area runs 5 more tests and the Meshing area 4 more (the cases that need the real Manifold library), while 1 Meshing test that only makes sense without Manifold is skipped; all 1607 pass on MSVC and on the clang build.
+With `-DOST_TEST_BOOLEAN=ON` the Export area runs 5 more tests and the Meshing area 4 more (the cases that need the real Manifold library), while 1 Meshing test that only makes sense without Manifold is skipped; all 1640 pass on MSVC and on the clang build.
 
 These numbers are a snapshot of the run named above: re-run the tests for the current figure. The first CI run of the host-test step is described under "FMA and arm64" below.
 

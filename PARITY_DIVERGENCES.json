@@ -8604,7 +8604,7 @@
     "tests/presentation/components/test_mesh_view.py:1638"
    ],
    "testPlan": "Extract fit math into Core and test against native Camera.show_object. Windows bounds (-3306,77,0)-(-528,2418,332): target (-1917,1247.5,166), position (-1917,4025.5,4333), distance 5008.111, elevation 56.31 deg (pinned by test_renderer_boundaries). Bounds (0,0,0)-(100,50,20): position (50,125,160), target (50,25,10), distance 180.278. Bounds (0,0,0)-(0.5,0.4,0.3): position (0.25,100.2,150.15), target (0.25,0.2,0.15) (size<1 uses 100). The Y-up equivalent is offset (0, 1.5*size, -size), i.e. yaw=pi, pitch=0.98279 rad, distance 1.80278*size, with the minimum extent 100 rule.",
-   "note": "Values taken from running the Windows native Camera. The near and far planes also differ (iOS: near=max(dist*0.005,0.01), far=max(dist+2R,4R); Windows: near=max(0.1,0.001*size), far=max(10000,20*size)), which is platform-adapted.",
+   "note": "Values taken from running the Windows native Camera. The near and far planes also differ (iOS: near=max(dist*0.005,0.01), far=max(dist+2R,4R), since 2026-11-20 also at least the farthest corner of the live scene bounds (Core/Domain/SceneRendering.hpp); Windows: near=max(0.1,0.001*size), far=max(10000,20*size)), which is platform-adapted.",
    "verdict": "CONFIRMED",
    "status": "fixed",
    "statusBefore": "open",
