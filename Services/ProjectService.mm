@@ -108,8 +108,10 @@
   try {
     meshes = ost_meshing::generate_view_meshes(_project, _selected3DPageUIDs,
                                                _renderConfig);
-  } catch (const std::exception &) {
-    // Windows: a failed scene generation leaves the view empty.
+  } catch (const std::exception &error) {
+    // Windows: a failed scene generation leaves the view empty. The reason is logged, so that an empty view can be explained.
+    NSLog(@"3D scene generation failed, the view stays empty: %s",
+          error.what());
     return;
   }
 

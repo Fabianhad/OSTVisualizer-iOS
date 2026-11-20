@@ -1,5 +1,6 @@
 #import "Renderer.h"
 #include "../Core/Domain/CameraFraming.hpp"
+#include "../Core/Domain/SceneRendering.hpp"
 #include "../Core/Geometry/feature_edges.hpp"
 #include "MathUtils.hpp"
 #include "MeshLoader.hpp"
@@ -94,7 +95,6 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
 
   bgfx::TextureHandle _oitAccumTex;
   bgfx::TextureHandle _oitRevealTex;
-  bgfx::TextureHandle _oitDepthTex;
   bgfx::FrameBufferHandle _oitAccumFB;
   bgfx::FrameBufferHandle _oitRevealFB;
 
@@ -240,18 +240,20 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
 
   _oitAccumTex = bgfx::createTexture2D(w, h, false, 1,
                                        bgfx::TextureFormat::RGBA16F, rtFlags);
-  _oitDepthTex = bgfx::createTexture2D(w, h, false, 1,
-                                       bgfx::TextureFormat::D24S8, rtFlags);
+  // The transparent passes test against the depth of the OPAQUE scene (kViewOpaque clears and fills _sceneDepthTex every frame, the
+  // OIT views neither clear nor write it), like Windows, where accum_fbo and opaque_fbo share one depth texture. A depth texture of
+  // their own was never cleared and never written: `DEPTH_TEST_LESS` ran against undefined contents and, with zeros, rejected
+  // every fragment of every mesh with an alpha below 0.99.
   bgfx::Attachment oitAccumAtt[2];
   oitAccumAtt[0].init(_oitAccumTex);
-  oitAccumAtt[1].init(_oitDepthTex);
+  oitAccumAtt[1].init(_sceneDepthTex);
   _oitAccumFB = bgfx::createFrameBuffer(2, oitAccumAtt, false);
 
   _oitRevealTex =
       bgfx::createTexture2D(w, h, false, 1, bgfx::TextureFormat::R8, rtFlags);
   bgfx::Attachment oitRevAtt[2];
   oitRevAtt[0].init(_oitRevealTex);
-  oitRevAtt[1].init(_oitDepthTex);
+  oitRevAtt[1].init(_sceneDepthTex);
   _oitRevealFB = bgfx::createFrameBuffer(2, oitRevAtt, false);
 
   _pickTex = bgfx::createTexture2D(w, h, false, 1, bgfx::TextureFormat::RGBA8,
@@ -289,8 +291,6 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
     bgfx::destroy(_oitAccumTex);
   if (bgfx::isValid(_oitRevealTex))
     bgfx::destroy(_oitRevealTex);
-  if (bgfx::isValid(_oitDepthTex))
-    bgfx::destroy(_oitDepthTex);
   if (bgfx::isValid(_pickFB))
     bgfx::destroy(_pickFB);
   if (bgfx::isValid(_pickTex))
@@ -559,18 +559,29 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
 
   bool hasMeshes = !_gpuMeshes.empty();
 
-  float yaw = _cameraYaw;
-  float pitch = _cameraPitch;
-  float dist = _cameraDistance;
+  ost_domain::CameraPose pose;
+  pose.target_x = _cameraTargetX;
+  pose.target_y = _cameraTargetY;
+  pose.target_z = _cameraTargetZ;
+  pose.distance = _cameraDistance;
+  pose.yaw = _cameraYaw;
+  pose.pitch = _cameraPitch;
+  const ost_domain::EyePosition eyePosition = ost_domain::camera_eye(pose);
   Vec3 target(_cameraTargetX, _cameraTargetY, _cameraTargetZ);
-  Vec3 eye(target.x + cosf(pitch) * sinf(yaw) * dist,
-           target.y + sinf(pitch) * dist,
-           target.z + cosf(pitch) * cosf(yaw) * dist);
+  Vec3 eye(eyePosition.x, eyePosition.y, eyePosition.z);
 
-  float near = hasMeshes ? fmaxf(dist * 0.005f, 0.01f) : 0.1f;
-  float far = fmaxf(dist + _sceneRadius * 2.0f, _sceneRadius * 4.0f);
-  if (far < 100.0f && !hasMeshes)
-    far = 100.0f;
+  // The clip planes follow the LIVE scene bounds (Windows configure_clip_planes): the far plane reaches the farthest corner of
+  // the meshes now in the scene, so a scene that appears without a refit is not cut off (Core/Domain/SceneRendering.hpp).
+  std::optional<ost_domain::SceneBounds> liveBounds;
+  if (hasMeshes) {
+    ost_domain::SceneBounds bounds;
+    if ([self _sceneBounds:&bounds])
+      liveBounds = bounds;
+  }
+  const ost_domain::RenderClipPlanes planes =
+      ost_domain::render_clip_planes(pose, _sceneRadius, liveBounds);
+  float near = planes.near_plane;
+  float far = planes.far_plane;
   float aspect = (float)_width / fmaxf(1.0f, (float)_height);
 
   Mat4 view = Mat4::lookAt(eye, target, Vec3(0, 1, 0));
@@ -589,10 +600,21 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
   bgfx::setViewFrameBuffer(kViewOpaque, _sceneFB);
   bgfx::setViewTransform(kViewOpaque, view.m, proj.m);
 
+  // Which pass draws a mesh is one Core rule: opaque meshes here, transparent ones through the OIT passes, or with plain alpha
+  // blending below when those cannot be used: a mesh is never left out of every pass.
+  const bool oitAvailable =
+      bgfx::isValid(_oitAccumFB) && bgfx::isValid(_oitRevealFB);
   bool hasTransparent = false;
+  bool hasBlended = false;
   for (auto &gm : _gpuMeshes) {
-    if (gm.color.is_transparent()) {
+    const ost_domain::MeshPass pass =
+        ost_domain::mesh_pass_for_alpha(gm.color.a, oitAvailable);
+    if (pass == ost_domain::MeshPass::Oit) {
       hasTransparent = true;
+      continue;
+    }
+    if (pass == ost_domain::MeshPass::AlphaBlend) {
+      hasBlended = true;
       continue;
     }
     bgfx::setTransform(identityMtx);
@@ -608,14 +630,41 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
     bgfx::submit(kViewOpaque, _progMesh);
   }
 
-  if (hasTransparent && bgfx::isValid(_oitAccumFB)) {
+  if (hasBlended) {
+    static bool logged = false;
+    if (!logged) {
+      logged = true;
+      NSLog(@"Renderer: the transparency passes are not available; "
+            @"transparent meshes are drawn with plain alpha blending");
+    }
+    // After the opaque meshes, tested against their depth, without writing it.
+    for (auto &gm : _gpuMeshes) {
+      if (ost_domain::mesh_pass_for_alpha(gm.color.a, oitAvailable) !=
+          ost_domain::MeshPass::AlphaBlend)
+        continue;
+      bgfx::setTransform(identityMtx);
+      bgfx::setVertexBuffer(0, gm.vbh);
+      bgfx::setIndexBuffer(gm.ibh);
+      float col[4] = {gm.color.r, gm.color.g, gm.color.b, gm.color.a};
+      bgfx::setUniform(_u_meshColor, col);
+      bgfx::setUniform(_u_lightParams, lightParams);
+      bgfx::setUniform(_u_eyePos, eyePos);
+      bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
+                     BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_BLEND_ALPHA |
+                     BGFX_STATE_MSAA);
+      bgfx::submit(kViewOpaque, _progMesh);
+    }
+  }
+
+  if (hasTransparent && oitAvailable) {
     bgfx::setViewClear(kViewOITAccum, BGFX_CLEAR_COLOR, 0x00000000, 1.0f, 0);
     bgfx::setViewRect(kViewOITAccum, 0, 0, (uint16_t)_width, (uint16_t)_height);
     bgfx::setViewFrameBuffer(kViewOITAccum, _oitAccumFB);
     bgfx::setViewTransform(kViewOITAccum, view.m, proj.m);
 
     for (auto &gm : _gpuMeshes) {
-      if (!gm.color.is_transparent())
+      if (ost_domain::mesh_pass_for_alpha(gm.color.a, oitAvailable) !=
+          ost_domain::MeshPass::Oit)
         continue;
       bgfx::setTransform(identityMtx);
       bgfx::setVertexBuffer(0, gm.vbh);
@@ -639,7 +688,8 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
     bgfx::setViewTransform(kViewOITRevealage, view.m, proj.m);
 
     for (auto &gm : _gpuMeshes) {
-      if (!gm.color.is_transparent())
+      if (ost_domain::mesh_pass_for_alpha(gm.color.a, oitAvailable) !=
+          ost_domain::MeshPass::Oit)
         continue;
       bgfx::setTransform(identityMtx);
       bgfx::setVertexBuffer(0, gm.vbh);
@@ -660,8 +710,12 @@ static bgfx::ShaderHandle loadShader(const uint8_t *data, uint32_t size) {
     bgfx::setIndexBuffer(_fsQuadIbh);
     bgfx::setTexture(0, _s_accumTex, _oitAccumTex);
     bgfx::setTexture(1, _s_revealTex, _oitRevealTex);
+    // fs_oit_composite outputs a premultiplied colour (avgColor * coverage, coverage), so the matching blend is ONE / INV_SRC_ALPHA
+    // (the usual weighted-blended OIT composite); SRC_ALPHA applied the coverage a second time and made mid and dark grey meshes
+    // indistinguishable from the 0x353535 background. This does not reproduce the Windows look: its accum / revealage shaders
+    // weight the alpha twice, so an opacity of 0.5 comes out almost opaque there (PORTING_BLOCKERS.md, owner decision).
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                   BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA,
+                   BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE,
                                          BGFX_STATE_BLEND_INV_SRC_ALPHA));
     bgfx::submit(kViewOITComposite, _progOITComposite);
   }
