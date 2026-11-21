@@ -6,6 +6,7 @@
 //                    json.dumps(separators=(",", ":")) of threejs_renderer._generate_html; the normals are the iOS ones
 //   kDxfTextScenario, kDxfMeshScenarios  native ost_dxf.DXFWriter / exporters/dxf_exporter.py DXFExporter._write_output
 //   kPipelineScenarios, kAliasVolumes  OBJExporter.export / DXFExporter.export end to end (real OSTCoordinateSystem, MeshFactory)
+// Re-verified against Windows b9902e6: regenerated from the current Windows code, every table byte-identical, no control character or CR / LF in any name (those are covered by the Exp12_ / Exp16_ tests)
 // Do not edit by hand.
 #pragma once
 #include <array>

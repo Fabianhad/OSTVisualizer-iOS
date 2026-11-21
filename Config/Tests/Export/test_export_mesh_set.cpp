@@ -14,6 +14,7 @@
 #include "Export/obj_writer.hpp"
 #include "Geometry/feature_edges.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -555,6 +556,104 @@ TEST(ExportGroups, TheBooleanPassSeesTheMeshesGroupByGroup)
     CHECK_STR_EQ(grouped.groups[1].meshes[0].takeoff->uid, "b1");
 }
 
+// ---------------------------------------------------------------- winding of what leaves the pipeline (EXP-13)
+namespace
+{
+    // The meshes that leave the three entry points of Core/Meshing/ExportMeshSet.cpp (the 3D view, the HTML scene and every
+    // group of the OBJ / DXF export) of a project with Count A (a1 at x 0, a2 at x 500), Attachment B (b1 at x 200) and
+    // three scenes: no negative; a negative of another condition type far away; a negative of A at x 10 that cuts a1 (the
+    // box 20 x 20 x 10 at x -10..10 loses x 0..10, volume 4000 -> 2000). Decided: iOS keeps every mesh outward-facing, cut or
+    // untouched (EXP-13 / EXP-M02), so every mesh that leaves any of the three has a positive signed volume. This is the test
+    // that sees a face reversal added AFTER the pass (BooleanRule.Winding_ThePassNeverReversesTheFacesOfAPositive only sees
+    // the pass itself, ObjWinding.* only the generators and the difference).
+    void check_winding_of_entry_point(const char *entry_point,
+                                      const std::vector<const ost_meshing::BooleanMesh *> &meshes, double a1_volume,
+                                      bool a1_is_cut)
+    {
+        SCOPED_CONTEXT(std::string("entry point: ") + entry_point);
+        // the three positives and nothing else (a negative is never a mesh of an entry point), so the loop is not vacuous
+        std::vector<std::string> uids;
+        for (const auto *m : meshes)
+            uids.push_back(m->takeoff->uid);
+        std::sort(uids.begin(), uids.end());
+        CHECK_EQ(uids, (std::vector<std::string>{"a1", "a2", "b1"}));
+        for (const auto *m : meshes)
+        {
+            SCOPED_CONTEXT("takeoff " + m->takeoff->uid);
+            const double volume = export_test::signed_volume(m->mesh);
+            CHECK(volume > 0.0); // outward-facing
+            CHECK_NEAR(volume, m->takeoff->uid == "a1" ? a1_volume : 4000.0, 1e-6);
+            if (m->takeoff->uid == "a1" && a1_is_cut)
+            {
+                // the cut piece (the Replaced path of the pass) is what this scene is for: iOS X = -x, Windows x -10..0
+                CHECK_NEAR(span_of(m->mesh, 0).lo, 0.0, 1e-6);
+                CHECK_NEAR(span_of(m->mesh, 0).hi, 10.0, 1e-6);
+            }
+        }
+    }
+
+    void check_winding_of_the_pipeline(const BooleanDifferenceFn &difference)
+    {
+        const auto config = solid_config();
+        const Condition a = box_condition("A", ConditionType::Count), b = box_condition("B", ConditionType::Attachment);
+        const std::vector<Takeoff> base = {box_takeoff("a1", "A", 0.0), box_takeoff("a2", "A", 500.0),
+                                           box_takeoff("b1", "B", 200.0)};
+        struct Scene
+        {
+            const char *name;
+            std::vector<Takeoff> takeoffs;
+            double a1_volume;
+            bool a1_is_cut;
+        };
+        std::vector<Scene> scenes;
+        scenes.push_back({"no negative", base, 4000.0, false});
+        auto other_type = base;
+        other_type.push_back(box_takeoff("n", "B", 5000.0, true));
+        scenes.push_back({"negative of another type far away", other_type, 4000.0, false});
+        auto same_type = base;
+        same_type.push_back(box_takeoff("n", "A", 10.0, true));
+        scenes.push_back({"same-type negative that cuts a1", same_type, 2000.0, true});
+        for (const auto &scene : scenes)
+        {
+            SCOPED_CONTEXT(scene.name);
+            const auto project = project_of({a, b}, scene.takeoffs);
+
+            const auto grouped = ost_meshing::generate_condition_export(project, kAllPages, config, difference);
+            REQUIRE(grouped.status == ExportStatus::Ok);
+            check_winding_of_entry_point("condition export (OBJ / DXF groups)", all_meshes(grouped), scene.a1_volume,
+                                         scene.a1_is_cut);
+
+            const auto html = ost_meshing::generate_html_export(project, kAllPages, config, difference);
+            REQUIRE(html.status == ExportStatus::Ok);
+            std::vector<const ost_meshing::BooleanMesh *> html_meshes;
+            for (const auto &m : html.meshes)
+                html_meshes.push_back(&m);
+            check_winding_of_entry_point("HTML export", html_meshes, scene.a1_volume, scene.a1_is_cut);
+
+            const auto view = ost_meshing::generate_view_meshes(project, kAllPages, config, difference);
+            std::vector<const ost_meshing::BooleanMesh *> view_meshes;
+            for (const auto &m : view)
+                view_meshes.push_back(&m);
+            check_winding_of_entry_point("3D view", view_meshes, scene.a1_volume, scene.a1_is_cut);
+        }
+    }
+} // namespace
+
+TEST(ExportRule, Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacing)
+{
+    // The decided EXP-13 rule at the level of the entry points (the stand-in difference cuts the box exactly): a mesh that is
+    // never cut, one that goes through the difference untouched (a2, b1) and the cut piece (a1) all have a positive volume.
+    check_winding_of_the_pipeline(box_difference_fn());
+}
+
+#if OST_HAVE_BOOLEAN
+TEST(ExportRuleManifold, Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacingWithManifold)
+{
+    // The same three scenes with the real boolean difference (Manifold).
+    check_winding_of_the_pipeline({});
+}
+#endif
+
 // ---------------------------------------------------------------- mesh order (MSH-20)
 namespace
 {
@@ -845,4 +944,170 @@ TEST(ExportGroups, TheDxfHasALayerForEveryConditionAndLinesOnlyWhereMeshesSurviv
     const std::string dxf = export_test::read_text_lf(dir.file("model.dxf"));
     CHECK(dxf.find("\nUnknown_count_count\n") != std::string::npos);
     CHECK(dxf.find("\nUnknown_count_block_count_bl\n") != std::string::npos);
+}
+
+// ---------------------------------------------------------------- EXP-12 control characters in the names (Windows b9902e6)
+namespace
+{
+    // The (group code, value) pairs of a DXF text (read_text_lf): two lines each, the code right-aligned in three columns.
+    // `well_formed` is false when the number of lines is odd or a code line is not a plain number, which is what a name
+    // that injected a line would break.
+    struct DxfPairs
+    {
+        bool well_formed = true;
+        std::vector<std::pair<std::string, std::string>> pairs;
+    };
+
+    std::vector<std::string> split_text_lines(const std::string &text)
+    {
+        std::vector<std::string> out;
+        size_t pos = 0;
+        while (pos < text.size())
+        {
+            size_t end = text.find('\n', pos);
+            if (end == std::string::npos)
+                end = text.size();
+            out.push_back(text.substr(pos, end - pos));
+            pos = end + 1;
+        }
+        return out;
+    }
+
+    DxfPairs dxf_pairs(const std::string &text)
+    {
+        DxfPairs out;
+        const std::vector<std::string> rows = split_text_lines(text);
+        if (rows.size() % 2 != 0)
+            out.well_formed = false;
+        for (size_t i = 0; i + 1 < rows.size(); i += 2)
+        {
+            const size_t first = rows[i].find_first_not_of(' ');
+            const std::string code = first == std::string::npos ? std::string() : rows[i].substr(first);
+            if (code.empty() || code.find_first_not_of("0123456789") != std::string::npos)
+                out.well_formed = false;
+            out.pairs.emplace_back(code, rows[i + 1]);
+        }
+        return out;
+    }
+
+    // The rest of every line that starts with `prefix`.
+    std::vector<std::string> values_after_prefix(const std::vector<std::string> &lines, const std::string &prefix)
+    {
+        std::vector<std::string> out;
+        for (const auto &line : lines)
+            if (line.compare(0, prefix.size(), prefix) == 0)
+                out.push_back(line.substr(prefix.size()));
+        return out;
+    }
+
+    // Every line is empty or starts with one of the statements the writer produces.
+    bool only_known_statements(const std::vector<std::string> &lines, const std::vector<std::string> &prefixes)
+    {
+        for (const auto &line : lines)
+        {
+            bool known = line.empty();
+            for (const auto &p : prefixes)
+                known = known || line.compare(0, p.size(), p) == 0;
+            if (!known)
+                return false;
+        }
+        return true;
+    }
+} // namespace
+
+TEST(ExportGroups, Exp12_ControlCharactersOfAConditionNameBecomeUnderscoresInTheMaterialName)
+{
+    // base_exporter.py sanitizes f"{cdn_type or 'Unknown'}_{condition_name}_{condition_uid[:8]}" as a whole, and since
+    // b9902e6 that turns every U+0000..U+001F and U+007F into '_' (iOS dropped them before).
+    Condition c;
+    c.uid = "abcd1234";
+    c.name = "Wall\nusemtl Evil";
+    CHECK_STR_EQ(ost_meshing::export_material_name(c.uid, c), "Unknown_Wall_usemtl_Evil_abcd1234");
+    // the '# <name>' comment of the OBJ / MTL keeps the raw name (the writer turns CR and LF into a space, EXP-16)
+    CHECK_STR_EQ(ost_meshing::export_condition_name(c.uid, c), "Wall\nusemtl Evil");
+    // a control character in the cdn type or in the first eight characters of the uid is replaced the same way
+    c.cdn_type_name = "Ty\x01" "pe";
+    c.uid = "ab\tcdefghij";
+    c.name = "";
+    CHECK_STR_EQ(ost_meshing::export_material_name(c.uid, c), "Ty_pe_Condition_ab_cdefghij_ab_cdefg");
+}
+
+TEST(ExportGroups, Exp12_ALineBreakOrNulInAConditionNameInjectsNoLineIntoTheObjMtlOrDxf)
+{
+    // A condition named 'Wall\r\nusemtl Evil\rnewmtl Bad\nv 9 9 9' + NUL + 'x' goes through the export set, the OBJ / MTL writer
+    // and the DXF writer exactly as Services/ExportService.mm does it (OBJ: add_group(material_name, name, ...); DXF:
+    // add_layer(material_name) and the lines of the meshes on that layer). The name is one material / layer name with an
+    // underscore for every control character; no statement of the OBJ, MTL or DXF comes from the name.
+    std::string name = "Wall\r\nusemtl Evil\rnewmtl Bad\nv 9 9 9";
+    name.push_back('\0');
+    name += "x";
+    Condition c = box_condition("abcd1234", ConditionType::Count);
+    c.name = name;
+    const auto grouped = ost_meshing::generate_condition_export(project_of({c}, {box_takeoff("t1", "abcd1234", 0.0)}), kAllPages,
+                                                                solid_config(), box_difference_fn());
+    REQUIRE(grouped.status == ExportStatus::Ok);
+    REQUIRE_EQ(grouped.groups.size(), static_cast<size_t>(1));
+    const auto &group = grouped.groups[0];
+    const std::string material = "Unknown_Wall__usemtl_Evil_newmtl_Bad_v_9_9_9_x_abcd1234";
+    CHECK_STR_EQ(group.material_name, material);
+    CHECK_STR_EQ(group.name, name); // the comment text is the raw name
+
+    export_test::ScratchDir dir("exp12_injection");
+
+    // OBJ / MTL: one 'g', one 'usemtl', one 'newmtl' and one 'Kd' line, every line a statement the writer produces
+    ost_geometry::OBJWriter obj_writer;
+    obj_writer.set_display_mode("solid");
+    obj_writer.add_group(group.material_name, group.name, group.color.r, group.color.g, group.color.b, group.mesh_pointers());
+    REQUIRE(obj_writer.save(dir.file("model.obj")));
+    const std::string obj = export_test::read_text_lf(dir.file("model.obj"));
+    const std::string mtl = export_test::read_text_lf(dir.file("model.mtl"));
+    const auto obj_lines = split_text_lines(obj);
+    const auto mtl_lines = split_text_lines(mtl);
+    CHECK_EQ(values_after_prefix(obj_lines, "g "), (std::vector<std::string>{material}));
+    CHECK_EQ(values_after_prefix(obj_lines, "usemtl "), (std::vector<std::string>{material}));
+    CHECK_EQ(values_after_prefix(mtl_lines, "newmtl "), (std::vector<std::string>{material}));
+    CHECK_EQ(values_after_prefix(mtl_lines, "Kd ").size(), static_cast<size_t>(1));
+    CHECK_EQ(values_after_prefix(obj_lines, "v ").size(), static_cast<size_t>(8)); // the 8 corners of the box, not '9 9 9'
+    CHECK_EQ(values_after_prefix(obj_lines, "f ").size(), static_cast<size_t>(12));
+    CHECK(only_known_statements(obj_lines, {"# ", "mtllib ", "g ", "usemtl ", "v ", "f "}));
+    CHECK(only_known_statements(mtl_lines, {"# ", "newmtl ", "Kd ", "Ka ", "Ks ", "Ns ", "Ni ", "d ", "illum "}));
+    CHECK(obj.find('\r') == std::string::npos);
+    CHECK(mtl.find('\r') == std::string::npos);
+    // the comment line holds the name with CR and LF as spaces, on ONE line
+    REQUIRE(obj_lines.size() > 3);
+    CHECK(obj_lines[3].rfind("# Wall  usemtl Evil newmtl Bad v 9 9 9", 0) == 0);
+
+    // DXF: one LAYER record named like the material (after the default layer 0), the LINEs on that layer, no injected group
+    ost_geometry::DXFWriter dxf_writer;
+    dxf_writer.add_layer(group.material_name, group.color.hex());
+    for (const auto &m : group.meshes)
+    {
+        Mesh clean = m.mesh;
+        clean.edges = ost_geometry::extract_feature_edges(clean, 0.1);
+        dxf_writer.add_mesh_as_lines(clean, group.material_name);
+    }
+    REQUIRE(dxf_writer.get_line_count() > 0);
+    REQUIRE(dxf_writer.save(dir.file("model.dxf")));
+    const DxfPairs dxf = dxf_pairs(export_test::read_text_lf(dir.file("model.dxf")));
+    CHECK(dxf.well_formed);
+    std::vector<std::string> layer_names, line_layers;
+    std::string entity;
+    for (const auto &p : dxf.pairs)
+    {
+        if (p.first == "0")
+            entity = p.second;
+        else if (entity == "LAYER" && p.first == "2")
+            layer_names.push_back(p.second);
+        else if (entity == "LINE" && p.first == "8")
+            line_layers.push_back(p.second);
+        // no value of the file reads as a statement of the OBJ / MTL ('usemtl Evil'), and none carries a control character
+        CHECK(p.second.rfind("usemtl ", 0) != 0);
+        CHECK(p.second.rfind("newmtl ", 0) != 0);
+        for (unsigned char ch : p.second)
+            CHECK(ch >= 0x20 && ch != 0x7F);
+    }
+    CHECK_EQ(layer_names, (std::vector<std::string>{"0", material})); // the default layer 0 and the condition layer
+    CHECK_EQ(line_layers.size(), dxf_writer.get_line_count());
+    for (const auto &l : line_layers)
+        CHECK_STR_EQ(l, material);
 }

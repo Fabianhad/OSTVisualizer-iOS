@@ -480,6 +480,115 @@ TEST(Imp12_NonConflicting, ANameTakenByADirectoryIsNeverReused)
     CHECK_STR_EQ(chosen, tree.path("plan-" + digest.substr(0, 32) + ".png"));
 }
 
+// Port of test_a_destination_that_is_not_a_regular_file_counts_as_different_content (Windows b9902e6). The source is EMPTY on purpose:
+// on NTFS a directory reports st_size 0, so a size comparison alone would call an empty file and a directory "the same" and then fail
+// opening the directory. Windows answers "different" first, because the second path is not a regular file; iOS does the same with
+// OspFileSystem::is_file (never with luck: StdOspFileSystem::file_size of a directory is an error that would fail the comparison).
+// Pin: iOS already behaved like this, the test is not a red-first test. The digest literal is the SHA-256 of the empty string (printed by
+// the Core digest and by Python hashlib.sha256(b'').hexdigest(): e3b0c442 98fc1c14 9afbf4c8 996fb924 27ae41e4 649b934c a495991b 7852b855).
+TEST(Imp12_NonConflicting, AnEmptySourceAndADirectoryDestinationCountAsDifferentContent)
+{
+    TempTree tree("empty_source_directory");
+    ost_import::StdOspFileSystem fs;
+    tree.write("source.png", "");
+    tree.make_directory("plan.png");
+    const std::string digest = ost_import::digest::sha256_hex("");
+    CHECK_STR_EQ(digest, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+
+    // the comparison itself: no error, and a directory is never the same content
+    bool same = true;
+    CHECK(ost_import::files_have_same_content(fs, tree.path("source.png"), tree.path("plan.png"), same));
+    CHECK_FALSE(same);
+
+    // the first candidate is the 16 digit name; the directory is not reused
+    const std::string first_candidate = "plan-e3b0c44298fc1c14.png";
+    CHECK_STR_EQ(first_candidate, "plan-" + digest.substr(0, 16) + ".png");
+    std::string chosen;
+    std::string error;
+    REQUIRE(ost_import::non_conflicting_image_destination(fs, tree.path("source.png"), tree.path("plan.png"), chosen, error));
+    CHECK_STR_EQ(chosen, tree.path(first_candidate));
+    CHECK(error.empty());
+
+    // that candidate taken by a directory too: the 32 digit name
+    tree.make_directory(first_candidate);
+    REQUIRE(ost_import::non_conflicting_image_destination(fs, tree.path("source.png"), tree.path("plan.png"), chosen, error));
+    CHECK_STR_EQ(chosen, tree.path("plan-e3b0c44298fc1c149afbf4c8996fb924.png"));
+    CHECK_STR_EQ(chosen, tree.path("plan-" + digest.substr(0, 32) + ".png"));
+
+    // choosing created nothing: the destination is still a directory and the folder holds exactly the three entries
+    CHECK(tree.is_directory("plan.png"));
+    CHECK(tree.is_directory(first_candidate));
+    CHECK(tree.entries_in(".") == (std::vector<std::string>{first_candidate, "plan.png", "source.png"}));
+    CHECK(tree.files_below(".") == (std::vector<std::string>{"source.png"}));
+
+    // all three names taken by directories: the Windows content-address collision error
+    tree.make_directory("plan-" + digest.substr(0, 32) + ".png");
+    tree.make_directory("plan-" + digest + ".png");
+    CHECK_FALSE(ost_import::non_conflicting_image_destination(fs, tree.path("source.png"), tree.path("plan.png"), chosen, error));
+    CHECK_STR_EQ(error, "image staging content-address collision for 'plan.png'");
+}
+
+// Direct pins of files_have_same_content (Windows _files_have_same_content: `if not second.is_file(): return False` runs before any size
+// or open). A directory or a missing path as the second argument is "different" and not an error, whatever the sizes: an empty source
+// (a directory reports size 0 on NTFS), a 9 byte source and a 4096 byte source (4096 is the size a directory reports on most file
+// systems). Controls: the same bytes in two regular files are "same", so the pins are not vacuous. Pin: iOS already behaved like this.
+TEST(Imp12_NonConflicting, ASecondPathThatIsNotARegularFileIsAlwaysDifferentContent)
+{
+    TempTree tree("not_regular");
+    ost_import::StdOspFileSystem fs;
+    tree.write("empty.bin", "");
+    tree.write("nine.bin", "new image");
+    tree.write("page.bin", std::string(4096, '\x07'));
+    tree.make_directory("folder");
+    tree.write("folder/inner.bin", "new image");
+
+    auto compare = [&](const char *a, const char *b, bool &same)
+    {
+        same = true; // the function must overwrite it
+        return ost_import::files_have_same_content(fs, tree.path(a), tree.path(b), same);
+    };
+    bool same = true;
+
+    // a regular file against a directory: different, success, for equal and for different sizes
+    for (const char *source : {"empty.bin", "nine.bin", "page.bin"})
+    {
+        SCOPED_CONTEXT(std::string("source ") + source);
+        CHECK(compare(source, "folder", same));
+        CHECK_FALSE(same);
+    }
+    // the directory is not looked into: a file of the same bytes inside it changes nothing
+    CHECK(compare("nine.bin", "folder", same));
+    CHECK_FALSE(same);
+
+    // a regular file against a path that does not exist: different, success (Windows is_file() is False for it too)
+    for (const char *source : {"empty.bin", "nine.bin", "page.bin"})
+    {
+        SCOPED_CONTEXT(std::string("source ") + source);
+        CHECK(compare(source, "missing.bin", same));
+        CHECK_FALSE(same);
+        CHECK(compare(source, "missing/inner.bin", same));
+        CHECK_FALSE(same);
+    }
+
+    // controls: the same bytes in a regular file are the same content, other bytes or another size are not
+    tree.write("empty2.bin", "");
+    tree.write("nine2.bin", "new image");
+    tree.write("ten.bin", "new image!");
+    CHECK(compare("empty.bin", "empty2.bin", same));
+    CHECK(same);
+    CHECK(compare("nine.bin", "nine2.bin", same));
+    CHECK(same);
+    CHECK(compare("nine.bin", "ten.bin", same));
+    CHECK_FALSE(same);
+    CHECK(compare("nine.bin", "folder/inner.bin", same));
+    CHECK(same);
+
+    // nothing was created or changed by the comparisons
+    CHECK(tree.is_directory("folder"));
+    CHECK_FALSE(tree.exists("missing.bin"));
+    CHECK_FALSE(tree.exists("missing"));
+}
+
 // Port of test_large_files_are_compared_and_hashed_across_chunk_boundaries and test_value_comparisons_return_exact_booleans.
 TEST(Imp12_NonConflicting, FilesAreComparedAcrossChunkBoundaries)
 {

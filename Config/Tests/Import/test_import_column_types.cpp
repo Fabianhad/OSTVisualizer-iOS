@@ -4,25 +4,26 @@
 //   - a DATETIME column (14 of them in database_creator.py _TABLE_DDL: Bids.CreateDateTime, ModDateTime, LastReceiveDateTime,
 //     LastSendDateTime, BidDate, CopyTimeStamp, BidComments.CommentModified, BidEmployees.DateAdded, ...): a value that
 //     is exactly six whitespace separated integers 'Y M D h m s' forming a valid datetime.datetime becomes a datetime; anything
-//     else (blank, ISO text, 3 parts, month 13, non-numeric) becomes NULL; an integer outside the C int range raises
-//     OverflowError, which is not caught, so the whole import fails (the Windows suite calls this a characterisation, not a
-//     requirement).
+//     else (blank, ISO text, 3 parts, month 13, non-numeric) becomes NULL; an integer outside the C int range (datetime raises
+//     OverflowError) becomes NULL too: since Windows commit b9902e6 the function catches (ValueError, TypeError, OverflowError)
+//     (import_operations.py:608), so such a text no longer stops the import (sub-rule (1) below).
 //   - a memo / IMAGE column (30 IMAGE columns, e.g. Bids.Notes, BidTakeoffs.Position, BidConditionFolders.Description):
 //     '' becomes NULL, text becomes its UTF-8 bytes.
 // The user's decision (IMP-20): the iOS database keeps the RAW six part text for a valid date (it has no datetime type and the
 // bid date columns are never read) and stores NULL for an invalid one. Binary columns: '' is NULL, text stays text (the iOS
 // columns are TEXT/BLOB read back as text).
 //
-// Deviations from Windows, all under the general rule (an accidental, inconsistent or unsafe Windows behaviour is not ported,
-// the user decides). The user decided on 2026-11-19 to keep all three sub-rules (IMP-20, see PORTING_BLOCKERS.md):
-//   - (1) an integer outside the C int range reads as NULL ("invalid date") instead of failing the import (an uncaught
-//     OverflowError that the Windows suite itself marks as an open owner question);
+// IMP-20 has three sub-rules (see PORTING_BLOCKERS.md). Sub-rule (1) is a PARITY, not a deviation: an integer outside the C int
+// range reads as NULL and the import goes on, on Windows (b9902e6) and on iOS. Sub-rules (2) and (3) stay deliberate deviations from
+// Windows, kept by the user's decision of 2026-11-19 under the general rule (an accidental, inconsistent or unsafe Windows behaviour is
+// not ported, the user decides):
 //   - (2) the Windows latin-1 bytes for BidTexts/BidCallOuts.Name are not stored (iOS reads text columns as UTF-8: latin-1 bytes
 //     would be invalid strings, and a character above U+00FF would make the Windows code raise) and (3) neither is the BLOB
 //     storage class of memo values (the iOS writers store TEXT in the same columns, so a column would mix both classes).
+// The valid date itself is the standing difference too: Windows stores a datetime object, iOS the raw six part text.
 //
-// Oracle: Fixtures/import_datetime_oracle.txt holds ~3400 values and what the real Windows function does with them (see
-// the fixture header); an X (an exception escapes) line is the first deviation above: iOS must read NULL.
+// Oracle: Fixtures/import_datetime_oracle.txt holds ~3400 values and what the real Windows function (HEAD b9902e6) does with them
+// (see the fixture header): N (None) or D (a datetime). iOS must read NULL for every N and keep the raw text for every D.
 #include "ImportTestSupport.hpp"
 
 #include "Persistence/OstSchema.hpp"
@@ -110,15 +111,27 @@ TEST(ImportColumnTypes, Imp20_AnythingElseReadsAsNull)
     }
 }
 
-// What an integer outside the C int range does. Windows: datetime.datetime raises OverflowError ('Python int too large to
-// convert to C long'), which _convert_access_value does not catch (it only catches ValueError and TypeError), so the whole
-// import fails. The Windows suite itself calls this a characterisation and not a requirement
-// (tests/infrastructure/mdb/components/test_import_operations.py::test_an_absurd_datetime_text_raises_overflow_characterisation:
-// "Owner question: should such a text read as NULL like any other bad date?"), so by the general rule (an accidental Windows
-// behaviour is not ported) and by the user's IMP-20 decision ("NULL when invalid") iOS reads such a text as NULL, like every other
-// invalid date, and the import goes on. A part that is not an integer is NULL too, huge parts or not.
-TEST(ImportColumnTypes, Imp20_AnIntegerBeyondTheCIntRangeReadsAsNullInsteadOfFailingTheImport)
+// What an integer outside the C int range does: it reads as NULL, like every other invalid date, and the import goes on. Port of
+// tests/infrastructure/mdb/components/test_import_operations.py::test_a_datetime_text_beyond_the_c_int_range_reads_as_null: since
+// Windows commit b9902e6 datetime.datetime's OverflowError ('Python int too large to convert to C long') is caught together with
+// ValueError and TypeError (import_operations.py:608), so Windows and iOS agree (a pin: iOS already read NULL here). A part that is
+// not an integer is NULL too, huge parts or not.
+TEST(ImportColumnTypes, Imp20_AnIntegerBeyondTheCIntRangeReadsAsNull)
 {
+    // the three literal inputs of the Windows test: a huge year, a huge month, a huge negative second
+    for (const char *value : {"99999999999999999999 1 1 0 0 0", "2024 99999999999999999999 1 0 0 0", "2024 1 1 0 0 -99999999999999999999"})
+    {
+        SCOPED_CONTEXT(std::string("Windows input '") + value + "'");
+        ImportValue out;
+        std::string failure;
+        CHECK(convert(value, "datetime", out, &failure));
+        CHECK_EQ(show(out), std::string("NULL"));
+        CHECK(failure.empty());
+    }
+    // the valid control of the Windows test: datetime(2024, 3, 9, 14, 5, 7) there, its raw text here (the standing IMP-20 decision)
+    CHECK_EQ(converted("2024 3 9 14 5 7", "datetime"), std::string("text:2024 3 9 14 5 7"));
+
+    // the same in every slot, at the first value beyond the C int range, and beyond 64 bits
     for (const char *value : {"2147483648 1 1 0 0 0", "1 2147483648 1 0 0 0", "1 1 2147483648 0 0 0", "1 1 1 2147483648 0 0", "1 1 1 0 2147483648 0",
                               "1 1 1 0 0 2147483648", "-2147483649 1 1 0 0 0", "99999999999999999999 1 1 0 0 0", "2024 3 9 14 5 99999999999999999999",
                               "99999999999999999999999999999999999999 1 1 0 0 0", "1 1 1 0 0 -99999999999999999999"})
@@ -139,15 +152,16 @@ TEST(ImportColumnTypes, Imp20_AnIntegerBeyondTheCIntRangeReadsAsNullInsteadOfFai
     CHECK_EQ(converted("99999999999 1 1 1 1 5.0", "datetime"), std::string("NULL"));
 }
 
-// The oracle: every value of the fixture through the REAL Windows function (N = None, D = a datetime, X = an exception, which
-// iOS reads as NULL: the documented deviation, see the top of this file).
+// The oracle: every value of the fixture through the REAL Windows function (HEAD b9902e6; N = None, D = a datetime whose raw text iOS
+// keeps). The fixture used to mark 176 values X (an uncaught OverflowError stopped the Windows import); since b9902e6 Windows
+// returns None for them and they are N like every other invalid date, so there is no X any more.
 TEST(ImportColumnTypes, Imp20_TheConversionMatchesTheWindowsFunctionOnEveryOracleValue)
 {
     std::string text;
     REQUIRE(ost_test::read_file(ost_test::fixture_path("import_datetime_oracle.txt"), text));
     std::istringstream stream(text);
     std::string line;
-    size_t checked = 0, nulls = 0, kept = 0, windows_raises = 0;
+    size_t checked = 0, nulls = 0, kept = 0;
     int number = 0;
     while (std::getline(stream, line))
     {
@@ -170,16 +184,8 @@ TEST(ImportColumnTypes, Imp20_TheConversionMatchesTheWindowsFunctionOnEveryOracl
             actual = "D";
         else
             actual = "?";
-        // Windows raises OverflowError (X); iOS reads the value as NULL (N) and the import goes on.
-        if (expected == "X")
-        {
-            ++windows_raises;
-            CHECK_EQ(actual, std::string("N"));
-        }
-        else
-        {
-            CHECK_EQ(actual, expected);
-        }
+        CHECK(expected == "N" || expected == "D"); // no X (an exception) is left in the fixture
+        CHECK_EQ(actual, expected);
         ++checked;
         nulls += actual == "N";
         kept += actual == "D";
@@ -187,7 +193,6 @@ TEST(ImportColumnTypes, Imp20_TheConversionMatchesTheWindowsFunctionOnEveryOracl
     CHECK(checked > 3000u);
     CHECK(nulls > 1000u);
     CHECK(kept > 300u);
-    CHECK(windows_raises > 100u);
 }
 
 // Memo / IMAGE columns: '' is NULL, text is kept (UTF-8). The column type name of the Windows ODBC driver for IMAGE is
@@ -337,15 +342,17 @@ TEST(ImportColumnTypes, Imp20_MemoTextAndDatesOfTheBidTablesAreConverted)
     CHECK_EQ(db.rows("SELECT typeof(Notes) FROM BidZones", 1), std::string("null"));
 }
 
-// A date that makes Python raise OverflowError (Windows: the whole import fails and rolls back) reads as NULL on iOS, like every
-// other invalid date: the import succeeds, the bid and its rows are stored and only that column is NULL (documented deviation, see
-// the top of this file).
-TEST(ImportColumnTypes, Imp20_AnOverflowingDateReadsAsNullAndTheImportGoesOn)
+// An out-of-range date reads as NULL and the import goes on: the bid and its rows are stored, only that column is NULL (Windows
+// CHANGELOG.md of b9902e6: "a date outside the supported range is imported as empty instead of stopping the whole import"). A pin:
+// iOS already behaved so.
+// A date column holding the text 'NULL' is NULL too (the 'NULL' marker of the raw rows), next to the overflowing one.
+TEST(ImportColumnTypes, Imp20_AnOutOfRangeDateStoresNullAndTheImportGoesOn)
 {
     ScratchDb db("column_types_overflow", true);
     REQUIRE(db.schema_ok());
     const OstRawData raw = parse_ost_xml(
-        "<XML_ROOT><Bid UID=\"6\" JobName=\"Job\" CreateDateTime=\"99999999999 1 1 0 0 0\" ModDateTime=\"2024 3 9 14 5 7\">"
+        "<XML_ROOT><Bid UID=\"6\" JobName=\"Job\" CreateDateTime=\"99999999999 1 1 0 0 0\" ModDateTime=\"2024 3 9 14 5 7\" "
+        "LastSendDateTime=\"NULL\" LastReceiveDateTime=\"99999999999999999999 1 1 0 0 0\">"
         "<BidConditionFolders><BidConditionFolder UID=\"7\" BidUID=\"6\" Name=\"A\"/></BidConditionFolders>"
         "</Bid></XML_ROOT>");
     REQUIRE(!raw.empty());
@@ -353,7 +360,33 @@ TEST(ImportColumnTypes, Imp20_AnOverflowingDateReadsAsNullAndTheImportGoesOn)
     CHECK(ost_store::import_project(db.path(), raw, &result));
     CHECK(result.error.empty());
     CHECK_EQ(db.count("SELECT COUNT(*) FROM Bids"), 1);
-    CHECK_EQ(db.rows("SELECT JobName, typeof(CreateDateTime), typeof(ModDateTime), ModDateTime FROM Bids", 4),
-             std::string("Job|null|text|2024 3 9 14 5 7"));
+    CHECK_EQ(db.rows("SELECT JobName, typeof(CreateDateTime), typeof(ModDateTime), ModDateTime, typeof(LastSendDateTime), "
+                     "typeof(LastReceiveDateTime) FROM Bids",
+                     6),
+             std::string("Job|null|text|2024 3 9 14 5 7|null|null"));
     CHECK_EQ(db.count("SELECT COUNT(*) FROM BidConditionFolders"), 1);
+}
+
+// Port of test_an_out_of_range_datetime_stores_null_and_the_row_is_still_written (Windows b9902e6): the importer's own row writer, a
+// hand-made table Sample (UID INTEGER, Stamp DATETIME), one row whose Stamp is '99999999999999999999 1 1 0 0 0' and one whose Stamp is the
+// text 'NULL'. Both rows are written and both stamps are NULL (Windows: [(1, None), (2, None)]). A pin: iOS already behaved so.
+TEST(ImportColumnTypes, Imp20_AnOutOfRangeDateAndTheTextNullBothStoreNullAndTheRowIsWritten)
+{
+    ScratchDb db("column_types_sample");
+    db.must("CREATE TABLE Sample (UID INTEGER, Stamp DATETIME)");
+    ost_itest::Connection connection(db);
+    const ost_store::ImportTableInfo info = ost_store::import_get_table_info(connection.get(), "Sample");
+    REQUIRE(info.has_column("Stamp"));
+    CHECK_STR_EQ(info.types.at("Stamp"), std::string("datetime"));
+    std::string error;
+    CHECK(ost_store::import_insert_raw_row(connection.get(), "Sample",
+                                           ost_itest::row({{"UID", "1"}, {"Stamp", "99999999999999999999 1 1 0 0 0"}}), info, error));
+    CHECK(error.empty());
+    CHECK(ost_store::import_insert_raw_row(connection.get(), "Sample", ost_itest::row({{"UID", "2"}, {"Stamp", "NULL"}}), info, error));
+    CHECK(error.empty());
+    CHECK_EQ(db.rows("SELECT UID, Stamp FROM Sample ORDER BY UID", 2), std::string("1|NULL;2|NULL"));
+    CHECK_EQ(db.rows("SELECT typeof(Stamp) FROM Sample ORDER BY UID", 1), std::string("null;null"));
+    // and a valid stamp next to them keeps its raw text (the standing IMP-20 decision)
+    CHECK(ost_store::import_insert_raw_row(connection.get(), "Sample", ost_itest::row({{"UID", "3"}, {"Stamp", "2024 3 9 14 5 7"}}), info, error));
+    CHECK_EQ(db.rows("SELECT UID, typeof(Stamp), Stamp FROM Sample WHERE UID = 3", 3), std::string("3|text|2024 3 9 14 5 7"));
 }

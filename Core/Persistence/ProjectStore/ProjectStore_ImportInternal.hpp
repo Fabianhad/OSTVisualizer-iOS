@@ -37,10 +37,11 @@ namespace ost_store
     // Windows _convert_access_value for the column types the iOS schema can express: NULL/"NULL" -> NULL for every
     // type; yesno -> -1 for "True"/"true"/"-1"/"1", otherwise 0; datetime (IMP-20): a value of exactly six whitespace
     // separated integers that form a valid date (datetime.datetime) keeps its raw text, anything else is NULL (also an
-    // integer outside the C int range, where Windows raises an uncaught OverflowError: deliberate deviation, see
-    // ProjectStore+ImportWriter.cpp); longbinary / memo: "" -> NULL, text kept; numeric types (type name contains one of
-    // int, long, short, double, float, real, bit, byte, counter, currency, single, numeric, decimal): "" -> NULL, "0" -> 0,
-    // a value with '.' -> float, otherwise integer, unparsable -> NULL; every other type keeps the text (including "").
+    // integer outside the C int range: Windows catches the OverflowError since b9902e6 and gives None too, so the import
+    // goes on on both sides, see ProjectStore+ImportWriter.cpp); longbinary / memo: "" -> NULL, text kept; numeric types
+    // (type name contains one of int, long, short, double, float, real, bit, byte, counter, currency, single, numeric,
+    // decimal): "" -> NULL, "0" -> 0, a value with '.' -> float, otherwise integer, unparsable -> NULL; every other type
+    // keeps the text (including "").
     // Returns false only when the Windows code would raise: a number that is a valid integer SQLite cannot store (more
     // than 64 bits), which fails the import (`failure`, when given, gets the Python message).
     bool import_convert_value(const std::string &value, const std::string &type_name, ImportValue &out, std::string *failure = nullptr);

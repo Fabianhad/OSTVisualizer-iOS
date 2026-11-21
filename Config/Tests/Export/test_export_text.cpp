@@ -13,9 +13,11 @@ using namespace ost_geometry::export_text;
 TEST(ExportText, SanitizeMaterialNameMatchesTheWindowsRules)
 {
     // Port of exporters/base_exporter.py BaseExporter._sanitize_material_name (the 8 cases of the EXP-12 plan, every
-    // printable ASCII character alone / leading / inside / trailing, control characters, Unicode digits, random mixes).
+    // printable ASCII character alone / leading / inside / trailing, Unicode digits, random mixes; the table has no
+    // control character, those are the Exp12_ tests below).
     // Windows replaces ' ' / \ : ; * ? < > | . ( ) [ ] { } by '_', removes " ' , and keeps everything else (also non-ASCII,
-    // # & = % + - @). A leading str.isdigit() character gets "Mat_"; an empty result is "Unknown".
+    // # & = % + - @). A leading str.isdigit() character gets "Mat_"; an empty result is "Unknown". U+0000..U+001F and
+    // U+007F become '_' since Windows b9902e6 (the Exp12_ tests).
     size_t checked = 0;
     for (const auto &c : export_oracle::kSanitizeCases)
     {
@@ -26,15 +28,85 @@ TEST(ExportText, SanitizeMaterialNameMatchesTheWindowsRules)
     CHECK(checked > 300);
 }
 
-TEST(ExportText, SanitizeMaterialNameDropsControlCharactersUnlikeWindows)
+// ---------------------------------------------------------------- EXP-12 control characters (Windows b9902e6)
+// Windows base_exporter.py: _CONTROL_CHARACTERS = {code: "_" for code in (*range(0x20), 0x7F)} and
+// _sanitize_material_name(...).translate(_CONTROL_CHARACTERS): every U+0000..U+001F and U+007F becomes ONE '_' (it is not
+// removed), so a name can no longer split the 'newmtl' / 'usemtl' / 'g' line of the OBJ / MTL or the DXF layer name. The
+// digit rule and the empty rule look at the text after that replacement. Nothing else changed (U+0085, U+00A0, U+2028 ...
+// stay as they are).
+TEST(ExportText, Exp12_ControlCharactersBecomeUnderscoresLikeWindows)
 {
-    // DELIBERATE DIFFERENCE from Windows, kept by user decision 2026-11-19 (EXP-12, see PORTING_BLOCKERS.md): Windows keeps
-    // control characters in the name, so a line break or tab splits the 'newmtl' / 'g' line of the OBJ / MTL; iOS has always
-    // dropped them from these names and keeps doing so. Everything else is the Windows rule (the oracle test above).
-    CHECK_STR_EQ(sanitize_material_name("a\nb"), "ab");
-    CHECK_STR_EQ(sanitize_material_name("a\tb\r\x01\x7f"), "ab");
-    CHECK_STR_EQ(sanitize_material_name("\n1x"), "Mat_1x"); // the digit test sees the first character that is kept
-    CHECK_STR_EQ(sanitize_material_name("\n"), "Unknown");
+    // Port of test_base_exporter.py MaterialNameControlCharacterTests::test_control_characters_become_underscores. The
+    // controls are built with a loop: in a C++ literal "\x7fB" would be one (invalid) hex escape.
+    std::string controls;
+    for (int code = 0; code < 0x20; ++code)
+        controls += static_cast<char>(code); // the NUL is a real character of the std::string
+    controls += static_cast<char>(0x7F);
+    REQUIRE_EQ(controls.size(), static_cast<size_t>(33));
+    CHECK_STR_EQ(sanitize_material_name("A" + controls + "B"), "A" + std::string(33, '_') + "B");
+    // and each one alone gives exactly one '_' (in the middle of a name, so the digit / empty rules do not interfere)
+    for (int code = 0; code <= 0x7F; ++code)
+    {
+        if (code >= 0x20 && code < 0x7F)
+            continue; // printable ASCII: not a control character
+        SCOPED_CONTEXT("control character " + std::to_string(code));
+        std::string name = "a";
+        name += static_cast<char>(code);
+        name += "b";
+        CHECK_STR_EQ(sanitize_material_name(name), "a_b");
+    }
+}
+
+TEST(ExportText, Exp12_InjectedLinesCannotSurviveInAMaterialName)
+{
+    // Port of ...::test_injected_lines_cannot_survive_in_a_material_name: the name of Windows
+    // 'Slab\r\nnewmtl evil\rKd 1 0 0\nv 1 2 3\x00' (CR LF and CR and LF and a closing NUL). The NUL needs an explicit-length
+    // std::string: a const char * would end at it.
+    std::string injected = "Slab\r\nnewmtl evil\rKd 1 0 0\nv 1 2 3";
+    injected.push_back('\0');
+    REQUIRE_EQ(injected.size(), static_cast<size_t>(35));
+    const std::string sanitized = sanitize_material_name(injected);
+    CHECK_STR_EQ(sanitized, "Slab__newmtl_evil_Kd_1_0_0_v_1_2_3_");
+    for (unsigned char c : sanitized)
+        CHECK(c >= 0x20 && c != 0x7F);
+}
+
+TEST(ExportText, Exp12_PrintableAndNonAsciiTextIsUnchangedByTheControlCharacterRule)
+{
+    // Port of ...::test_printable_text_is_unchanged_by_the_control_character_rule: only U+0000..U+001F and U+007F are
+    // replaced. 'Área_Ω' is C3 81 'rea_' CE A9; U+0085 (C2 85) and U+00A0 (C2 A0) are not controls of this rule (the bytes
+    // are >= 0x80 and stay), and neither are U+2028 / U+2029 (E2 80 A8 / E2 80 A9).
+    CHECK_STR_EQ(sanitize_material_name("\xC3\x81rea_\xCE\xA9"), "\xC3\x81rea_\xCE\xA9");
+    CHECK_STR_EQ(sanitize_material_name("\xC2\x85\xC2\xA0"), "\xC2\x85\xC2\xA0");
+    CHECK_STR_EQ(sanitize_material_name("a\xE2\x80\xA8" "b\xE2\x80\xA9"), "a\xE2\x80\xA8" "b\xE2\x80\xA9");
+    // the printable ASCII characters around the control range keep the old rule: ' ' (0x20) is '_', '!' (0x21) and '~' (0x7E)
+    // stay
+    CHECK_STR_EQ(sanitize_material_name("a b~!"), "a_b~!");
+}
+
+TEST(ExportText, Exp12_TheDigitRuleAndTheEmptyRuleSeeTheReplacedText)
+{
+    // Derived from reading _sanitize_material_name (not a Windows test, not run): the control characters are replaced
+    // before the digit test and the empty test, like the ' ' of the existing rule (" 1" gives "_1", no prefix).
+    CHECK_STR_EQ(sanitize_material_name("\n1x"), "_1x");               // the leading control character is a '_', not a digit
+    CHECK_STR_EQ(sanitize_material_name("\x01" "1abc"), "_1abc");      // no 'Mat_' prefix
+    CHECK_STR_EQ(sanitize_material_name("1\x01"), "Mat_1_");           // a digit first still gets the prefix
+    CHECK_STR_EQ(sanitize_material_name("\n"), "_");                   // only controls: not 'Unknown'
+    CHECK_STR_EQ(sanitize_material_name("\x01\x02"), "__");
+    CHECK_STR_EQ(sanitize_material_name(std::string(1, '\0')), "_");   // a lone NUL (explicit length)
+    CHECK_STR_EQ(sanitize_material_name("\"\x01"), "_");               // a removed quote leaves the control character
+    CHECK_STR_EQ(sanitize_material_name("\x7F"), "_");
+    CHECK_STR_EQ(sanitize_material_name("\"',"), "Unknown");           // quotes and commas alone are still removed
+    CHECK_STR_EQ(sanitize_material_name(""), "Unknown");
+    // the old behaviour of the cases of the former test
+    CHECK_STR_EQ(sanitize_material_name("a\nb"), "a_b");
+    CHECK_STR_EQ(sanitize_material_name("a\tb\r\x01\x7f"), "a_b___");
+    // sanitising twice changes nothing more (the OBJ writer sanitises a name that ExportMeshSet already sanitised)
+    for (const char *raw : {"a\nb", "\n1x", "1\x01", "\x01\x02"})
+    {
+        const std::string once = sanitize_material_name(raw);
+        CHECK_STR_EQ(sanitize_material_name(once), once);
+    }
 }
 
 TEST(ExportText, SanitizeMaterialNameExamplesOfThePlan)

@@ -146,10 +146,10 @@ namespace ost_store
         // Windows _convert_access_value for a DATETIME column: parts = value.split(); exactly 6 parts ->
         // datetime.datetime(int(parts[0]), ..., int(parts[5])); true when that datetime exists (year 1..9999, month 1..12, day
         // of the month, hour 0..23, minute 0..59, second 0..59), false when Windows returns None (not six parts, a part that is
-        // not an integer, a date that does not exist: ValueError) and also for an integer outside the C int range. There Windows
-        // raises OverflowError, which it does not catch, so its import fails; its own suite marks that as a characterisation and
-        // an open owner question (test_an_absurd_datetime_text_raises_overflow_characterisation), so iOS follows the user's
-        // decision "NULL when invalid" instead (IMP-20, general rule). Such a value never passes the range checks below anyway.
+        // not an integer, a date that does not exist: ValueError) and also for an integer outside the C int range: datetime then
+        // raises OverflowError, which Windows catches together with ValueError and TypeError since b9902e6 (import_operations.py:608,
+        // test_a_datetime_text_beyond_the_c_int_range_reads_as_null), so the value is None there too and the import goes on, like here.
+        // Such a value never passes the range checks below anyway.
         bool is_valid_datetime(const std::string &value)
         {
             const std::vector<std::string> parts = text_rules::py_split(value);

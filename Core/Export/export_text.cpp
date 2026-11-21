@@ -194,12 +194,16 @@ namespace ost_geometry
                 case ',':
                     break;
                 default:
-                    // Not ported, kept by user decision 2026-11-19 (EXP-12, see PORTING_BLOCKERS.md): Windows keeps control
-                    // characters, so a name with a line break or a tab splits the 'newmtl' / 'usemtl' / 'g' line of the OBJ / MTL
-                    // (or the DXF layer name) into several statements. iOS has always dropped them from these names and still does.
+                    // Windows b9902e6 (base_exporter.py _CONTROL_CHARACTERS, .translate after the replace chain): every
+                    // U+0000..U+001F and U+007F becomes one '_' (it is not removed), so a name cannot split the 'newmtl' /
+                    // 'usemtl' / 'g' line of the OBJ / MTL or the DXF layer name. The replaced sets are disjoint, so doing it
+                    // in this pass equals Windows' chain followed by the translate; the digit test and the empty test below
+                    // see the final text ('\n1x' is '_1x', not 'Mat_1x'; '\n' is '_', not 'Unknown'). U+0085, U+00A0, U+2028
+                    // and the other non-ASCII characters (bytes >= 0x80 in UTF-8) are not touched.
                     if (static_cast<unsigned char>(c) < 0x20 || c == 0x7F)
-                        break;
-                    out += c;
+                        out += '_';
+                    else
+                        out += c;
                 }
             }
             if (!out.empty())

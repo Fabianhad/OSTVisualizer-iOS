@@ -607,6 +607,22 @@ TEST(FootprintOnCanvas, InvalidPageContractThrows)
     bad = frame;
     bad.scale_factor2 = std::nan("");
     CHECK(throws_invalid_argument([&] { ost_footprint::canvas_footprint(at, rect, bad); }));
+
+    // canvas_marker_anchor validates the same page contract itself (takeoff_footprint.hpp), also for a takeoff that has no
+    // outline (the mutation check of 2026-11-20 found both guards unpinned for the marker).
+    const Takeoff no_outline = takeoff_at({1.0});
+    const Condition square = count_condition(ShapeId::Square, 4.0, 4.0);
+    CHECK_FALSE(throws_invalid_argument([&] { ost_footprint::canvas_marker_anchor(at, rect, {}, frame); }));
+    std::vector<ost_footprint::PageFrame> invalid_frames(4, frame);
+    invalid_frames[0].scale_factor1 = 0.0;
+    invalid_frames[1].scale_factor2 = std::nan("");
+    invalid_frames[2].rotation = 45;
+    invalid_frames[3].width_pts = 0.0;
+    for (const ost_footprint::PageFrame &invalid_frame : invalid_frames)
+    {
+        CHECK(throws_invalid_argument([&] { ost_footprint::canvas_marker_anchor(at, rect, {}, invalid_frame); }));
+        CHECK(throws_invalid_argument([&] { ost_footprint::canvas_marker_anchor(no_outline, square, {}, invalid_frame); }));
+    }
 }
 
 // The footprint of a takeoff that Windows does not draw is empty: areas with fewer than 3 corners or an odd value count, a
@@ -760,6 +776,107 @@ TEST(MarkerAnchor, CountTriangleAndCurvedBand)
     const bool in_hole = (*d)[0] > 36 && (*d)[0] < 108 && (*d)[1] > 36 && (*d)[1] < 108;
     CHECK(in_outline);
     CHECK_FALSE(in_hole);
+}
+
+// RPV-27 (b), port of NegativeIndicatorPageTransformTests.test_the_marker_follows_the_shape_on_rotated_and_flipped_pages
+// (tests/presentation/visualization/pdf/renderers/test_takeoff_renderer.py, Windows b9902e6): on a rotated or flipped page the marker
+// of a negative takeoff sits at the centroid of the DISPLAYED shape, for the seven (rotation, flip_x, flip_y) combinations of the
+// Windows test. Windows draws the marker as a child of one anchor item that the plan view's page transform moves like the shape;
+// iOS computes the anchor on the unrotated outline and sends it through the same page transform that canvas_footprint applies to the
+// outline (Core/Geometry/page_transform.hpp: flips first, then the counter-clockwise rotation about the page), and the overlay draws
+// the glyph upright and at a fixed screen size at that canvas point. A pin: iOS already behaved so (no red step); if the transform
+// ever moves out of Core, or the marker stops following the shape, this is the test that fails first.
+// Page A is the Windows page: 80 x 80 with a square at (5, 10) of size 20, centroid (15, 20) before the page transform
+// (scale_factor2 / scale_factor1 = 72 and view_scale 1 make an OST value one scene px = one canvas point). Page B is not square
+// (576 x 720 points, 3x view scale, a 4 x 4 OST inch square at (1, 2): points (72, 144)-(360, 432), centroid (216, 288)), so that a
+// width and a height exchanged by a rotation of 90 or 270 degrees cannot hide. Expected points by hand from page_transform.hpp:
+//   (x, y) is the centroid; (rot, flip_x, flip_y) -> flips first (x -> W - x, y -> H - y), then 90: (y, W - x), 180: (W - x, H - y),
+//   270: (H - y, x); W and H are the unrotated page width and height.
+// These are iOS-frame points (the rotated page sits at the origin, H x W for 90 / 270). On a non-square page the Windows item
+// transform (zoom_handler.py _get_page_transform: translate(W/2, H/2), rotate, flip, translate(-W/2, -H/2)) pivots on the UNROTATED
+// page centre, so the absolute Windows scene points for rotation 90 / 270 differ from the page B points below by the constant
+// ((W - H) / 2, (H - W) / 2) = (-72, 72), e.g. (90,F,F): Windows (216, 432), here (288, 360); for 0 / 180, and on the square page
+// A, they are equal. What the test pins is that the marker and the displayed shape go through the same transform (marker ==
+// centroid of canvas_footprint) and these hand values of page_transform.hpp, not the Windows absolute scene points of page B.
+//   page A (W = H = 80, (15, 20)):   (0,F,F) (15, 20)  (90,F,F) (20, 65)  (180,F,F) (65, 60)  (270,F,F) (60, 15)
+//                                    (0,T,F) (65, 20)  (0,F,T) (15, 60)   (90,T,T) (60, 15)
+//   page B (W = 576, H = 720, (216, 288)): (0,F,F) (216, 288)  (90,F,F) (288, 360)  (180,F,F) (360, 432)  (270,F,F) (432, 216)
+//                                    (0,T,F) (360, 288)  (0,F,T) (216, 432)  (90,T,T) (432, 216)
+TEST(MarkerAnchor, FollowsTheDisplayedShapeOnEveryRotationAndFlip)
+{
+    struct Combo
+    {
+        int rotation;
+        bool flip_x;
+        bool flip_y;
+        Vec2 page_a; // expected canvas point on the Windows page
+        Vec2 page_b; // expected canvas point on the non-square page
+    };
+    const Combo combos[] = {
+        {0, false, false, {15.0, 20.0}, {216.0, 288.0}},  {90, false, false, {20.0, 65.0}, {288.0, 360.0}},
+        {180, false, false, {65.0, 60.0}, {360.0, 432.0}}, {270, false, false, {60.0, 15.0}, {432.0, 216.0}},
+        {0, true, false, {65.0, 20.0}, {360.0, 288.0}},   {0, false, true, {15.0, 60.0}, {216.0, 432.0}},
+        {90, true, true, {60.0, 15.0}, {432.0, 216.0}},
+    };
+
+    struct Page
+    {
+        const char *name;
+        ost_footprint::PageFrame frame;
+        std::vector<double> square; // the area takeoff, OST units
+        double side;                // the side of the displayed square, canvas points
+    };
+    ost_footprint::PageFrame frame_a;
+    frame_a.width_pts = 80.0;
+    frame_a.height_pts = 80.0;
+    frame_a.scale_factor1 = 1.0;
+    frame_a.scale_factor2 = 72.0;
+    frame_a.view_scale = 1.0;
+    ost_footprint::PageFrame frame_b;
+    frame_b.width_pts = 576.0;
+    frame_b.height_pts = 720.0;
+    frame_b.scale_factor1 = 1.0;
+    frame_b.scale_factor2 = 1.0;
+    frame_b.view_scale = 3.0;
+    const Page pages[] = {{"page A (Windows, 80 x 80)", frame_a, {5.0, 10.0, 25.0, 10.0, 25.0, 30.0, 5.0, 30.0}, 20.0},
+                          {"page B (576 x 720)", frame_b, {1.0, 2.0, 5.0, 2.0, 5.0, 6.0, 1.0, 6.0}, 288.0}};
+
+    const Condition condition = area_condition();
+    for (size_t page_index = 0; page_index < 2; ++page_index)
+    {
+        const Page &page = pages[page_index];
+        const Takeoff takeoff = takeoff_at(page.square);
+        for (const Combo &combo : combos)
+        {
+            SCOPED_CONTEXT(std::string(page.name) + ", rotation " + std::to_string(combo.rotation) + ", flip_x " +
+                           (combo.flip_x ? "true" : "false") + ", flip_y " + (combo.flip_y ? "true" : "false"));
+            ost_footprint::PageFrame frame = page.frame;
+            frame.rotation = combo.rotation;
+            frame.flip_x = combo.flip_x;
+            frame.flip_y = combo.flip_y;
+            const Vec2 expected = page_index == 0 ? combo.page_a : combo.page_b;
+
+            const auto marker = ost_footprint::canvas_marker_anchor(takeoff, condition, {}, frame);
+            REQUIRE(marker.has_value());
+            // the point computed by hand from the page transform
+            CHECK_NEAR((*marker)[0], expected[0], 1e-9);
+            CHECK_NEAR((*marker)[1], expected[1], 1e-9);
+
+            // and the centroid of the displayed outline: the same page transform applied to the shape (Windows: marker position ==
+            // items[0].sceneTransform().map(centroid))
+            const std::vector<Vec2> displayed = ost_footprint::canvas_footprint(takeoff, condition, frame);
+            REQUIRE_EQ(displayed.size(), 4u);
+            const Vec2 centroid = ost_footprint::polygon_area_centroid(displayed);
+            CHECK_NEAR((*marker)[0], centroid[0], 1e-9);
+            CHECK_NEAR((*marker)[1], centroid[1], 1e-9);
+            // the shape is displayed as a square of the same size on every orientation, and the marker is inside it
+            const Box box = bounds_of(displayed);
+            CHECK(box.left < (*marker)[0] && (*marker)[0] < box.right);
+            CHECK(box.top < (*marker)[1] && (*marker)[1] < box.bottom);
+            CHECK_NEAR(box.width(), page.side, 1e-9);
+            CHECK_NEAR(box.height(), page.side, 1e-9);
+        }
+    }
 }
 
 // Windows _nearest_interior_anchor is min(candidates, key=squared distance): on an exact tie the FIRST candidate of its order

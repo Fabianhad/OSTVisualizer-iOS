@@ -4,6 +4,7 @@
 //   kReprCases      repr(float) / json.dumps number text
 //   kEscapeCases    json.dumps(str) with '<' written as the JSON escape u003c, and html.escape(s, quote=False)
 //                   (renderers/threejs/threejs_renderer.py _generate_html)
+// Re-verified against Windows b9902e6: all 569 kSanitizeCases rows unchanged, no control character in the table (control characters are covered by the Exp12_ tests)
 // Do not edit by hand.
 #pragma once
 #include <array>
@@ -12,7 +13,8 @@
 
 namespace export_oracle
 {
-    // ---- EXP-12: Windows BaseExporter._sanitize_material_name (python str.replace chain + str.isdigit) ----
+    // ---- EXP-12: Windows BaseExporter._sanitize_material_name (python str.replace chain + .translate(_CONTROL_CHARACTERS) +
+    // str.isdigit; no row has a control character, so the translate step changes none of them) ----
     struct SanitizeCase { const char *input; const char *expected; };
     static const SanitizeCase kSanitizeCases[] = {
         {"Concrete_Wall 1/2_12345678", "Concrete_Wall_1_2_12345678"},

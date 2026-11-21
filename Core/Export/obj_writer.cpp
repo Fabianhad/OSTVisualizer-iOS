@@ -124,9 +124,10 @@ namespace ost_geometry
         return export_text::sanitize_material_name(name);
     }
 
-    // The text of a '# ...' comment line. Not ported, kept by user decision 2026-11-19 (EXP-16, see PORTING_BLOCKERS.md):
-    // Windows writes the condition name as it is, so a name with a line break ends the comment and the rest of the name becomes
-    // OBJ / MTL statements. iOS writes a line break as a space.
+    // The text of a '# ...' comment line (EXP-16, Windows b9902e6 obj_exporter.py _comment_text): every CR and every LF is
+    // one space ('A\r\nB' gives 'A  B', no collapsing), so a name cannot end the comment and turn the rest of it into OBJ / MTL
+    // statements. Every other character stays as it is, TAB and the other control characters included, like Windows. (The
+    // '# Display Mode:' header goes through it too; Windows writes that one raw, no difference for the fixed mode labels.)
     std::string OBJWriter::single_line(const std::string &text)
     {
         std::string out = text;

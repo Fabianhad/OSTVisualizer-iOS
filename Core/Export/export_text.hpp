@@ -14,11 +14,13 @@ namespace ost_geometry
     namespace export_text
     {
 
-        // Material / OBJ group / DXF layer name: ' ' '/' '\\' ':' ';' '*' '?' '<' '>' '|' '.' '(' ')' '[' ']' '{' '}' become
-        // '_', '"' '\'' ',' are removed, every other character (non-ASCII too) is kept. A name that starts with a digit
-        // (Python str.isdigit(): also superscripts and other scripts' digits) gets the prefix "Mat_"; an empty result is
-        // "Unknown". `name` is UTF-8. One deliberate difference: the ASCII control characters (U+0000..U+001F, U+007F),
-        // which Windows keeps, are dropped (they would split the OBJ / MTL / DXF line of the name).
+        // Material / OBJ group / DXF layer name: ' ' '/' '\\' ':' ';' '*' '?' '<' '>' '|' '.' '(' ')' '[' ']' '{' '}' and the
+        // ASCII control characters U+0000..U+001F and U+007F (Windows b9902e6, EXP-12: one '_' for each, so a name cannot
+        // split the OBJ / MTL / DXF line) become '_', '"' '\'' ',' are removed, every other character (non-ASCII too,
+        // U+0085 / U+00A0 / U+2028 included) is kept. A name that starts with a digit (Python str.isdigit(): also
+        // superscripts and other scripts' digits) gets the prefix "Mat_"; an empty result is "Unknown". Both rules see the
+        // text after the replacements ('\n1x' gives "_1x", '\n' gives "_"). `name` is UTF-8 and may hold a NUL (pass an
+        // explicit-length std::string).
         std::string sanitize_material_name(const std::string &name);
 
         // repr(float): the shortest digits that read back as the same double; fixed notation for decimal exponents in

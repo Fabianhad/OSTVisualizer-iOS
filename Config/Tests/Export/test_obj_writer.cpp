@@ -1,5 +1,8 @@
 // OBJ / MTL writer (Core/Export/obj_writer.*) against the text of the Windows OBJExporter (EXP-16, EXP-12) and the winding
 // of the exported meshes (EXP-13). Oracle: ExportFileOracleData.hpp (the Windows exporter run read-only).
+// Since Windows b9902e6 the names are written like this on both sides: every control character (U+0000..U+001F, U+007F) of a
+// 'g' / 'usemtl' / 'newmtl' name is one '_' (EXP-12) and every CR and LF of a '# <name>' comment line is one space (EXP-16),
+// so no name can add a statement to the OBJ or the MTL (the Exp12_ / Exp16_ tests).
 #include "ExportTestSupport.hpp"
 #include "ExportFileOracleData.hpp"
 #include "ExportTextOracleData.hpp"
@@ -8,6 +11,7 @@
 #include "Meshing/MeshFactory.hpp"
 #include "Meshing/MeshGenerator.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -47,6 +51,43 @@ namespace
         }
         return out;
     }
+
+    // The lines of a text that is LF separated (read_text_lf) like Python's str.splitlines for such a text: no empty piece
+    // after the last LF. Only LF ends a line here, so a stray CR or NUL of a name stays visible inside its line.
+    std::vector<std::string> split_lines(const std::string &text)
+    {
+        std::vector<std::string> out;
+        size_t pos = 0;
+        while (pos < text.size())
+        {
+            size_t end = text.find('\n', pos);
+            if (end == std::string::npos)
+                end = text.size();
+            out.push_back(text.substr(pos, end - pos));
+            pos = end + 1;
+        }
+        return out;
+    }
+
+    // Every line is empty or starts with one of the OBJ / MTL statements the writer produces: a name that injected a line
+    // would add one that starts with something else ('newmtl evil', 'Kd 1 0 0', 'v 1 2 3' inside a comment is no statement).
+    bool every_line_is_a_known_statement(const std::vector<std::string> &lines, const std::vector<std::string> &prefixes)
+    {
+        for (const auto &line : lines)
+        {
+            if (line.empty())
+                continue;
+            bool known = false;
+            for (const auto &p : prefixes)
+                known = known || line.compare(0, p.size(), p) == 0;
+            if (!known)
+                return false;
+        }
+        return true;
+    }
+
+    const std::vector<std::string> kObjStatements = {"# ", "mtllib ", "g ", "usemtl ", "v ", "f "};
+    const std::vector<std::string> kMtlStatements = {"# ", "newmtl ", "Kd ", "Ka ", "Ks ", "Ns ", "Ni ", "d ", "illum "};
 
     Mesh triangle()
     {
@@ -190,6 +231,204 @@ TEST(ObjWriter, NameExamplesOfThePlan)
     CHECK_STR_EQ(g[2], "Unknown");
     CHECK_STR_EQ(g[3], "_x__y_");
     CHECK_STR_EQ(g[4], "Mat_1st_Floor");
+}
+
+// ---------------------------------------------------------------- EXP-12 control characters in names (Windows b9902e6)
+namespace
+{
+    // The name of the Windows test test_injected_lines_cannot_survive_in_a_material_name, closing NUL included (an
+    // explicit-length std::string: a const char * would end at the NUL).
+    std::string injected_name()
+    {
+        std::string name = "Slab\r\nnewmtl evil\rKd 1 0 0\nv 1 2 3";
+        name.push_back('\0');
+        return name;
+    }
+
+    // Both Windows files for one group: the 'g', 'usemtl' and 'newmtl' lines of the name, the 'Kd' lines of the material.
+    struct NameLines
+    {
+        std::string obj, mtl;
+        std::vector<std::string> g, usemtl, newmtl, kd, obj_lines, mtl_lines;
+    };
+
+    NameLines write_one_group(const std::string &scratch, bool as_group, const std::string &name, const std::string &original)
+    {
+        ScratchDir dir(scratch);
+        ost_geometry::OBJWriter w;
+        w.set_display_mode("solid");
+        float r = 0, g = 0, b = 0;
+        colour_floats(255, 0, 0, r, g, b);
+        const Mesh tri = triangle();
+        if (as_group)
+            w.add_group(name, original, r, g, b, {&tri}); // the path of Services/ExportService.mm (one group per condition)
+        else
+            w.add_mesh(tri, name, original, r, g, b);     // the path of add_layered_meshes
+        NameLines out;
+        if (!w.save(dir.file("model.obj")))
+            return out;
+        out.obj = read_text_lf(dir.file("model.obj"));
+        out.mtl = read_text_lf(dir.file("model.mtl"));
+        out.g = lines_with_prefix(out.obj, "g ");
+        out.usemtl = lines_with_prefix(out.obj, "usemtl ");
+        out.newmtl = lines_with_prefix(out.mtl, "newmtl ");
+        out.kd = lines_with_prefix(out.mtl, "Kd ");
+        out.obj_lines = split_lines(out.obj);
+        out.mtl_lines = split_lines(out.mtl);
+        return out;
+    }
+} // namespace
+
+TEST(ObjWriter, Exp12_ControlCharactersInANameBecomeUnderscoresInGUsemtlAndNewmtl)
+{
+    // Windows OBJExporter writes the sanitised material name in 'newmtl', 'g' and 'usemtl'; since b9902e6 the sanitiser
+    // turns every U+0000..U+001F and U+007F into '_' (it used to keep them, iOS used to drop them). The injection name
+    // (CR LF, CR, LF and a NUL) therefore gives ONE of each line and nothing else: no 'newmtl evil', no 'Kd 1 0 0', no 'v 1 2 3'.
+    const std::string expected = "Slab__newmtl_evil_Kd_1_0_0_v_1_2_3_";
+    for (bool as_group : {true, false})
+    {
+        SCOPED_CONTEXT(as_group ? "add_group" : "add_mesh");
+        // the comment name is plain here, so that no raw control character of the name can reach the files at all
+        const NameLines f = write_one_group(as_group ? "obj_exp12_group" : "obj_exp12_mesh", as_group, injected_name(), "plain");
+        REQUIRE_EQ(f.g.size(), static_cast<size_t>(1));
+        REQUIRE_EQ(f.usemtl.size(), static_cast<size_t>(1));
+        REQUIRE_EQ(f.newmtl.size(), static_cast<size_t>(1));
+        CHECK_STR_EQ(f.g[0], expected);
+        CHECK_STR_EQ(f.usemtl[0], expected);
+        CHECK_STR_EQ(f.newmtl[0], expected);
+        CHECK_EQ(f.kd, (std::vector<std::string>{"1.000000 0.000000 0.000000"}));
+        CHECK(every_line_is_a_known_statement(f.obj_lines, kObjStatements));
+        CHECK(every_line_is_a_known_statement(f.mtl_lines, kMtlStatements));
+        // the OBJ holds the 3 vertices and the face of the triangle, the MTL no vertex
+        CHECK_EQ(lines_with_prefix(f.obj, "v ").size(), static_cast<size_t>(3));
+        CHECK_EQ(lines_with_prefix(f.obj, "f ").size(), static_cast<size_t>(1));
+        CHECK_EQ(lines_with_prefix(f.mtl, "v ").size(), static_cast<size_t>(0));
+        // 'newmtl' is not an OBJ statement the writer produces, and no line of either file carries a raw CR or NUL
+        for (const auto &line : f.obj_lines)
+            CHECK(line.find_first_of(std::string("\r\0", 2)) == std::string::npos);
+        for (const auto &line : f.mtl_lines)
+            CHECK(line.find_first_of(std::string("\r\0", 2)) == std::string::npos);
+    }
+}
+
+TEST(ObjWriter, Exp12_EveryControlCharacterOfANameIsOneUnderscoreInTheFile)
+{
+    // A name 'A' + U+0000..U+001F + U+007F + 'B' (Windows test_control_characters_become_underscores) written through the
+    // OBJ: 33 underscores between A and B in the 'g', 'usemtl' and 'newmtl' lines.
+    std::string name = "A";
+    for (int code = 0; code < 0x20; ++code)
+        name += static_cast<char>(code);
+    name += static_cast<char>(0x7F);
+    name += "B";
+    const NameLines f = write_one_group("obj_exp12_all_controls", true, name, "plain");
+    const std::string expected = "A" + std::string(33, '_') + "B";
+    REQUIRE_EQ(f.g.size(), static_cast<size_t>(1));
+    REQUIRE_EQ(f.usemtl.size(), static_cast<size_t>(1));
+    REQUIRE_EQ(f.newmtl.size(), static_cast<size_t>(1));
+    CHECK_STR_EQ(f.g[0], expected);
+    CHECK_STR_EQ(f.usemtl[0], expected);
+    CHECK_STR_EQ(f.newmtl[0], expected);
+    CHECK(every_line_is_a_known_statement(f.obj_lines, kObjStatements));
+    CHECK(every_line_is_a_known_statement(f.mtl_lines, kMtlStatements));
+}
+
+// ---------------------------------------------------------------- EXP-16 line breaks in the comment lines (Windows b9902e6)
+TEST(ObjWriter, Exp16_LineBreaksInAConditionNameAreWrittenAsSpacesLikeWindows)
+{
+    // PIN: iOS already writes CR and LF of a '# <name>' comment as one space each (OBJWriter::single_line), which is what
+    // Windows does since b9902e6 (obj_exporter.py _comment_text: replace('\r', ' ') then replace('\n', ' ')). Port of
+    // tests/presentation/visualization/exporters/test_obj_exporter.py OBJExporterCommentTests::
+    // test_line_breaks_in_a_condition_name_are_written_as_spaces: condition name 'Slab\r\nv 9 9 9\rf 1 2 3\nend', material
+    // 'red', colour #ff0000, display mode 'solid', one triangle. The Windows writer swaps the vertices to (x, z, -y) and the
+    // faces to (f0, f2, f1); iOS receives the mesh already swapped (triangle()), so the lines are the same.
+    ScratchDir dir("obj_exp16_windows");
+    ost_geometry::OBJWriter w;
+    w.set_display_mode("solid");
+    float r = 0, g = 0, b = 0;
+    colour_floats(255, 0, 0, r, g, b);
+    const Mesh tri = triangle();
+    w.add_group("red", "Slab\r\nv 9 9 9\rf 1 2 3\nend", r, g, b, {&tri});
+    REQUIRE(w.save(dir.file("model.obj")));
+    const std::string obj = read_text_lf(dir.file("model.obj"));
+    const std::string mtl = read_text_lf(dir.file("model.mtl"));
+    CHECK(obj.find('\r') == std::string::npos); // the comment holds no raw CR (Windows splitlines would break the line there)
+    CHECK(mtl.find('\r') == std::string::npos);
+    const auto obj_lines = split_lines(obj);
+    const auto mtl_lines = split_lines(mtl);
+    REQUIRE(obj_lines.size() > 5);
+    REQUIRE(mtl_lines.size() > 5);
+    const std::string comment = "# Slab  v 9 9 9 f 1 2 3 end";
+    CHECK_STR_EQ(obj_lines[3], comment);
+    CHECK_STR_EQ(mtl_lines[5], comment);
+    CHECK_STR_EQ(obj_lines[4], "g red");
+    CHECK_STR_EQ(obj_lines[5], "usemtl red");
+    CHECK_STR_EQ(mtl_lines[4], "newmtl red");
+    CHECK_EQ(lines_with_prefix(obj, "v "), (std::vector<std::string>{"0.000000 0.000000 0.000000", "1.000000 0.000000 0.000000",
+                                                                      "0.000000 0.000000 -1.000000"}));
+    CHECK_EQ(lines_with_prefix(obj, "f "), (std::vector<std::string>{"1 3 2"}));
+    CHECK_EQ(lines_with_prefix(mtl, "Kd "), (std::vector<std::string>{"1.000000 0.000000 0.000000"}));
+    CHECK(every_line_is_a_known_statement(obj_lines, kObjStatements));
+    CHECK(every_line_is_a_known_statement(mtl_lines, kMtlStatements));
+}
+
+TEST(ObjWriter, Exp16_EachCrAndLfOfACommentIsOneSpaceAndNothingElseChanges)
+{
+    // PIN, derived from _comment_text (not a Windows test): 'A\r\nB' gives 'A  B' (one space per CR and per LF, no
+    // collapsing), a lone CR and a lone LF one space each; every other character of the name stays raw in the comment, TAB,
+    // 0x01, 0x0B, 0x0C, 0x7F, U+0085 and U+2028 too (Windows replaces only CR and LF); and no injected statement appears.
+    struct Case
+    {
+        std::string name, comment;
+    };
+    const std::vector<Case> cases = {
+        {"A\r\nB", "A  B"},
+        {"A\rB", "A B"},
+        {"A\nB", "A B"},
+        {"A\n\r\n\rB", "A    B"},
+        {"\nA", " A"},
+        {"A\r", "A "},
+        {"A\tB", "A\tB"},
+        {"A\x01" "B", "A\x01" "B"},
+        {"A\x0B" "B\x0C" "C", "A\x0B" "B\x0C" "C"},
+        {"A\x7F" "B", "A\x7F" "B"},
+        {"A\xC2\x85" "B\xE2\x80\xA8" "C", "A\xC2\x85" "B\xE2\x80\xA8" "C"},
+        {"Slab\r\nnewmtl evil\rKd 1 0 0\nv 1 2 3", "Slab  newmtl evil Kd 1 0 0 v 1 2 3"},
+    };
+    ScratchDir dir("obj_exp16_cases");
+    ost_geometry::OBJWriter w;
+    const Mesh tri = triangle();
+    for (size_t k = 0; k < cases.size(); ++k)
+        w.add_group("c" + std::to_string(k), cases[k].name, 0.5f, 0.5f, 0.5f, {&tri});
+    REQUIRE(w.save(dir.file("model.obj")));
+    const std::string obj = read_text_lf(dir.file("model.obj"));
+    const std::string mtl = read_text_lf(dir.file("model.mtl"));
+    const auto obj_lines = split_lines(obj);
+    const auto mtl_lines = split_lines(mtl);
+    // one statement block per group and nothing else: no line was injected by a name
+    CHECK_EQ(lines_with_prefix(obj, "g ").size(), cases.size());
+    CHECK_EQ(lines_with_prefix(obj, "usemtl ").size(), cases.size());
+    CHECK_EQ(lines_with_prefix(mtl, "newmtl ").size(), cases.size());
+    CHECK_EQ(lines_with_prefix(mtl, "Kd ").size(), cases.size());
+    CHECK_EQ(lines_with_prefix(obj, "v ").size(), 3 * cases.size());
+    CHECK_EQ(lines_with_prefix(obj, "f ").size(), cases.size());
+    CHECK(every_line_is_a_known_statement(obj_lines, kObjStatements));
+    CHECK(every_line_is_a_known_statement(mtl_lines, kMtlStatements));
+    CHECK(obj.find('\r') == std::string::npos);
+    CHECK(mtl.find('\r') == std::string::npos);
+    for (size_t k = 0; k < cases.size(); ++k)
+    {
+        SCOPED_CONTEXT("case " + std::to_string(k) + " " + ost_test::detail::quote(cases[k].name));
+        const std::string expected = "# " + cases[k].comment;
+        const std::string group = "c" + std::to_string(k);
+        // OBJ: '# <comment>' directly before 'g <group>'
+        const auto g = std::find(obj_lines.begin(), obj_lines.end(), "g " + group);
+        REQUIRE(g != obj_lines.end() && g != obj_lines.begin());
+        CHECK_STR_EQ(*(g - 1), expected);
+        // MTL: '# <comment>' directly after 'newmtl <group>'
+        const auto m = std::find(mtl_lines.begin(), mtl_lines.end(), "newmtl " + group);
+        REQUIRE(m != mtl_lines.end() && m + 1 != mtl_lines.end());
+        CHECK_STR_EQ(*(m + 1), expected);
+    }
 }
 
 // ---------------------------------------------------------------- EXP-13 winding of the exported meshes
@@ -356,14 +595,28 @@ TEST(ObjWinding, EveryCurvedWallAndCylinderVariantIsOutwardFacing)
 }
 
 #if OST_HAVE_BOOLEAN
-// ---------------------------------------------------------------- EXP-13 with a negative takeoff in the export
-TEST(ObjWinding, BooleanResultsStayOutwardFacingWithANegativeInTheExport)
+// ---------------------------------------------------------------- EXP-13: the boolean difference keeps every result outward-facing
+TEST(ObjWinding, BooleanDifferenceResultsAreOutwardFacing)
 {
-    // Windows apply_boolean_operations (core/boolean_operations.py:49-61) flips the faces of EVERY positive as soon as the
-    // export holds a negative mesh: the untouched wall of the EXP-13 plan comes out with the volume -57600 instead of
-    // +57600 (and -60000 for the slab) while a cut piece comes out outward, so one Windows OBJ mixes both windings. That is
-    // internally inconsistent and is deliberately not ported (EXP-13 / EXP-M02, kept by user decision 2026-11-19, "keep outward
-    // normals", see PORTING_BLOCKERS.md): iOS keeps every exported mesh outward-facing, cut or untouched, and so does the volume.
+    // Scope: this test runs ost_geometry::boolean_difference_batch (the Manifold difference that the boolean pass calls for
+    // a positive with a negative of its type) on generator meshes, so it pins that the difference itself never returns an
+    // inward-facing mesh. It runs neither the pass nor an export. The pass is pinned by
+    // BooleanRule.Winding_ThePassNeverReversesTheFacesOfAPositive and the meshes that leave the 3D view, the HTML export and
+    // the OBJ / DXF groups by ExportRule.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacing (with the stand-in
+    // difference) and ExportRuleManifold.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacingWithManifold (with
+    // Manifold).
+    //
+    // Windows apply_boolean_operations (core/boolean_operations.py:70-111, since b9902e6) flips (f0, f2, f1) the native result
+    // of a positive that MAY be cut (its bounding box strictly overlaps the bounding box of a negative of the same condition
+    // type; empty positives count as may-be-cut), and hands back the original mesh of every other positive. Before b9902e6
+    // it flipped EVERY positive as soon as the export held a negative mesh: the untouched wall of the EXP-13 plan came out
+    // with the volume -57600 instead of +57600 (and -60000 for the slab). Now an uncut positive keeps the winding its
+    // generator gives it (EXP-17: most prisms clockwise in the Windows frame, rhombus and triangle counter-clockwise), a cut
+    // piece comes out of the native pass outward and flipped inward for the 3D view / HTML, and the Windows OBJ writer swaps
+    // every face again, so one Windows OBJ can still mix both windings. That is not ported (EXP-13 / EXP-M02 / EXP-17 / GEO-15
+    // / MSH-21, kept by user decision, "keep outward normals"): iOS keeps every exported mesh outward-facing, cut or
+    // untouched, and so does the volume. Nothing in iOS depends on the flip (no renderer culls faces, the shaders light both
+    // sides, and the writers write the faces as stored).
     Mesh cylinder = ost_meshing::generate_cylinder_mesh(0.0, 0.0, 24.0, 48.0, 0.0);
     const double whole = signed_volume(cylinder);
     REQUIRE(whole > 0.0);

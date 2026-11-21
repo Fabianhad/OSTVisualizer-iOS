@@ -5,6 +5,11 @@
 // cpp_extensions/src/module_geometry.cpp apply_boolean_operations_impl, run read-only (ExportRuleOracleData.hpp unit_cases).
 // The rule itself is tested with a stand-in for the boolean difference (the pass takes it as a parameter); the real
 // Manifold cases are under '#if OST_HAVE_BOOLEAN' (configure with -DOST_TEST_BOOLEAN=ON).
+// Since Windows b9902e6 apply_boolean_operations also returns the ORIGINAL mesh of a positive whose bounding box does not
+// strictly overlap the bounding box of any negative of its type (touching counts as apart) and reverses the faces of the
+// native result only for the positives that may be cut. iOS has no such bounding-box pre-check and never reverses a face
+// (every mesh stays outward by decision, see Winding_ThePassNeverReversesTheFacesOfAPositive): every positive of a type
+// that has a negative reaches the difference, so the tests below, whose boxes lie 100 apart, rely on that.
 #include "ExportRuleTestSupport.hpp"
 #include "ExportRuleOracleData.hpp"
 
@@ -156,6 +161,52 @@ TEST(BooleanRule, ACutPositiveIsTheDifferenceResultRepairedOfDegenerateFaces)
     CHECK(results[0].mesh.vertices == tagged_box(1).vertices);
 }
 
+TEST(BooleanRule, Winding_ThePassNeverReversesTheFacesOfAPositive)
+{
+    // PIN of a deliberate difference. Windows (b9902e6) reverses (f0, f2, f1) the native result of every positive that may be
+    // cut (bounding box strictly overlapping a same-type negative) and returns the original mesh of the others; iOS keeps
+    // every mesh outward-facing by decision (GEO-15 / EXP-13 / EXP-M02 / EXP-17 / MSH-21), so the faces that leave the pass
+    // are exactly the faces that went in (untouched positive) or that the difference returned (cut positive), in the same
+    // order and winding, and the volume stays positive. Nothing downstream consumes a flip either.
+    const Mesh box = tagged_box(1);
+    REQUIRE(export_test::signed_volume(box) > 0.0);
+    auto only = [&](std::vector<BooleanPassMesh> input, Recorder &rec)
+    {
+        auto results = ost_meshing::apply_boolean_operations(std::move(input), rec.fn());
+        REQUIRE_EQ(results.size(), static_cast<size_t>(1));
+        CHECK(results[0].mesh.faces == box.faces);
+        CHECK(export_test::signed_volume(results[0].mesh) > 0.0);
+        return results;
+    };
+    {
+        SCOPED_CONTEXT("no negative");
+        Recorder rec;
+        only({entry(1, false, 2, "p")}, rec);
+        CHECK(rec.calls.empty());
+    }
+    {
+        SCOPED_CONTEXT("a negative of another type");
+        Recorder rec;
+        only({entry(1, false, 2, "p"), entry(2, true, 3, "n")}, rec);
+        CHECK(rec.calls.empty());
+    }
+    {
+        SCOPED_CONTEXT("a same-type negative whose box does not touch the positive (Windows returns the original mesh)");
+        Recorder rec;
+        const auto results = only({entry(1, false, 2, "p"), entry(2, true, 2, "n")}, rec);
+        CHECK_EQ(rec.calls.size(), static_cast<size_t>(1)); // iOS has no bounding-box pre-check: the difference ran
+        CHECK(results[0].mesh.vertices != box.vertices);    // and its (here: shifted) result replaced the positive
+    }
+    {
+        SCOPED_CONTEXT("a same-type negative that overlaps the positive");
+        Recorder rec;
+        BooleanPassMesh overlapping = entry(1, true, 2, "n");
+        overlapping.mesh = make_box(5.0, 0.0, 0.0, 15.0, 10.0, 10.0);
+        only({entry(1, false, 2, "p"), overlapping}, rec);
+        CHECK_EQ(rec.calls.size(), static_cast<size_t>(1));
+    }
+}
+
 TEST(BooleanRule, AFullyConsumedPositiveIsDropped)
 {
     // Port of tests/presentation/visualization/exporters/test_obj_exporter.py::OBJExporterBooleanRuleTests::
@@ -215,6 +266,12 @@ TEST(BooleanRule, AFailingBooleanOperationReturnsEveryPositiveUnchangedAndLogsAn
         { throw std::runtime_error("manifold failed"); });
     CHECK_EQ(sources(results), (std::vector<size_t>{0, 2}));
     CHECK(results[0].mesh.vertices == tagged_box(1).vertices);
+    // Returned "as they are" includes the winding: the fallback never reverses the faces of a positive (the iOS decision
+    // EXP-13 / EXP-M02: every mesh stays outward-facing; mutation check of 2026-11-20 found this path unpinned).
+    REQUIRE_EQ(results.size(), static_cast<size_t>(2));
+    CHECK(results[0].mesh.faces == tagged_box(1).faces);
+    CHECK(results[1].mesh.faces == tagged_box(3).faces);
+    CHECK(export_test::signed_volume(results[0].mesh) > 0.0);
     REQUIRE_EQ(log.records.size(), static_cast<size_t>(1));
     CHECK(log.records[0].level == ost_log::Level::Error);
     CHECK_STR_EQ(log.records[0].message, "Boolean operations failed; returning positive meshes unchanged: manifold failed");
