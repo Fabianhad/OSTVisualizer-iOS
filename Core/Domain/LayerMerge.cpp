@@ -77,27 +77,58 @@ namespace ost_domain
         return ost_import::text_rules::py_lower(ost_import::text_rules::py_strip(name));
     }
 
+    bool is_image_layer_uid(const std::vector<BidLayer> &merged_layers, const std::unordered_map<std::string, Layer> &own_layers,
+                            const std::string &uid)
+    {
+        // the merged list first (Windows' name map is built from it), and the name it holds for the uid is the one that counts
+        for (const BidLayer &entry : merged_layers)
+        {
+            if (entry.uid == uid)
+                return normalize_layer_name(entry.name) == "image";
+        }
+        auto found = own_layers.find(uid);
+        if (found != own_layers.end())
+            return normalize_layer_name(found->second.name) == "image";
+        return false;
+    }
+
     bool is_comments_layer_name(const std::string &name)
     {
         return normalize_layer_name(name) == "comments";
     }
 
-    std::vector<std::string> layers_to_change_for_bulk_visibility(const std::vector<BidLayer> &listed,
-                                                                  const std::unordered_map<std::string, Layer> &bid_layers,
-                                                                  bool show)
+    bool is_shared_template_layer(const BidLayer &layer, const std::string &bid_uid)
     {
-        // changed_layer_uids = [uid for uid, visible in previous_visibility.items() if visible != bool(show)] over the layers of
-        // the list; only the bid's own layers can be written (a template-only entry has no live visibility here)
-        std::vector<std::string> uids;
+        // bool(layer.is_template and layer.is_locked and str(layer.bid_uid or "") != str(bid_uid or "")); the loader already
+        // reads a NULL or 0 BidUID as "", so the comparison is a plain text comparison
+        return layer.is_template && layer.is_locked && layer.bid_uid != bid_uid;
+    }
+
+    BulkLayerPlan plan_bulk_layer_visibility(const std::vector<BidLayer> &listed, const std::string &bid_uid,
+                                             const std::unordered_map<std::string, Layer> &bid_layers, bool show)
+    {
+        // Windows update_all_layers_visibility_deferred: previous_visibility = {uid: show for the layers of the list that are not
+        // shared}; empty -> return False (nothing queued); changed_layer_uids = [uid for uid, visible in previous_visibility.items()
+        // if visible != bool(show)]; none -> return True without a write. Only a layer of the bid has a live visibility here (a
+        // template-only entry has none), and the Comments layer is never part of the list (it is dropped from it, LP-18).
+        BulkLayerPlan plan;
+        bool any_own_layer = false;
         for (const BidLayer &entry : listed)
         {
+            if (is_shared_template_layer(entry, bid_uid) || is_comments_layer_name(entry.name))
+                continue;
             auto own = bid_layers.find(entry.uid);
             if (own == bid_layers.end() || is_comments_layer_name(own->second.name))
                 continue;
+            any_own_layer = true;
             if (own->second.visible != show)
-                uids.push_back(entry.uid);
+                plan.uids.push_back(entry.uid);
         }
-        return uids;
+        if (!plan.uids.empty())
+            plan.outcome = BulkLayerOutcome::Write;
+        else
+            plan.outcome = any_own_layer ? BulkLayerOutcome::AlreadyThere : BulkLayerOutcome::NoOwnLayers;
+        return plan;
     }
 
 }

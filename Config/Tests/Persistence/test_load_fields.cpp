@@ -1,6 +1,7 @@
 // Field mapping of load_project against the Windows readers (database-persistence parity):
-//   DBP-04 (+SNP-01, LP-19, LOAD-01)          Bids.TakeoffIncrements NULL loads as 1.0 (hierarchy_reader.py:126); a stored 0 stays 0
-//                                             (DBP-05: Windows disagrees with itself; kept by user decision 2026-11-19)
+//   DBP-04 (+SNP-01, LP-19, LOAD-01)          Bids.TakeoffIncrements NULL loads as 1.0 (hierarchy_reader.py:126-130); a stored number
+//                                             of any value is kept, 0 included, and 0 means snapping off (DBP-05: Windows now
+//                                             loads a stored 0 as 0.0 too, test_hierarchy_reader.py:836)
 //   QTY-13 (+DBP-02, LOAD-M01)                BidTakeoffs.Curve NULL loads as -1 (bid_data_reader.py:1131-1135)
 //   DBP-03 (+MSH-M03)                         BidConditions.DisplaySize <= 0 / NULL loads as 100.0 (_normalize_display_size)
 //   LP-20 (+DBP-28, DBP-29, BOOL-01)          BidPages: Show, Rotation % 360, flip / flag parsing, Sequence, SheetNo
@@ -43,8 +44,9 @@ namespace
 // DBP-04
 // ---------------------------------------------------------------------------------------------------------------
 
-// Port of tests/infrastructure/mdb/components/test_hierarchy_reader.py:534-548 (orphan bid: NULL TakeoffIncrements ->
-// 1.0) and test_minimal_schema_hierarchy_uses_documented_defaults (a missing value is 1 inch).
+// Port of tests/infrastructure/mdb/components/test_hierarchy_reader.py::test_parse_hierarchy_projects_bids_with_counts_status_and_
+// estimator (:541-551, the orphan bid: NULL TakeoffIncrements -> 1.0) and test_minimal_schema_hierarchy_uses_documented_defaults
+// (a missing value is 1 inch).
 TEST(Dbp04_TakeoffIncrements, NullLoadsAsOneInch)
 {
     TempDb db("dbp04_null");
@@ -56,27 +58,36 @@ TEST(Dbp04_TakeoffIncrements, NullLoadsAsOneInch)
     CHECK_EQ(project.bid.snap_increments_ost(), 1.0);
 }
 
-// DBP-05 (kept by user decision 2026-11-19, see PORTING_BLOCKERS.md): a stored 0 is not turned into 1.0. Windows disagrees
-// with itself here: hierarchy_reader.py:126 (`float(TakeoffIncrements or 1.0)`) maps 0 to 1.0 while settings_reader.py:151 and
-// the cover sheet dialog keep 0 and the plan view treats `<= 0` as "snapping off"; no Windows test pins 0. The iOS behavior
-// stays (0 disables snapping, like a negative value). The test name keeps its old wording, it was not renamed.
-TEST(Dbp05_TakeoffIncrementsZero, ZeroKeepsSnappingDisabledUntilTheOwnerDecides)
+// DBP-05: a stored number is kept, a stored 0 included, and 0 means snapping off. Windows hierarchy_reader.py:126-130 loads
+// `1.0 if bid_row.TakeoffIncrements is None else float(bid_row.TakeoffIncrements)`, so only NULL becomes 1.0 (the cover sheet
+// reader settings_reader.py:151 and the dialog keep 0 as well), and the plan view's set_snap_settings (view.py:3955-3962) turns
+// `<= 0` into a snap increment of 0.0 for either measure base. Windows tests: test_hierarchy_reader.py:831-836 (bid 11 stored 0
+// -> takeoff_increments 0.0) and tests/integration/mdb/test_snap_increment_reaches_plan_view.py:72-79
+// (test_a_stored_zero_increment_turns_snapping_off_in_the_plan_view: stored 0.0 with MeasureBase 0 and 1 -> snap settings
+// (0.0, measure_base) and a plan view snap of 0.0). A negative zero is `<= 0` as well.
+TEST(Dbp05_TakeoffIncrementsZero, AStoredZeroTurnsSnappingOff)
 {
     int index = 0;
-    for (const char *stored : {"0", "0.0"})
+    for (const char *measure_base : {"0", "1"})
     {
-        SCOPED_CONTEXT(std::string("TakeoffIncrements = ") + stored);
-        TempDb db("dbp05_zero_" + std::to_string(index++));
-        seed_bid(db, "0", stored);
-        const ost_data::ProjectData project = load(db);
-        REQUIRE_EQ(project.bid.uid, std::string("10"));
-        CHECK_EQ(project.bid.takeoff_increments, 0.0);
-        CHECK_EQ(project.bid.snap_increments_ost(), 0.0);
+        for (const char *stored : {"0", "0.0", "-0.0"})
+        {
+            SCOPED_CONTEXT(std::string("MeasureBase = ") + measure_base + ", TakeoffIncrements = " + stored);
+            TempDb db("dbp05_zero_" + std::to_string(index++));
+            seed_bid(db, measure_base, stored);
+            const ost_data::ProjectData project = load(db);
+            REQUIRE_EQ(project.bid.uid, std::string("10"));
+            CHECK_EQ(project.bid.takeoff_increments, 0.0);
+            CHECK_EQ(project.bid.snap_increments_ost(), 0.0);
+        }
     }
 }
 
-// The snap increment the plan view derives (plan_view/view.py set_snap_settings): metric -> mm / 25.4, else inches;
-// <= 0 disables snapping. SNP-01 / LP-19 plans.
+// The snap increment the plan view derives (plan_view/view.py:3955-3962 set_snap_settings): metric (MeasureBase 1 only) -> mm /
+// 25.4, else inches; <= 0 disables snapping. SNP-01 / LP-19 plans; the DBP-05 rows are the ones of
+// tests/presentation/components/plan_view/test_view.py:14859-14876 (set_snap_settings(0.0, 1) -> 0.0, (-1.0, 0) -> 0.0) and of
+// tests/integration/mdb/test_snap_increment_reaches_plan_view.py:81-96 ((0, NULL) -> 1.0, (1, NULL) -> 1 / 25.4, (0, 0.25) ->
+// 0.25, (1, 10.0) -> 10.0 / 25.4, assertAlmostEqual there, exact here: the same IEEE expression).
 TEST(Dbp04_TakeoffIncrements, SnapIncrementFollowsTheMeasurementSystem)
 {
     struct Case
@@ -100,6 +111,12 @@ TEST(Dbp04_TakeoffIncrements, SnapIncrementFollowsTheMeasurementSystem)
         {"1", "NULL", 1.0, 1.0 / 25.4},   // NULL is 1.0 whatever MeasureBase is (not the dialog's 10 for metric): 0.03937007874015748
         {"1", "1.0", 1.0, 1.0 / 25.4},    // 0.03937007874015748
         {"0", "1e-9", 1e-9, 1e-9},        // any positive value is kept, however small
+        // DBP-05 (Windows keeps a stored 0 and treats <= 0 as snapping off, in either measurement system):
+        {"1", "0", 0.0, 0.0},             // set_snap_settings(0.0, 1) -> 0.0, not 0 / 25.4 (also 0.0)
+        {"0", "-1", -1.0, 0.0},           // set_snap_settings(-1.0, 0) -> 0.0
+        {"0", "NULL", 1.0, 1.0},          // NULL is 1 inch with MeasureBase 0 (NullLoadsAsOneInch), the metric row is above
+        {"0", "0.25", 0.25, 0.25},
+        {"1", "10.0", 10.0, 10.0 / 25.4}, // 0.3937007874015748
     };
     int index = 0;
     for (const Case &c : cases)

@@ -153,7 +153,10 @@ namespace ost_store
     // Windows update_all_layers_show(db_path, bid_uid, show, layer_uids): Show All / Hide All write the visibility of
     // `layer_uids` in ONE transaction, all or nothing. The bid must exist; every uid (duplicates count once) must be a
     // positive integer naming a layer of that bid or a locked template layer (BidUID = bid OR (IsTemplate AND IsLocked)),
-    // otherwise nothing is written; a failed statement rolls everything back. An empty list succeeds without writing.
+    // otherwise nothing is written (one such uid refuses the whole call). Then only the rows with BidUID = bid are written:
+    // the shared template rows (a locked template layer of no bid or of another bid) are skipped, never changed, and a call
+    // whose uids are all shared rows succeeds without writing (LP-24 (a); the bid's own locked copy is written). A failed
+    // statement rolls everything back. An empty list succeeds without writing.
     bool set_layers_visibility(const std::string &db_path,
                                const std::string &bid_uid,
                                const std::vector<std::string> &layer_uids,

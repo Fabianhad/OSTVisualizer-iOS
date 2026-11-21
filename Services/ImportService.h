@@ -45,7 +45,8 @@ extern NSNotificationName const OSTRenderConfigChangedNotification;
                   forLayer:(NSString *)layerUID
                      inBid:(NSString *)bidUID;
 
-// Show All / Hide All: the visibility of every listed layer in one transaction, all of them or none (Windows update_all_layers_show).
+// Show All / Hide All: the visibility of the listed layers of the bid in one transaction, all of them or none (Windows update_all_layers_show).
+// A shared template row among them (a locked template layer of no bid or of another bid) is skipped, never written (LP-24 (a)).
 // NO, nothing written, when a layer is refused or a statement fails (DBP-35).
 + (BOOL)setLayersVisibility:(BOOL)visible
                   forLayers:(const std::vector<std::string> &)layerUIDs

@@ -706,6 +706,16 @@ static const int kToolbar2DOnlyTag = 40000;
       });
 }
 
+// Windows handle_place_press (placement_mode.py:1648) refuses at the first press: for a condition that is gone or not visible no
+// preview, no point of a polygon and no in-progress state is made. PlanView asks this at the start of every placement gesture
+// (a tap, the start of a drag). The Image layer toggle leaves the tool armed on a condition that is then hidden (COND-PLACE-01).
+// The decision is Core ost_data::placement_tap_accepted.
+- (BOOL)planView:(PlanView *)planView
+    canPlaceWithCondition:(const std::string &)conditionUID {
+  return ost_data::placement_tap_accepted(_projectService.project,
+                                          conditionUID);
+}
+
 - (void)planView:(PlanView *)planView areaPlacementInProgress:(BOOL)inProgress {
   _fab.userInteractionEnabled = !inProgress;
   _fab.alpha = inProgress ? 0.3 : 1.0;
@@ -733,6 +743,22 @@ static const int kToolbar2DOnlyTag = 40000;
   if (!_is2DMode) {
     _cameraEditMode = mode;
     _cameraController.panMode = (mode == ost_domain::EditMode::Select);
+    return;
+  }
+  // Windows enter_place_mode_for_condition (placement_mode.py:1869) and PlacementCoordinator._is_condition_placeable: a condition
+  // that is gone or on a hidden layer is not entered. The button keeps offering the condition of the last takeoff or list
+  // selection, and the Image layer toggle leaves the tool armed on a condition that is then hidden (COND-PLACE-01), so the way
+  // back into the Place mode would arm a hidden condition. The decision is Core ost_data::placement_tap_accepted (the "exists and
+  // is visible" of placement_for_selected_condition, which the Conditions list applies). A refusal is Windows' force_exit, like
+  // the Conditions list: the offered condition is dropped (_leavePlacement clears it and switches the Place button off, and goes
+  // back to View when the tool was in Place), so the tap cycle goes Select -> View and the ring shows Place disabled instead of
+  // proposing the refused Place again; selecting the condition from the list offers it again. The button then shows the mode the
+  // app is really in.
+  if (mode == ost_domain::EditMode::PlaceTakeoff &&
+      !ost_data::placement_tap_accepted(_projectService.project,
+                                        _placeConditionUID)) {
+    [self _leavePlacement];
+    [fab setCurrentMode:_editMode animated:YES];
     return;
   }
   [self _setEditMode:mode];
@@ -1283,6 +1309,13 @@ static const int kToolbar2DOnlyTag = 40000;
 - (void)planView:(PlanView *)planView
     didPlaceTakeoffWithCondition:(const std::string &)conditionUID
                         position:(const std::vector<double> &)position {
+  // Windows handle_place_press (placement_mode.py:1648): a tap for a condition that is gone or not visible places nothing, no
+  // takeoff, no history entry, no selection change. The Image layer toggle leaves the tool armed on a condition that is then
+  // hidden (COND-PLACE-01). PlanView already asked planView:canPlaceWithCondition: at the start of the gesture, so no preview
+  // was drawn; this is the last line of defence at the one place every placement (tap, drag, polygon) comes through. The
+  // decision is Core ost_data::placement_tap_accepted.
+  if (!ost_data::placement_tap_accepted(_projectService.project, conditionUID))
+    return;
   if (_bidUID.length == 0)
     return;
   const std::string &pageUID = _projectService.selected2DPageUID;

@@ -255,10 +255,23 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
   _placePreviewView = preview;
 }
 
+// Windows handle_place_press (placement_mode.py:1648) refuses at the first press for a condition that is gone or not visible
+// ("event.accept(); return"): nothing is previewed, no polygon point exists, no placement is in progress. The delegate decides
+// (the Image layer toggle leaves the tool armed on a condition that is then hidden, COND-PLACE-01); a delegate without the query
+// allows every press.
+- (BOOL)_placementPressAllowed {
+  id<PlanViewEditDelegate> delegate = _editDelegate;
+  if (![delegate respondsToSelector:@selector(planView:canPlaceWithCondition:)])
+    return YES;
+  return [delegate planView:self canPlaceWithCondition:_placeConditionUID];
+}
+
 - (void)_handlePlaceTap:(UITapGestureRecognizer *)tap {
   if (tap.state != UIGestureRecognizerStateEnded)
     return;
   if (!_canvasView || !_editDelegate || !_placementActive)
+    return;
+  if (![self _placementPressAllowed])
     return;
 
   CGPoint canvasPt = [tap locationInView:_canvasView];
@@ -343,6 +356,12 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
 
 - (void)_handlePlacePan:(UIPanGestureRecognizer *)pan {
   if (!_canvasView || !_editDelegate || !_placementActive)
+    return;
+  // The press that starts a drag (Linear drag, Area rectangle drag) is refused at Began, before the first point exists. Every
+  // later state of a refused pan finds no drag in progress (_placeLinearDragging / _placeAreaRectDragging are only set at
+  // Began), so it does nothing; the recogniser still takes the touch, so the page does not scroll under a refused press.
+  if (pan.state == UIGestureRecognizerStateBegan &&
+      ![self _placementPressAllowed])
     return;
 
   // The press position (Windows) is where the touch went down: UIKit begins a

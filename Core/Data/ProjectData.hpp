@@ -85,6 +85,11 @@ namespace ost_data
             const double sf2 = it->second.scale_factor2 != 0.0 ? it->second.scale_factor2 : 1.0;
             return sf1 > 0.0 ? sf2 / sf1 : 1.0;
         }
+        // A condition is visible unless its layer is one of the bid's own layers and that layer is hidden. There is no per-
+        // condition flag: this is Windows is_layer_visible (layer.py:112-118, a falsy layer uid and a layer uid that is not
+        // among the bid's own layers are visible) applied to the live layers on every use. So a condition without a layer, with
+        // a blank or unknown layer or on a shared template row is visible, after Hide All / Show All exactly as after a reload
+        // (LP-22; Windows update_all_layer_visibility sets conditions the same way). Layer uids are text.
         bool is_condition_visible(const ost_domain::Condition &cdn) const
         {
             if (cdn.layer_uid.empty())
@@ -94,6 +99,51 @@ namespace ost_data
                 return true;
             return it->second.visible;
         }
+
+        // The in-memory side of Show All / Hide All after the write worked: the named layers of the bid get the visibility
+        // `show` (the uids of ost_domain::plan_bulk_layer_visibility). A uid that is not one of the bid's layers is ignored
+        // (no layer is created), so a shared row can never change here. Conditions and the page background follow because they
+        // are derived from `layers` (is_condition_visible, ost_domain::is_image_layer_visible).
+        void apply_layer_visibility(const std::vector<std::string> &layer_uids, bool show)
+        {
+            for (const std::string &uid : layer_uids)
+            {
+                auto it = layers.find(uid);
+                if (it != layers.end())
+                    it->second.visible = show;
+            }
+        }
+
+        // What the layer sheet shows for a row of the layer list: the live visibility of a layer of the bid (the toggles made
+        // since the load), else the stored Show of the listed row (a shared template row cannot be changed from the sheet),
+        // else visible for a uid the list does not have.
+        bool is_listed_layer_visible(const std::string &layer_uid) const
+        {
+            auto own = layers.find(layer_uid);
+            if (own != layers.end())
+                return own->second.visible;
+            for (const ost_domain::BidLayer &entry : merged_layers)
+            {
+                if (entry.uid == layer_uid)
+                    return entry.show;
+            }
+            return true;
+        }
     };
+
+    // COND-PLACE-01 note 1: placement_mode.py handle_place_press (:1648) "condition = self._current_conditions.get(active_uid); if
+    // not condition or not condition.layer_visible: event.accept(); return", and the same check at the release of an Area / Linear
+    // drag (:1754, :1819) and in enter_place_mode_for_condition (:1869): a press for a condition that is gone or not visible does
+    // nothing at all - no preview, no point of a polygon, no takeoff. `condition_uid` is the condition the placement tool is
+    // armed on. The Image layer toggle does not suspend the tool, so this is where an armed condition of that layer is refused
+    // while the layer is hidden; its presses place again when the layer is shown. A condition without a layer, with a layer uid
+    // the bid does not have or on a shared template row is visible (is_condition_visible), hence accepted. The app asks this at
+    // the start of every placement gesture (PlanViewEditDelegate planView:canPlaceWithCondition:), when the floating mode button
+    // would enter the Place mode, and where the finished placement arrives (planView:didPlaceTakeoffWithCondition:position:).
+    inline bool placement_tap_accepted(const ProjectData &project, const std::string &condition_uid)
+    {
+        auto placing = project.conditions.find(condition_uid);
+        return placing != project.conditions.end() && project.is_condition_visible(placing->second);
+    }
 
 }

@@ -370,11 +370,11 @@ namespace ost_store
             project.bid.status_uid = stmt.column_text(6);
             project.bid.estimator_uid = stmt.column_text(7);
             project.bid.measure_base = stmt.column_int(8);
-            // A NULL TakeoffIncrements is 1 inch (hierarchy_reader.py:126 `float(TakeoffIncrements or 1.0)` and
-            // settings_reader.py:151 `parse_float(TakeoffIncrements, 1.0)` agree). A stored 0 is NOT turned into 1.0 here: Windows
-            // disagrees with itself (hierarchy_reader's `or 1.0` maps 0 to 1.0, the cover sheet reader and dialog keep 0, and the
-            // plan view's `<= 0` branch means "snapping off"), so the iOS behavior stays (0 and a negative value disable snapping,
-            // Bid::snap_increments_ost): kept by user decision 2026-11-19 (DBP-04 / DBP-05, see PORTING_BLOCKERS.md).
+            // Only a NULL TakeoffIncrements is 1 inch: hierarchy_reader.py:126-130 loads
+            // `1.0 if bid_row.TakeoffIncrements is None else float(bid_row.TakeoffIncrements)` and settings_reader.py:151
+            // `parse_float(TakeoffIncrements, 1.0)` agrees. Any stored number is kept, a stored 0 included (test_hierarchy_reader.py:
+            // 831-836, DBP-05), and a value <= 0 means "snapping off" (Bid::snap_increments_ost, plan_view/view.py
+            // set_snap_settings).
             project.bid.takeoff_increments = stmt.column_double(9);
             if (stmt.column_type(9) == ost_db::Statement::TypeNull)
                 project.bid.takeoff_increments = 1.0;

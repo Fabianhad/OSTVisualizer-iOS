@@ -27,7 +27,9 @@ namespace
 }
 
 // Item plan: layers (uid 1 'Default' show, uid 3 'Image' show = 0): the background is hidden; with the Image layer shown it is
-// drawn. Show All / Hide All change the visibility of every layer, the Image layer included.
+// drawn. Show All / Hide All change the visibility of every layer of the bid, the bid's own Image layer included; a shared
+// Image row (a locked template layer of no bid, LP-24 (a)) is not one of the bid's layers, so the background stays
+// (test_layer_visibility.cpp, Lp24_HideAllAgreement).
 TEST(ImageLayer, TheImageLayerDecides)
 {
     auto layers = layers_of({{"1", "Default", true, 0}, {"3", "Image", false, 1}});

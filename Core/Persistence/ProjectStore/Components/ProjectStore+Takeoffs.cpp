@@ -90,7 +90,10 @@ namespace ost_store
         // (require_existing_unique_bid_owned_uid_matches(Bids)); the uids are made unique in order of appearance and an empty
         // list is a success that writes nothing; EVERY uid must name a layer of the bid or, when the table has both flag
         // columns, a locked template layer (BidUID = ? OR (IsTemplate <> 0 AND IsLocked <> 0)) - otherwise nothing is
-        // written; then one UPDATE per layer, all in the one transaction (any failed statement rolls everything back).
+        // written; then the uids that are not rows of the bid (BidUID = ?: the shared template rows, a locked template layer of
+        // no bid or of another bid) are dropped and a call with none left is a success that writes nothing (LP-24 (a)); the
+        // rest is one UPDATE ... WHERE UID = ? AND BidUID = ? per layer, all in the one transaction (any failed statement rolls
+        // everything back).
         long long bid = 0;
         if (!integrity::parse_uid(bid_uid, bid))
             return false;
@@ -137,14 +140,33 @@ namespace ost_store
                 return fail();
         }
 
-        ost_db::Statement update = db.prepare("UPDATE [BidLayers] SET [Show] = ? WHERE [UID] = ?");
+        // own_uids = the uids whose row has BidUID = bid; a shared template row is eligible above but is never written
+        ost_db::Statement owned = db.prepare("SELECT COUNT(*) FROM [BidLayers] WHERE [UID] = ? AND [BidUID] = ?");
+        if (!owned.valid())
+            return fail();
+        std::vector<long long> own_uids;
+        for (long long uid : uids)
+        {
+            owned.reset();
+            owned.bind_int64(1, uid);
+            owned.bind_int64(2, bid);
+            if (!owned.step())
+                return fail();
+            if (owned.column_int(0) == 1)
+                own_uids.push_back(uid);
+        }
+        if (own_uids.empty())
+            return db.commit(); // only shared rows: nothing to write
+
+        ost_db::Statement update = db.prepare("UPDATE [BidLayers] SET [Show] = ? WHERE [UID] = ? AND [BidUID] = ?");
         if (!update.valid())
             return fail();
-        for (long long uid : uids)
+        for (long long uid : own_uids)
         {
             update.reset();
             update.bind_int(1, visible ? -1 : 0);
             update.bind_int64(2, uid);
+            update.bind_int64(3, bid);
             if (!update.run())
                 return fail();
         }

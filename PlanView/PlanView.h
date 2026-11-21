@@ -23,6 +23,10 @@
                 atPoint:(CGPoint)screenPoint;
 - (void)planView:(PlanView *)planView didLongPressEmptySpaceAtPoint:(CGPoint)screenPoint;
 - (void)planView:(PlanView *)planView areaPlacementInProgress:(BOOL)inProgress;
+/// Asked at the start of every placement gesture (the tap, the first touch of a drag) for the condition the tool is armed on. NO
+/// = the press does nothing at all: no preview, no polygon point, no in-progress state (Windows handle_place_press, a condition
+/// that is gone or not visible). Without this method every press is allowed.
+- (BOOL)planView:(PlanView *)planView canPlaceWithCondition:(const std::string &)conditionUID;
 @end
 
 @interface PlanView : UIScrollView

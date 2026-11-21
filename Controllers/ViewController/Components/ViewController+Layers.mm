@@ -81,42 +81,44 @@
   [self _setAllLayersVisible:NO];
 }
 
-// Windows update_all_layers_visibility_deferred: the layers of the list that do
-// not have the requested visibility are written in ONE transaction (all or
-// none, DBP-35); nothing is written when none differs; the Comments layer is
-// not in the list and never changes (LP-18). The project follows only after the
-// write worked, a refused write is reported and changes nothing (DBP-11,
-// DBP-17, Windows restore_authoritative).
+// Windows update_all_layers_visibility_deferred: the layers of the bid in the
+// list that do not have the requested visibility are written in ONE transaction
+// (all or none, DBP-35); nothing is written when none differs; the Comments
+// layer is not in the list and never changes (LP-18); a shared template row (a
+// locked template layer of no bid or of another bid) is never changed, in the
+// write, in memory or in the list (LP-24 (a); the plan is
+// ost_domain::plan_bulk_layer_visibility). When the bid has no layer of its own
+// the plan is NoOwnLayers: Windows returns False there and the sidebar path
+// ignores it, so nothing is written, nothing changes and no alert is shown. The
+// project follows only after the write worked, a refused write is reported and
+// changes nothing (DBP-11, DBP-17, Windows restore_authoritative).
 - (void)_setAllLayersVisible:(BOOL)show {
   const auto &project = self.projectService.project;
-  const std::vector<std::string> changed =
-      ost_domain::layers_to_change_for_bulk_visibility(project.merged_layers,
-                                                       project.layers, show);
-  if (changed.empty())
+  const ost_domain::BulkLayerPlan plan = ost_domain::plan_bulk_layer_visibility(
+      project.merged_layers, std::string(self.bidUID.UTF8String ?: ""),
+      project.layers, show);
+  if (plan.outcome != ost_domain::BulkLayerOutcome::Write)
     return;
   if (self.bidUID.length > 0 &&
       ![ImportService setLayersVisibility:show
-                                forLayers:changed
+                                forLayers:plan.uids
                                     inBid:self.bidUID]) {
     [self _presentLayerVisibilityFailure];
     return;
   }
   // Windows update_all_layers_visibility_deferred: Hide All leaves the placement tool before the layers change, Show All puts it
-  // back at the end (COND-PLACE-01)
+  // back at the end (COND-PLACE-01). Unlike the single toggle there is no Image layer exemption here (no layer is named), also
+  // for a condition on the Image layer.
   if (!show)
-    [self _suspendPlacementForLayerHide:nil];
-  for (const auto &uid : changed) {
-    auto it = self.projectService.mutableProject.layers.find(uid);
-    if (it != self.projectService.mutableProject.layers.end())
-      it->second.visible = show;
-  }
+    [self _suspendPlacementForLayerHide:nil layerIsImage:NO];
+  self.projectService.mutableProject.apply_layer_visibility(plan.uids, show);
   [self _generateMeshesForSelectedPages];
   [self _refreshOverlays];
   UITableView *table = objc_getAssociatedObject(self, "layerTable");
   [table reloadData];
   [self _refreshConditionsListForLayerVisibility];
   if (show)
-    [self _restorePlacementAfterLayerShow:nil];
+    [self _restorePlacementAfterLayerShow:nil layerIsImage:NO];
 }
 
 #pragma mark - Conditions on a hidden layer (COND-PLACE-01)
@@ -133,9 +135,14 @@
 }
 
 // Windows _suspend_active_layer_tool: when the layer of the condition that is being placed is hidden (`layerUID` nil = every layer,
-// Hide All) the placement tool is left and remembered, to come back when the layer is shown again. Windows leaves the
-// placement of an Image layer condition running (`not image_layer`), here a hidden condition is never placed.
-- (void)_suspendPlacementForLayerHide:(NSString *)layerUID {
+// Hide All) the placement tool is left and remembered, to come back when the layer is shown again. `layerIsImage` is the single
+// toggle of the Image layer (Core is_image_layer_uid): Windows does not suspend for it (`if not show and not image_layer`), so the
+// tool stays armed on a condition that is now hidden; its presses are ignored from the first touch (Core
+// ost_data::placement_tap_accepted, asked by PlanView through planView:canPlaceWithCondition:, by the floating mode button and
+// in planView:didPlaceTakeoffWithCondition:position:) and place again when the Image layer is shown. Hide All names no layer and
+// passes NO.
+- (void)_suspendPlacementForLayerHide:(NSString *)layerUID
+                         layerIsImage:(BOOL)layerIsImage {
   if (self.editMode != ost_domain::EditMode::PlaceTakeoff ||
       self.placeConditionUID.empty())
     return;
@@ -150,7 +157,7 @@
   std::optional<ost_domain::SuspendedPlacement> suspended =
       ost_domain::suspended_placement_for_layer_hide(
           std::string(self.bidUID.UTF8String ?: ""), placing->second,
-          hiddenLayer);
+          hiddenLayer, layerIsImage);
   if (!suspended)
     return;
 
@@ -160,8 +167,10 @@
   self.suspendedPlacement = suspended;
 }
 
-// Windows _restore_suspended_layer_tool: `layerUID` is the layer that was shown (nil = Show All).
-- (void)_restorePlacementAfterLayerShow:(NSString *)layerUID {
+// Windows _restore_suspended_layer_tool: `layerUID` is the layer that was shown (nil = Show All). `layerIsImage` is the single
+// toggle of the Image layer: Windows does not restore for it (`if show and not image_layer`), an existing suspension stays.
+- (void)_restorePlacementAfterLayerShow:(NSString *)layerUID
+                           layerIsImage:(BOOL)layerIsImage {
   if (!self.suspendedPlacement)
     return;
   const ost_domain::SuspendedPlacement suspended = *self.suspendedPlacement;
@@ -183,8 +192,8 @@
   }
   now.takeoff_2d_view_active = self.is2DMode;
 
-  switch (ost_domain::restore_of_suspended_placement(suspended, shownLayer,
-                                                     now)) {
+  switch (ost_domain::restore_of_suspended_placement(suspended, shownLayer, now,
+                                                     layerIsImage)) {
   case ost_domain::SuspendedPlacementOutcome::Keep:
     return;
   case ost_domain::SuspendedPlacementOutcome::Drop:
@@ -217,19 +226,13 @@
   [presenter presentViewController:alert animated:YES completion:nil];
 }
 
-// What the list shows for a layer: the live visibility of a layer of the bid
-// (the toggles made since the load), the stored Show of a template layer that
-// belongs to no bid (it cannot be changed from here).
+// What the list shows for a layer (ost_data::ProjectData::is_listed_layer_visible):
+// the live visibility of a layer of the bid (the toggles and Show All / Hide All
+// made since the load), the stored Show of a shared template row (a locked
+// template layer of no bid or of another bid: Show All / Hide All never change
+// it), so the sheet equals a reload after a bulk change.
 - (BOOL)_visibilityOfListedLayer:(const std::string &)uid {
-  const auto &project = self.projectService.project;
-  auto own = project.layers.find(uid);
-  if (own != project.layers.end())
-    return own->second.visible;
-  for (const auto &entry : project.merged_layers) {
-    if (entry.uid == uid)
-      return entry.show;
-  }
-  return YES;
+  return self.projectService.project.is_listed_layer_visible(uid) ? YES : NO;
 }
 
 - (NSString *)_nameOfListedLayer:(const std::string &)uid {
@@ -288,10 +291,17 @@
       return;
     }
     NSString *layerUIDString = [NSString stringWithUTF8String:layerUID.c_str()];
-    // Windows update_layer_visibility_deferred: hiding the layer of the condition that is being placed leaves the placement tool
-    // (COND-PLACE-01)
+    // Windows update_layer_visibility_deferred (image_layer = is_image_layer_uid, COND-PLACE-01): hiding the layer of the
+    // condition that is being placed leaves the placement tool, and showing it puts it back, except for the Image layer, which
+    // neither suspends nor restores (the flag is worked out once and goes to both helpers)
+    const ost_data::ProjectData &listed = self.projectService.project;
+    const BOOL layerIsImage = ost_domain::is_image_layer_uid(
+                                  listed.merged_layers, listed.layers, layerUID)
+                                  ? YES
+                                  : NO;
     if (!show)
-      [self _suspendPlacementForLayerHide:layerUIDString];
+      [self _suspendPlacementForLayerHide:layerUIDString
+                             layerIsImage:layerIsImage];
     // Only a layer of the bid has a state to change; this never adds a layer to
     // the project (a template layer of no bid is refused above).
     auto it = self.projectService.mutableProject.layers.find(layerUID);
@@ -304,7 +314,8 @@
     [self _refreshConditionsListForLayerVisibility];
     // ... and showing that layer again puts it back, last, after the views follow
     if (show)
-      [self _restorePlacementAfterLayerShow:layerUIDString];
+      [self _restorePlacementAfterLayerShow:layerUIDString
+                               layerIsImage:layerIsImage];
   }
 }
 

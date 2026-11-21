@@ -11,7 +11,7 @@
 //   ost_visualizer/presentation/dialogs/edit_condition_dialog.py _SHAPE_ITEMS   (COND-SHAPE-01)
 //   ost_visualizer/presentation/components/conditions_sidebar.py
 //                                collect_ordered_condition_uids                 (COND-NAV-01)
-//   ost_visualizer/presentation/dialogs/edit_condition_dialog.py :837,1200-1203 (COND-M08)
+//   ost_visualizer/presentation/dialogs/edit_condition_dialog.py :841,1204-1207 (COND-M08)
 //   ost_visualizer/presentation/coordinators/placement_coordinator.py enter, handlers/condition_action_handler.py
 //                                _finish_condition_duplicate                    (COND-PLACE-01, COND-M07)
 #pragma once
@@ -85,11 +85,14 @@ namespace ost_domain
         return placement_for_selected_condition(new_condition_placeable);
     }
 
+    // COND-PLACE-01 note 1 (a press for a condition that is gone or hidden places nothing) is ost_data::placement_tap_accepted(
+    // project, condition uid) in Data/ProjectData.hpp: it needs the project's layers, which Domain does not see.
+
     // COND-PLACE-01 / LP-17: a placement whose layer is hidden is suspended and put back when the layer is shown again.
-    // ui_event_coordinator.py _active_layer_tool_snapshot (the place branch, :1479-1498), _suspend_active_layer_tool,
-    // _restore_suspended_layer_tool (:1502-1545), called from update_layer_visibility_deferred (:6487, :6504) and the Show All /
-    // Hide All paths (:6746, :6816). Only the placement tool exists on iOS (no annotation tool), and one condition is placed at
-    // a time.
+    // ui_event_coordinator.py _active_layer_tool_snapshot (the place branch, :1453-1490), _suspend_active_layer_tool (:1493-1501),
+    // _restore_suspended_layer_tool (:1503-1546), called from the single layer toggle _project_layer_visibility_if_current (:6476-
+    // 6477, :6504-6505) and the Show All / Hide All paths (:6728-6729, :6752-6753, and the map projection :6790, :6823). Only the
+    // placement tool exists on iOS (no annotation tool), and one condition is placed at a time.
     struct SuspendedPlacement
     {
         std::string condition_uid;
@@ -105,9 +108,16 @@ namespace ost_domain
     // _active_layer_tool_snapshot: hiding the layer `hidden_layer_uid` (nullopt = every layer, Hide All) suspends the placement
     // of `placing` when that is a condition of the hidden layer; a condition on no layer is never suspended and a hide of another
     // layer leaves the placement alone. The caller sets `tool_revision` once the placement tool has been left.
+    // `hidden_layer_is_image` (ost_domain::is_image_layer_uid of `hidden_layer_uid`): hiding the Image layer with the single toggle
+    // never suspends anything, not even the placement of a condition on that layer (Windows "if not show and not image_layer", so
+    // the tool stays armed on a hidden condition, whose taps ost_data::placement_tap_accepted refuses). Hide All (nullopt) has no such guard
+    // in Windows, so the flag is only read together with a layer uid.
     inline std::optional<SuspendedPlacement> suspended_placement_for_layer_hide(const std::string &bid_uid, const Condition &placing,
-                                                                                 const std::optional<std::string> &hidden_layer_uid)
+                                                                                 const std::optional<std::string> &hidden_layer_uid,
+                                                                                 bool hidden_layer_is_image = false)
     {
+        if (hidden_layer_uid.has_value() && hidden_layer_is_image)
+            return std::nullopt;
         if (placing.layer_uid.empty())
             return std::nullopt;
         if (hidden_layer_uid.has_value() && *hidden_layer_uid != placing.layer_uid)
@@ -141,10 +151,15 @@ namespace ost_domain
     // _restore_suspended_layer_tool(layer_uid): `shown_layer_uid` is the layer that was shown (nullopt = Show All). Another layer
     // keeps the suspension; a tool chosen since (another mode or a changed tool revision), another bid, a condition that is gone,
     // of another style or layer, or still hidden, or a view other than the 2D takeoff view drops it.
+    // `shown_layer_is_image` (ost_domain::is_image_layer_uid of `shown_layer_uid`): showing the Image layer with the single toggle
+    // does not touch the suspension at all (Windows "if show and not image_layer", checked before everything else here), so it
+    // stays for the next show that names its layer or for Show All. Show All (nullopt) is not guarded.
     inline SuspendedPlacementOutcome restore_of_suspended_placement(const SuspendedPlacement &suspended,
                                                                     const std::optional<std::string> &shown_layer_uid,
-                                                                    const PlacementRestoreState &now)
+                                                                    const PlacementRestoreState &now, bool shown_layer_is_image = false)
     {
+        if (shown_layer_uid.has_value() && shown_layer_is_image)
+            return SuspendedPlacementOutcome::Keep;
         if (shown_layer_uid.has_value() && *shown_layer_uid != suspended.layer_uid)
             return SuspendedPlacementOutcome::Keep;
         if (!now.tool_in_view_mode || now.tool_revision != suspended.tool_revision)
