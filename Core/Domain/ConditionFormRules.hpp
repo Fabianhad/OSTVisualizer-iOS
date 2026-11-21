@@ -131,7 +131,7 @@ namespace ost_domain
     // 10..500 is "Validation Error" / "Display Size must be between 10% and 500%." (COND-VAL-01).
     std::optional<FormIssue> parse_display_size(const std::string &text, double &percent);
 
-    // Rise / Run: float(text or "0") like Windows (:1562 / :1574 Linear, :1592 / :1604 Area): the text is NOT stripped and only an
+    // Rise / Run: float(text or "0") like Windows (:1578 / :1590 Linear, :1608 / :1620 Area): the text is NOT stripped and only an
     // EMPTY text is 0.0; any other text must be float() text that is finite, else "Invalid Value" / "<label> must be a number." (not
     // a number, which includes a field of white space only: float(" ") is a ValueError, DLG-FINITE-01) or "<label> must be a finite
     // number." (nan, inf, overflow). `absolute` applies abs() (the Area style, DLG-RISE-01); the Linear style keeps the sign. The
@@ -140,7 +140,7 @@ namespace ost_domain
 
     // "Save Failed" / the reason of the refusal, or "Failed to save condition to database." when there is none: the save was refused
     // or a statement failed (COND-UPD-03). Windows' use case answers a ConditionNumberOverflowError with its own text and every other
-    // failure with the generic one; the dialog shows result.error under "Save Failed" (edit_condition_dialog.py :1787-1794).
+    // failure with the generic one; the dialog shows result.error under "Save Failed" (edit_condition_dialog.py :1810-1817).
     FormIssue condition_save_failed_issue(const std::string &detail = std::string());
 
     // Trim and Curved Segment exclude each other (Linear style, COND-TRIM-01): checking Trim unchecks Curved Segment and disables

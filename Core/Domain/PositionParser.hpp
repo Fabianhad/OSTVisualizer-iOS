@@ -8,7 +8,7 @@
 //                                                              (since b9902e6: _fraction_value, _parse_fractional_inches_text,
 //                                                              _parse_imperial_elevation, _parse_metric_elevation, cm_to_inches,
 //                                                              elevation_text_inches)
-//   ost_visualizer/infrastructure/parsers/position_parser.py   extract_z_value_from_name (:23-33); it only imports those helpers
+//   ost_visualizer/infrastructure/parsers/position_parser.py   extract_z_value_from_name (:21-31); it only imports those helpers
 //
 // The Windows code relies on Python semantics (str.split()/strip(), the re module on Unicode str, float(),
 // repr(float)). This port reproduces them where they are observable: Unicode whitespace (str.isspace), Unicode
@@ -100,10 +100,10 @@ namespace ost_domain
     // the imperial reader, one with a letter m and no mark by the metric reader (centimetres / 2.54), one with both is None.
     // `inches` is written only for Value (and may then be inf: a metre figure beyond the float range, which Windows does not
     // raise on either); for Raises `error` (when given) holds the Windows message. The loader (extract_z_value_from_name,
-    // position_parser.py:23-33) and the Edit Condition dialog (parse_elevation_z, edit_condition_dialog.py:1423-1447) both call it.
+    // position_parser.py:21-31) and the Edit Condition dialog (parse_elevation_z, edit_condition_dialog.py:1437-1461) both call it.
     ElevationTextStatus elevation_text_inches(const std::string &text, double &inches, std::string *error = nullptr);
 
-    // position_parser.py::extract_z_value_from_name = parse_elevation + elevation_text_inches of the value (position_parser.py:23-33).
+    // position_parser.py::extract_z_value_from_name = parse_elevation + elevation_text_inches of the value (position_parser.py:21-31).
     // On success z_inches/is_top hold the Windows result ((0.0, false) when the name has no valid elevation). Returns false where
     // Windows raises (a zero denominator, e.g. "Wall @B 1/0\""): the Windows MDB reader then logs a warning and stores (0.0, false).
     bool extract_z_value_from_name(const std::string &name, double &z_inches, bool &is_top,

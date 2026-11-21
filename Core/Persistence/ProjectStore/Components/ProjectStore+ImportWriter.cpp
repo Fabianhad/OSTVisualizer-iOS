@@ -147,7 +147,7 @@ namespace ost_store
         // datetime.datetime(int(parts[0]), ..., int(parts[5])); true when that datetime exists (year 1..9999, month 1..12, day
         // of the month, hour 0..23, minute 0..59, second 0..59), false when Windows returns None (not six parts, a part that is
         // not an integer, a date that does not exist: ValueError) and also for an integer outside the C int range: datetime then
-        // raises OverflowError, which Windows catches together with ValueError and TypeError since b9902e6 (import_operations.py:608,
+        // raises OverflowError, which Windows catches together with ValueError and TypeError since b9902e6 (parse_ost_datetime, ost_text_values.py:15-22, called at import_operations.py:597,
         // test_a_datetime_text_beyond_the_c_int_range_reads_as_null), so the value is None there too and the import goes on, like here.
         // Such a value never passes the range checks below anyway.
         bool is_valid_datetime(const std::string &value)

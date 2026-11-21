@@ -1,7 +1,7 @@
 // COND-METRIC-01: the metric defaults of a new condition style and the metric unit facts the dialog relies on.
 //
-// Windows oracle: presentation/dialogs/edit_condition_dialog.py TYPE_DEFAULTS (:90-143), _DEFAULT_COUNT_WIDTH_IN /
-// _DEFAULT_COUNT_WIDTH_MM and _populate_defaults_for_type (:1241-1252):
+// Windows oracle: presentation/dialogs/edit_condition_dialog.py TYPE_DEFAULTS (:97-150), _DEFAULT_COUNT_WIDTH_IN /
+// _DEFAULT_COUNT_WIDTH_MM and _populate_defaults_for_type (:1255-1266):
 //   metric:   spacing = mm_to_inches(spacing_metric), thickness = mm_to_inches(thickness_metric),
 //             width = mm_to_inches(300.0), uom1 = uom1_metric
 //   imperial: spacing, thickness, width = 12.0, uom1 straight from the table

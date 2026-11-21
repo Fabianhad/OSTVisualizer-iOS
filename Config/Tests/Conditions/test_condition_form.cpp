@@ -343,7 +343,7 @@ TEST(CondVal01_RiseRun, AnEmptyFieldIsZeroAndANumberIsTheNumber)
 // DLG-FINITE-01 (Rise / Run half; decided 2026-11-19: follow Windows)
 // ---------------------------------------------------------------------------------------------------------------------
 
-// edit_condition_dialog.py :1562 / :1574 (Linear) and :1592 / :1604 (Area, abs()): float(self._rise_edit.text() or "0"). The field
+// edit_condition_dialog.py :1578 / :1590 (Linear) and :1608 / :1620 (Area, abs()): float(self._rise_edit.text() or "0"). The field
 // is not stripped and only an EMPTY text is blank, so a text of white space reaches float(). Python 3.11.4 (python -B, builtins):
 // float(t) is a ValueError for ' ', '   ', '\t', '\xa0', '\u2003', '\u3000', ' \n', '\r', '\x0b', '\x0c', '\x1c', '\x1f',
 // '\x85' and '\u2028' (str.strip() removes every one of them, float() has no number left), shown as "Rise must be a number." /
@@ -431,7 +431,7 @@ TEST(DlgFinite01_RiseRun, WhiteSpaceAroundANumberAndTheOtherRefusalsStayAsTheyWe
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Test plan: Area condition with rise text '-3' run '12' -> saved rise 3.0 run 12.0; Linear condition with rise '-3' -> -3.0
-// (edit_condition_dialog.py :1585-1614, the branch of every style but Linear: abs(float(...)) at :1592 / :1604).
+// (edit_condition_dialog.py :1601-1630, the branch of every style but Linear: abs(float(...)) at :1608 / :1620).
 TEST(DlgRise01_AreaSlope, AreaRiseAndRunAreAbsoluteLinearKeepsTheSign)
 {
     double area_rise = 0.0, area_run = 0.0, linear_rise = 0.0;
@@ -552,7 +552,7 @@ TEST(Msg01_SaveFailed, TheWindowsWording)
     CHECK_STR_EQ(issue.message, "Failed to save condition to database.");
 }
 
-// DLG-FINITE-01: the dialog shows result.error under "Save Failed" (edit_condition_dialog.py :1787-1794); the use case's error is the
+// DLG-FINITE-01: the dialog shows result.error under "Save Failed" (edit_condition_dialog.py :1810-1817); the use case's error is the
 // overflow text for a ConditionNumberOverflowError and the generic text for every other failure, so an empty detail is the generic one.
 TEST(DlgFinite01_SaveFailed, ADetailReplacesTheGenericTextUnderTheSameTitle)
 {
@@ -571,7 +571,7 @@ TEST(DlgFinite01_SaveFailed, ADetailReplacesTheGenericTextUnderTheSameTitle)
     CHECK_STR_EQ(empty.message, "Failed to save condition to database.");
 }
 
-// condition_operations.py :636-641, with the number of the renumber filled in twice and the limit once (Windows tests: N = 2 and 3).
+// condition_operations.py :650-655, with the number of the renumber filled in twice and the limit once (Windows tests: N = 2 and 3).
 TEST(DlgFinite01_SaveFailed, TheOverflowMessageIsTheWindowsTextForTheNumberTyped)
 {
     CHECK_STR_EQ(condition_number_overflow_message(2),

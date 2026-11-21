@@ -108,7 +108,7 @@ namespace ost_domain
 
     std::optional<FormIssue> parse_condition_number(const std::string &text, int &ref_no)
     {
-        // int(ref_no_text) with ref_no_text = text.strip(), then Windows' three checks in this order (:1465-1490): ValueError and
+        // int(ref_no_text) with ref_no_text = text.strip(), then Windows' three checks in this order (:1481-1506): ValueError and
         // ref_no < 1 give the same "positive whole number" alert, ref_no > MAX_CONDITION_NUMBER the range alert. str.strip() removes
         // the C0 separators U+001C..U+001F too, which int() itself does not accept around a number: strip first, like the dialog.
         using ost_import::text_rules::NumberParse;

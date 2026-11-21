@@ -1593,7 +1593,7 @@ namespace ost_domain
 
     bool extract_z_value_from_name(const std::string &name, double &z_inches, bool &is_top, std::string *error)
     {
-        // position_parser.py:23-33: parse_elevation, then elevation_text_inches of the value; None is (0.0, False), an exception
+        // position_parser.py:21-31: parse_elevation, then elevation_text_inches of the value; None is (0.0, False), an exception
         // propagates (here: false)
         z_inches = 0.0;
         is_top = false;

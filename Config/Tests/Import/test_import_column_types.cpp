@@ -6,7 +6,7 @@
 //     is exactly six whitespace separated integers 'Y M D h m s' forming a valid datetime.datetime becomes a datetime; anything
 //     else (blank, ISO text, 3 parts, month 13, non-numeric) becomes NULL; an integer outside the C int range (datetime raises
 //     OverflowError) becomes NULL too: since Windows commit b9902e6 the function catches (ValueError, TypeError, OverflowError)
-//     (import_operations.py:608), so such a text no longer stops the import (sub-rule (1) below).
+//     (parse_ost_datetime, ost_text_values.py:15-22, called at import_operations.py:597), so such a text no longer stops the import (sub-rule (1) below).
 //   - a memo / IMAGE column (30 IMAGE columns, e.g. Bids.Notes, BidTakeoffs.Position, BidConditionFolders.Description):
 //     '' becomes NULL, text becomes its UTF-8 bytes.
 // The user's decision (IMP-20): the iOS database keeps the RAW six part text for a valid date (it has no datetime type and the
@@ -114,7 +114,7 @@ TEST(ImportColumnTypes, Imp20_AnythingElseReadsAsNull)
 // What an integer outside the C int range does: it reads as NULL, like every other invalid date, and the import goes on. Port of
 // tests/infrastructure/mdb/components/test_import_operations.py::test_a_datetime_text_beyond_the_c_int_range_reads_as_null: since
 // Windows commit b9902e6 datetime.datetime's OverflowError ('Python int too large to convert to C long') is caught together with
-// ValueError and TypeError (import_operations.py:608), so Windows and iOS agree (a pin: iOS already read NULL here). A part that is
+// ValueError and TypeError (parse_ost_datetime, ost_text_values.py:15-22, called at import_operations.py:597), so Windows and iOS agree (a pin: iOS already read NULL here). A part that is
 // not an integer is NULL too, huge parts or not.
 TEST(ImportColumnTypes, Imp20_AnIntegerBeyondTheCIntRangeReadsAsNull)
 {
