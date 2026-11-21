@@ -3,13 +3,16 @@
 // loader cannot read is refused with the forms that are accepted; a text it can read is saved verbatim as the name suffix and gives,
 // in the dialog's z, the number a reload gives for that name: memory equals a reload after a Save.
 //
-// Windows: presentation/dialogs/edit_condition_dialog.py:1423-1447 (_validate_and_build_dto: strip, elevation_text_inches, a caught
+// Windows: presentation/dialogs/edit_condition_dialog.py:1437-1461 (_validate_and_build_dto: strip, elevation_text_inches, a caught
 // ValueError and a non-finite number are refused, 'Invalid Value' / '"<text>" is not a valid elevation. <hint>', the hint depends on
-// the measurement system and nothing else does) and :386-389 (the placeholder). Windows oracle: tests/presentation/dialogs/
-// test_edit_condition_dialog.py :1319-1380 (test_an_elevation_the_loader_cannot_read_is_rejected_with_the_accepted_forms,
+// the measurement system and nothing else does) and :389-392 (the placeholder). Windows oracle: tests/presentation/dialogs/
+// test_edit_condition_dialog.py :1319-1374 and :1425-1429 (they were :1319-1380 in b9902e6: test_an_elevation_the_loader_cannot_read_is_rejected_with_the_accepted_forms,
 // test_an_accepted_elevation_reloads_to_the_value_the_dialog_saved, test_the_elevation_placeholder_shows_a_form_the_loader_reads)
-// and :641-651 ('nan' with the imperial hint). The extra rows ("5'", "5'6", decimal inches, a letter m next to a mark, a feet run
-// beyond the float range) were computed by running the Windows elevation_text.py in memory (Python 3.11.4).
+// and :641-651 ('nan' with the imperial hint). The extra rows ("5'", decimal inches, a letter m next to a mark, a feet run beyond the
+// float range) were computed by running the Windows elevation_text.py in memory (Python 3.11.4). "5'6" was one of them (accepted,
+// 60 inches, on b9902e6); since Windows 49a2d59 (edit_condition_dialog.py :72, :1444-1445) the dialog
+// refuses it, with "10'6", "5'6x", "5'abc" and "-2'3", unless a closing inch mark is typed: see test_condition_elevation_foot_mark.cpp
+// (the loader still reads a stored "5'6" as 60 inches).
 #include "TestHarness.hpp"
 
 #include "Domain/ConditionFormRules.hpp"
@@ -194,8 +197,7 @@ TEST(CondElev01_Validation, AnAcceptedElevationReloadsToTheValueTheDialogSaved)
         // run on Windows: more forms of the shared grammar
         {"3,5 m", 350.0 / 2.54},
         {"-1m+5cm", -105.0 / 2.54},
-        {"5'x", 60.0},
-        {"5'6", 60.0},
+        {"5'x", 60.0}, // a lone x after the foot mark is still accepted ("5'6" is refused now, see the header)
     };
     size_t checked = 0;
     for (const Row &row : rows)
@@ -238,7 +240,7 @@ TEST(CondElev01_Validation, AnAcceptedElevationReloadsToTheValueTheDialogSaved)
             }
         }
     }
-    CHECK_EQ(checked, size_t(44));
+    CHECK_EQ(checked, size_t(40)); // 10 rows x 2 bids x 2 segments
 }
 
 // The text is stripped before it is read and stored: surrounding white space is neither refused nor part of the suffix; the number is
@@ -274,7 +276,7 @@ TEST(CondElev01_Validation, ABlankElevationIsZeroAndNeverValidated)
 // The hints and the placeholder
 // ---------------------------------------------------------------------------------------------------------------------
 
-// edit_condition_dialog.py:386-389 setPlaceholderText: 'e.g. 3.2 m' in a metric bid, 'e.g. 10' 6"' in an imperial one: a form the
+// edit_condition_dialog.py:389-392 setPlaceholderText: 'e.g. 3.2 m' in a metric bid, 'e.g. 10' 6"' in an imperial one: a form the
 // loader reads (the old iOS placeholder 'e.g. 3200' was a text the loader does not read). The two hint strings are the Windows ones,
 // and the examples they and the placeholders show are accepted by the validation in both modes.
 TEST(CondElev01_Placeholder, ThePlaceholderShowsAFormTheLoaderReads)

@@ -487,17 +487,25 @@ TEST(Msg01_Dimension, BlankIsZeroAndTextIsTheWindowsParse)
 
 // Port of ...::test_edit_condition_rejects_non_finite_numeric_values ("elevation": 'nan' is refused, with the imperial hint since
 // b9902e6) and of the COND-ELEV-01 rule of b9902e6: the text is read with the loader's parser (elevation_text_inches), not with
-// display_to_inches. So "10'6" is feet only, 120.0 (display_to_inches gave 126.0), decimal inches are no elevation (display_to_inches
-// gave 126.3), a bare metric number is refused (it was read as millimetres) and metres are accepted; empty is 0.0, never validated.
-// The whole table, both modes, Top / Bottom and the reload: test_condition_elevation_dialog.cpp.
+// display_to_inches. So decimal inches are no elevation (display_to_inches gave 126.3), a bare metric number is refused (it was read as
+// millimetres) and metres are accepted; empty is 0.0, never validated. "10'6" is feet only, 120.0, for the LOADER (display_to_inches
+// gave 126.0); since Windows 49a2d59 (edit_condition_dialog.py :72, :1444-1445) the DIALOG refuses
+// "10'6" (a digit after the foot mark and no closing inch mark: it would be saved as written and reloaded as 120.0), while "10'6\""
+// is 126.0. The whole table, both modes, Top / Bottom and the reload: test_condition_elevation_dialog.cpp; the rule:
+// test_condition_elevation_foot_mark.cpp.
 TEST(CondElev01_Elevation, TheTextGivesZAndNanIsRefused)
 {
     const std::string imperial_hint = "Use feet and inches with unit marks, for example 10' 6\".";
     const std::string metric_hint = "Use metres or centimetres, for example \"3.2 m\" or \"320 cm\".";
 
     double z = -1.0;
-    CHECK_FALSE(parse_elevation_z("10'6", false, z).has_value());
-    CHECK_EQ(z, 120.0);
+    const auto closing = parse_elevation_z("10'6", false, z);
+    REQUIRE(closing.has_value());
+    CHECK_STR_EQ(closing->title, "Invalid Value");
+    CHECK_STR_EQ(closing->message, "\"10'6\" is not a valid elevation. " + imperial_hint);
+    CHECK_EQ(z, -1.0); // a refusal leaves the output untouched
+    CHECK_FALSE(parse_elevation_z("10'6\"", false, z).has_value());
+    CHECK_EQ(z, 126.0); // read with the loader's parser, not display_to_inches: the closing inch mark makes it feet and inches
     z = -1.0;
     const auto decimal_inches = parse_elevation_z("10' 6.3\"", false, z);
     REQUIRE(decimal_inches.has_value());

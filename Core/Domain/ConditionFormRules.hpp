@@ -6,12 +6,14 @@
 // Trim / Curved Segment switches) so that the wording and the edge cases are the Windows ones and testable on the host.
 //
 // Windows source of truth: ost_visualizer/presentation/dialogs/edit_condition_dialog.py
-//   _parse_dimension_field (:1397-1412)            '"x" is not a valid dimension for <label>.'
-//   _validate_and_build_dto (:1414-1722)           the name, elevation, condition number, Display Size, Rise / Run rules
-//   _validate_and_build_dto elevation (:1423-1447)   validated with elevation_text_inches (b9902e6); placeholder (:386-389)
+//   _parse_dimension_field (:1411-1426)            '"x" is not a valid dimension for <label>.'
+//   _validate_and_build_dto (:1428-1742)           the name, elevation, condition number, Display Size, Rise / Run rules
+//   _validate_and_build_dto elevation (:1437-1461)   validated with elevation_text_inches (b9902e6); placeholder (:389-392)
+//   _TEXT_AFTER_FOOT_MARK (:72) and the elevation block of _validate_and_build_dto (:1437-1461): the closing-inch-mark rule on top
+//                                                  of it (Windows 49a2d59; the rule itself is :1444-1445)
 //   domain/services/elevation_text.py:131-144      elevation_text_inches, the loader's parser (PositionParser.hpp)
-//   _on_color_changed (:330-333)                   ColorFill = red | green << 8 | blue << 16 (never ColorLine)
-//   _on_trim_changed / _on_curved_changed / _sync_linear_trim_curved_state (:1313-1331)
+//   _on_color_changed (:333-336)                   ColorFill = red | green << 8 | blue << 16 (never ColorLine)
+//   _on_trim_changed / _on_curved_changed / _sync_linear_trim_curved_state (:1327-1345)
 //   application/use_cases/project/update_condition_use_case.py        "Failed to save condition to database."
 // All text is UTF-8; Python's str.strip(), int() and float() are reproduced where they are observable (the shared
 // ost_import::text_rules and ost_domain::parse_plain_number).
@@ -53,26 +55,41 @@ namespace ost_domain
     // name = text.strip(); an empty name is "Validation Error" / "Condition name cannot be empty.".
     std::optional<FormIssue> parse_condition_name(const std::string &text, std::string &name);
 
-    // The hint that ends the alert of a refused elevation (edit_condition_dialog.py:1431-1435): the forms that are accepted, in the
+    // The hint that ends the alert of a refused elevation (edit_condition_dialog.py:1447-1451): the forms that are accepted, in the
     // measurement system of the bid. Only the hint and the placeholder depend on the system: the same texts are accepted in both.
     inline constexpr const char *kElevationHintMetric = "Use metres or centimetres, for example \"3.2 m\" or \"320 cm\".";
     inline constexpr const char *kElevationHintImperial = "Use feet and inches with unit marks, for example 10' 6\".";
 
-    // The Elevation field (_validate_and_build_dto :1423-1447): text.strip(); blank is 0.0 (and the name gets no suffix) and is never
-    // validated; else the text must be one the LOADER reads: elevation_text_inches (PositionParser.hpp, the function behind
-    // extract_z_value_from_name) must give a finite number, so a bare number, "mm", units of both systems in one text, "5'" alone, a
-    // zero denominator (the ValueError Windows catches) and a feet run beyond the float range (an OverflowError Windows does NOT
-    // catch: refused here instead of copying the crash) are refused with "Invalid Value" / '"<stripped text>" is not a valid
-    // elevation. <hint>' (kElevationHintMetric in a metric bid, kElevationHintImperial otherwise). The typed text itself is kept
-    // verbatim as the name suffix (COND-ELEV-01): nothing here rewrites it, and the number is the one a reload of that name gives, so
-    // the form's z_value equals what condition_to_save derives from the saved NAME (derive_elevation_from_name).
+    // The Elevation field (_validate_and_build_dto :1437-1461 in Windows 49a2d59):
+    // text.strip(); blank is 0.0 (and the name gets no suffix) and is never validated; else the text must be one the LOADER reads:
+    // elevation_text_inches (PositionParser.hpp, the function behind extract_z_value_from_name) must give a finite number, so a bare
+    // number, "mm", units of both systems in one text, "5'" alone, a zero denominator (the ValueError Windows catches) and a feet run
+    // beyond the float range (an OverflowError Windows does NOT catch: refused here instead of copying the crash) are refused with
+    // "Invalid Value" / '"<stripped text>" is not a valid elevation. <hint>' (kElevationHintMetric in a metric bid,
+    // kElevationHintImperial otherwise). So is a text the closing-inch-mark rule refuses (elevation_text_needs_closing_inch_mark): "5'6",
+    // "10'6", "5'6x", "5'abc" and "-2'3" are refused, "5'x", "5' 6\"" and "5'6\"" are accepted; same alert, no new wording. The typed
+    // text itself is kept verbatim as the name suffix (COND-ELEV-01): nothing here rewrites it, and the number is the one a reload of
+    // that name gives, so the form's z_value equals what condition_to_save derives from the saved NAME (derive_elevation_from_name).
     std::optional<FormIssue> parse_elevation_z(const std::string &text, bool metric, double &z_inches);
 
-    // The placeholder of the Elevation field (:386-389): a form the loader reads, 'e.g. 3.2 m' in a metric bid and 'e.g. 10' 6"' in
+    // The rule of the Edit Condition dialog on a text the shared parser already accepted (Windows 49a2d59:
+    // edit_condition_dialog.py :72 `_TEXT_AFTER_FOOT_MARK = re.compile(r"['\u2032](?![xX]\s*$)\s*[0-9A-Za-z]")` and :1444
+    // `if '"' not in elev_value and _TEXT_AFTER_FOOT_MARK.search(elev_value): parsed = None`). The feet-only gate of the loader reads
+    // "5'6" as 5 feet and drops the rest; the dialog refuses such a text instead of saving 5 feet silently. True (= refuse) when the
+    // text has NO ASCII double quote U+0022 anywhere and some foot mark (U+0027 or U+2032) is followed by optional Unicode white space
+    // (Python's \s = str.isspace) and then ONE ASCII letter or digit [0-9A-Za-z], except a foot mark directly followed by a lone x or X
+    // and nothing but white space up to the end (5'x). Every foot mark is checked. Non-ASCII letters and digits, the underscore, U+201D
+    // and U+2033 do not count. It mirrors the regex on the text it is given: parse_elevation_z passes the STRIPPED text (as the dialog
+    // does), so trailing white space never reaches it there. Invalid UTF-8 never counts as white space or as an alphanumeric. The
+    // loader (elevation_text_inches, extract_z_value_from_name, derive_elevation_from_name) does NOT call it: a stored name such as
+    // "Footing @T 5'6" still reads as 60 inches, top.
+    bool elevation_text_needs_closing_inch_mark(const std::string &text);
+
+    // The placeholder of the Elevation field (:389-392): a form the loader reads, 'e.g. 3.2 m' in a metric bid and 'e.g. 10' 6"' in
     // an imperial one.
     std::string elevation_placeholder(bool metric);
 
-    // Cond. No. (:1464-1492): int(text.strip()) (Python int(): sign, underscores, Unicode digits), checked in Windows' order: text that
+    // Cond. No. (:1480-1508): int(text.strip()) (Python int(): sign, underscores, Unicode digits), checked in Windows' order: text that
     // is not a whole number, then a value below 1, are "Invalid Value" / "Condition number must be a positive whole number."
     // (COND-REF-01; nothing is coerced: "", "abc", "1.5", "0", "-1" and "12abc" are refused, and so is a huge NEGATIVE number, which
     // is below 1 before it is above anything); then a value above kMaxConditionNumber, beyond 64 bits as well, is "Invalid Value" /

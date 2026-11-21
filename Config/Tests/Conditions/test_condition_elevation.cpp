@@ -10,10 +10,10 @@
 // elevation with the Top segment is is_top = true in the form but false after a reload (Windows reloads after the Save anyway), and
 // a name can be typed whole into the Name field, whatever it contains.
 //
-// Windows: infrastructure/parsers/position_parser.py:23-33 extract_z_value_from_name (= parse_elevation + elevation_text_inches,
+// Windows: infrastructure/parsers/position_parser.py:21-31 extract_z_value_from_name (= parse_elevation + elevation_text_inches,
 // domain/services/elevation_text.py:131-144), read by infrastructure/mdb/components/bid_data_reader.py:896-906 (an unreadable
 // name, a ValueError, stores (0.0, False));
-// presentation/dialogs/edit_condition_dialog.py:1423-1457 puts the dialog's is_top / z_value into the DTO, but
+// presentation/dialogs/edit_condition_dialog.py:1437-1473 puts the dialog's is_top / z_value into the DTO, but
 // infrastructure/mdb/components/condition_operations.py update_condition writes only the Name column (is_top and z_value are no
 // columns) and Windows shows the reloaded condition. Every expected value below was computed by running the Windows
 // extract_z_value_from_name (Python 3.11.4, python -B) on the name, or is a row of the Windows oracle table
@@ -62,7 +62,7 @@ namespace
         {"Wall @T 1/0\"", 0.0, false, "the same at the top: not is_top"},
         {"Wall @T abc", 0.0, false, "text outside the grammar"},
         {"Wall @T", 0.0, false, "a marker without a value"},
-        {"Wall @T 10'6", 120.0, true, "feet only, 120.0: the dialog reads it the same way since b9902e6 (display_to_inches gave 126.0)"},
+        {"Wall @T 10'6", 120.0, true, "feet only, 120.0 from the loader; the dialog refuses this elevation text (closing-inch-mark rule, Windows 49a2d59), so it only reaches a name typed whole into the Name field"},
         {"Wall @T 10' 6.3\"", 0.0, false, "the loader grammar has no decimal inches (the dialog refuses it; display_to_inches gave 126.3)"},
         {"Wall @B 1' 2 3/4\"", 14.75, false, "a mixed fraction"},
         {"Wall @T -3 1/2\"", -3.5, true, "a negative elevation"},
@@ -330,9 +330,11 @@ TEST(CondElev01_ReloadParity, TheSavedInMemoryConditionEqualsTheReloadedOne)
         in_memory[i] = ost_domain::condition_to_save(stored, form, metric);
         REQUIRE(ost_store::update_condition(db.path(), bid_of(i), uid_of(i), ost_domain::collect_condition_changes(stored, in_memory[i])));
     }
-    // both ways to reach a name are in the table: the elevation controls (a suffix the dialog accepts, i.e. one the loader reads:
-    // 93 of the 261 names since b9902e6, measured; it was 28 while the dialog validated with display_to_inches) and a name typed
-    // whole into the Name field (168; 233 before)
+    // both ways to reach a name are in the table: the elevation controls (a suffix the dialog accepts, i.e. one the loader reads and
+    // the closing-inch-mark rule lets through: 90 of the 261 names since Windows 49a2d59, measured with the
+    // Windows functions in memory (93 on b9902e6, where "Wall @T 10'6", "Wall @T 007  '6  1/2" and "Wall @T 5 '6" + U+2033 were
+    // accepted; 28 while the dialog validated with display_to_inches)) and a name typed whole into the Name field (171; 168 on
+    // b9902e6, 233 before)
     CHECK(names.size() > 250);
     CHECK(from_elevation_controls > 60);
     CHECK(names.size() - from_elevation_controls > 150);

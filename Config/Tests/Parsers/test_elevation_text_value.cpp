@@ -1,5 +1,5 @@
 // COND-ELEV-01: ost_domain::elevation_text_inches, the Core port of Windows elevation_text.py::elevation_text_inches (b9902e6): the one
-// function that reads an elevation text. The loader (extract_z_value_from_name, position_parser.py:23-33) and the Edit Condition
+// function that reads an elevation text. The loader (extract_z_value_from_name, position_parser.py:21-31) and the Edit Condition
 // dialog (parse_elevation_z) both call it, so a text the dialog accepts is a text a reload reads to the same number.
 //
 // Windows oracle: tests/domain/services/test_elevation_text.py::ElevationTextValueTests (:525-572). Rows marked "run" are not in the
@@ -165,6 +165,9 @@ TEST(ElevationTextValue, MetresBeyondTheFloatRangeAreInfinite)
 // needs a word boundary right after the foot mark and a blank follows it), "5'foam" and "6\" mm" pass the gate and are then mixed
 // units (an imperial mark and a letter m: None). Windows b9902e6, elevation_text_inches run in memory: "5' foam" gate False / None,
 // "5'foam" gate True / None, "6\" mm" gate True / None.
+// This is the shared parser and the loader: "5'6" stays 60.0 here. The Edit Condition dialog refuses "5'6", "10'6" and the like since
+// Windows 49a2d59, with its own rule on top (ost_domain::elevation_text_needs_closing_inch_mark,
+// ConditionFormRules.hpp); the rows below must not change for it.
 TEST(ElevationTextValue, TheGateKeepsTheLoaderQuirks)
 {
     struct Row

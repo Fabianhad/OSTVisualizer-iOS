@@ -53,13 +53,52 @@ namespace ost_domain
         }
         // `try: parsed = elevation_text_inches(elev_value) except ValueError: parsed = None`, then `parsed is None or not
         // isfinite(parsed)`: None, a text that raises and a non-finite number are the same refusal. (Windows lets an OverflowError
-        // through; here every Raises is a refusal.)
+        // through; here every Raises is a refusal.) Between the two Windows 49a2d59 has
+        // `if '"' not in elev_value and _TEXT_AFTER_FOOT_MARK.search(elev_value): parsed = None` (edit_condition_dialog.py :1444-1445):
+        // a text the shared parser accepted is refused too when a letter or digit follows a foot mark with no closing inch mark
+        // ("5'6" would be saved as written but reloaded as 5 feet). Same alert; the loader does not call the rule.
         double inches = 0.0;
-        if (elevation_text_inches(stripped, inches) != ElevationTextStatus::Value || !std::isfinite(inches))
+        if (elevation_text_inches(stripped, inches) != ElevationTextStatus::Value || !std::isfinite(inches) ||
+            elevation_text_needs_closing_inch_mark(stripped))
             return invalid_value(quoted(stripped) + " is not a valid elevation. " +
                                  (metric ? kElevationHintMetric : kElevationHintImperial));
         z_inches = inches;
         return std::nullopt;
+    }
+
+    bool elevation_text_needs_closing_inch_mark(const std::string &text)
+    {
+        // `'"' not in text`: only U+0022 switches the rule off (not U+201C / U+201D / U+2033), wherever it stands in the text
+        const std::u32string chars = py_decode_utf8(text);
+        if (std::find(chars.begin(), chars.end(), U'"') != chars.end())
+            return false;
+        const auto ascii_alnum = [](char32_t c)
+        { return (c >= U'0' && c <= U'9') || (c >= U'A' && c <= U'Z') || (c >= U'a' && c <= U'z'); }; // [0-9A-Za-z], no IGNORECASE
+        const size_t count = chars.size();
+        // _TEXT_AFTER_FOOT_MARK.search(text) = ['\u2032](?![xX]\s*$)\s*[0-9A-Za-z]: every position is tried, so every foot mark counts
+        for (size_t mark = 0; mark < count; ++mark)
+        {
+            if (chars[mark] != U'\'' && chars[mark] != 0x2032) // U+0027 and U+2032, nothing else (not U+2019, U+02BC, U+00B4)
+                continue;
+            size_t next = mark + 1;
+            // (?![xX]\s*$) sits directly after the mark: a lone x / X and then white space only up to the end exempts THIS mark
+            // (`$` adds nothing after \s*, which already takes a final line feed)
+            if (next < count && (chars[next] == U'x' || chars[next] == U'X'))
+            {
+                size_t after = next + 1;
+                while (after < count && py_is_space(chars[after]))
+                    ++after;
+                if (after == count)
+                    continue;
+            }
+            // \s*[0-9A-Za-z]: white space (Python's \s, also none), then ONE ASCII letter or digit. White space and the ASCII
+            // alphanumerics are disjoint sets, so no backtracking can change the answer.
+            while (next < count && py_is_space(chars[next]))
+                ++next;
+            if (next < count && ascii_alnum(chars[next]))
+                return true;
+        }
+        return false;
     }
 
     std::string elevation_placeholder(bool metric)
