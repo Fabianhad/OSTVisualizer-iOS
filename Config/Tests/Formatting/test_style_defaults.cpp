@@ -63,7 +63,7 @@ TEST(Metric01_StyleDefaults, ImperialDefaultsAreTheTableValues)
     CHECK_EQ(linear.width, 12.0);
     CHECK_EQ(linear.uom1, 2); // LF
     const StyleDimensionDefaults area = style_dimension_defaults(ConditionType::Area, false);
-    CHECK_EQ(area.spacing, 6.0); // Windows: Area spacing 6.0 (COND-STYLE-02 persists it on a style change)
+    CHECK_EQ(area.spacing, 6.0); // Windows: Area spacing 6.0 (the TYPE_DEFAULTS row; a style change does not save it, COND-STYLE-02)
     CHECK_EQ(area.thickness, 4.0);
     CHECK_EQ(area.width, 12.0);
     CHECK_EQ(area.uom1, 5); // SF

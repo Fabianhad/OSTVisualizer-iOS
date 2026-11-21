@@ -137,11 +137,11 @@ namespace ost_domain
 
     TypeChangeDefaults type_change_defaults(ConditionType type, bool metric)
     {
-        // TYPE_DEFAULTS: thickness, spacing, backout. Imperial bid: the imperial table columns, exactly what Windows sends
-        // (edit_condition_dialog.py:1445-1448). Metric bid (COND-STYLE-02, decision of 2026-11-19, a deliberate deviation: Windows
-        // sends the imperial columns here too): the metric columns, i.e. what _populate_defaults_for_type (:1241-1252) shows after
-        // the style change, the same values apply_style_change puts into the form. The backout does not depend on the unit.
-        // Unknown styles fall back to 4.0 / 4.0 (100 mm) / False.
+        // TYPE_DEFAULTS: thickness and backout, what a type change sends (edit_condition_dialog.py:1458-1463). The thickness is
+        // _type_default_thickness (:1236-1239): the metric column (mm_to_inches(thickness_metric)) in a metric bid, the imperial
+        // one otherwise, the same values apply_style_change puts into the Thickness field. The backout does not depend on the
+        // unit. The spacing has no default here: a type change saves the Spacing field (COND-STYLE-02). Unknown styles fall back
+        // to 4.0 (100 mm) / False.
         const StyleDimensionDefaults dimensions = style_dimension_defaults(type, metric);
         bool backout = false;
         switch (type)
@@ -154,7 +154,7 @@ namespace ost_domain
             backout = true;
             break;
         }
-        return TypeChangeDefaults{dimensions.thickness, dimensions.spacing, backout};
+        return TypeChangeDefaults{dimensions.thickness, backout};
     }
 
     Condition condition_to_save(const Condition &stored, const Condition &form, bool metric)
@@ -165,9 +165,10 @@ namespace ost_domain
         // Always compared: name (with the elevation), Cond. No., type, layer, colour, pattern, spacing, the three results, notes.
         // ColorLine is never taken. is_top and z_value are not stored columns: a reload derives them from the name, so the in-memory
         // condition gets them from the saved name with the SAME derivation (derive_elevation_from_name, the loader's), not from what
-        // the dialog held: the Top segment (default) with an empty elevation is false / 0.0 after a reload, and the loader grammar
-        // reads no metric text such as "3200". COND-ELEV-01, decided 2026-11-19: memory equals a reload (Windows takes the dialog's
-        // values into the DTO, edit_condition_dialog.py:1427-1441, but shows the reloaded condition).
+        // the dialog held: the Top segment (default) with an empty elevation is false / 0.0 after a reload (a text the dialog accepts
+        // already has the number a reload gives: it is validated with the loader's own parser, elevation_text_inches, since Windows
+        // b9902e6). COND-ELEV-01, decided 2026-11-19: memory equals a reload (Windows takes the dialog's values into the DTO,
+        // edit_condition_dialog.py:1455-1457, but shows the reloaded condition).
         out.name = form.name;
         derive_elevation_from_name(out.name, out.z_value, out.is_top);
         out.condition_type = type;
@@ -232,20 +233,39 @@ namespace ost_domain
             out.snap_to_linear = form.snap_to_linear;
         }
 
-        // A style that differs from the stored one: dto.set("thickness", td), dto.set("spacing", td), dto.set("backout", td); a
-        // field whose value differs from the stored one is set afterwards and wins. A Count / Attachment has no thickness field.
-        // `td` is the imperial table in an imperial bid (= Windows) and the metric table in a metric bid (COND-STYLE-02, the
-        // decision of 2026-11-19: Windows writes the imperial table there too), see type_change_defaults.
+        // A style that differs from the stored one (edit_condition_dialog.py:1458-1463): dto.set("thickness",
+        // _type_default_thickness(td)) and dto.set("backout", td["backout"]); the spacing is NOT taken from the table. What the
+        // fields show is what is saved: the spacing (:1624) and the Thickness of a Linear / Area (:1559, :1589) are written from
+        // the field on a style change even when equal to the stored value (`if type_changed or value != stored`), which is the
+        // `out.spacing` / `out.thickness` copied from the form above (condition_changes_for_save marks those columns as written
+        // on a style change). Only a Count / Attachment, which has no Thickness field,
+        // keeps the table's thickness, and the backout is the table's. In a metric bid the thickness is the metric default
+        // (100 mm, an Attachment 0), see type_change_defaults. COND-STYLE-02, Windows b9902e6.
         if (type != stored.condition_type)
         {
             const TypeChangeDefaults defaults = type_change_defaults(type, metric);
-            if (is_count_like(type) || form.thickness == stored.thickness)
+            if (is_count_like(type))
                 out.thickness = defaults.thickness;
-            if (form.spacing == stored.spacing)
-                out.spacing = defaults.spacing;
             out.backout = defaults.backout;
         }
         return out;
+    }
+
+    ConditionChanges condition_changes_for_save(const Condition &stored, const Condition &form, bool metric)
+    {
+        ConditionChanges changes = collect_condition_changes(stored, condition_to_save(stored, form, metric));
+        // `type_changed = ct != cond.condition_type` (edit_condition_dialog.py:1458): on a style change the DTO always carries the
+        // thickness and the backout of the table (:1459-1463), the Linear / Area thickness field (:1559, :1589:
+        // `if type_changed or thickness != cond.thickness`) and the spacing field (:1624), so the UPDATE writes those columns even
+        // when the value equals the stored one (observable where the stored column is NULL: Windows writes 0.0). The values are
+        // already in `changes.values` (condition_to_save). Without a style change nothing is added: an unchanged field is left alone.
+        if (form.condition_type != stored.condition_type)
+        {
+            changes.mark(ConditionField::Spacing);
+            changes.mark(ConditionField::Thickness);
+            changes.mark(ConditionField::Backout);
+        }
+        return changes;
     }
 
 }

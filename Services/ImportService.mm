@@ -436,11 +436,19 @@ NSNotificationName const OSTRenderConfigChangedNotification =
 
 + (BOOL)updateConditionWithUID:(NSString *)conditionUID
                          inBid:(NSString *)bidUID
-                       changes:(const ost_domain::ConditionChanges &)changes {
-  return ost_store::update_condition([self _dbPath], [bidUID UTF8String],
-                                     [conditionUID UTF8String], changes)
-             ? YES
-             : NO;
+                       changes:(const ost_domain::ConditionChanges &)changes
+                         error:(NSString **)errorText {
+  std::string reason;
+  if (ost_store::update_condition([self _dbPath], [bidUID UTF8String],
+                                  [conditionUID UTF8String], changes, &reason)) {
+    if (errorText)
+      *errorText = nil;
+    return YES;
+  }
+  // only the overflow of a renumber has a text; every other failure is the generic "Failed to save condition to database."
+  if (errorText)
+    *errorText = reason.empty() ? nil : OSTString(reason);
+  return NO;
 }
 
 + (void)loadExtrasForTakeoff:(ost_domain::Takeoff &)takeoff

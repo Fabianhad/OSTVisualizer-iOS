@@ -1,20 +1,22 @@
 // Changing the style of a condition in the Edit Condition dialog (ConditionStyleChange.hpp): COND-STYLE-01 (a style change keeps
 // notes, pattern, the shared options and every unsaved text; only the controls of the new style get defaults), COND-STYLE-02
-// (a style change persists the type default spacing unless the user edited the field; the shape is reset only when entering
-// Count / Attachment from another style; a metric bid persists the METRIC type defaults, an imperial bid the Windows table),
+// (what the field shows is what is saved: on a style change the Spacing and the Linear / Area Thickness are written from their
+// fields even when equal to the stored value, only the thickness of a Count / Attachment and the backout come from the table, a
+// metric bid's thickness default is metric; the shape is reset only when entering Count / Attachment from another style),
 // COND-M08 (an unsupported stored type shows Linear), COND-METRIC-01 (the defaults of a metric bid are millimetres),
 // COL-PICK-01 (a save never writes ColorLine).
 //
 // Windows oracle: ost_visualizer/presentation/dialogs/edit_condition_dialog.py _on_style_changed / _populate_defaults_for_type /
-// _validate_and_build_dto and tests/presentation/dialogs/test_edit_condition_dialog.py. The persisted values after a style
-// change (spacing 6.0 for Area, thickness 0.0 for Attachment, Count(Circle) -> Attachment keeping the shape) were verified by
-// driving the Windows dialog headless (see the COND-STYLE-02 record of PARITY_MAP.md).
-// The metric half of COND-STYLE-02 is a deliberate decision (2026-11-19) that deviates from Windows, which persists the imperial
-// table in a metric bid too.
+// _validate_and_build_dto and tests/presentation/dialogs/test_edit_condition_dialog.py (Windows b9902e6: the six COND-STYLE tests
+// of EditConditionTypeChangeAndElevationTests, ported as CondStyle02_FieldWins). The persisted thickness after a style change
+// (0.0 for Attachment, Count(Circle) -> Attachment keeping the shape) was verified by driving the Windows dialog headless (see the
+// COND-STYLE-02 record of PARITY_MAP.md). The old iOS rule "the type default spacing unless the field was edited" (decision of
+// 2026-11-16) and the metric deviation of 2026-11-19 are gone: Windows b9902e6 writes the fields and the metric thickness default.
 #include "TestHarness.hpp"
 
 #include "Domain/ConditionChanges.hpp"
 #include "Domain/ConditionChoices.hpp"
+#include "Domain/ConditionFormRules.hpp"
 #include "Domain/ConditionStyleChange.hpp"
 #include "Domain/DimensionFormat.hpp"
 
@@ -45,9 +47,10 @@ namespace
         return std::find(change.reset_fields.begin(), change.reset_fields.end(), field) != change.reset_fields.end();
     }
 
+    // What the dialog hands to the store (the single call of EditConditionViewController.mm _applyChanges)
     ConditionChanges save_changes(const Condition &stored, const Condition &form, bool metric = false)
     {
-        return collect_condition_changes(stored, condition_to_save(stored, form, metric));
+        return condition_changes_for_save(stored, form, metric);
     }
 }
 
@@ -214,31 +217,40 @@ TEST(CondStyle01_StyleChange, FieldsWithoutAControlKeepTheirStoredValue)
 // COND-STYLE-02
 // ---------------------------------------------------------------------------------------------------------------------
 
-// The test plan: Linear->Area untouched spacing -> 6.0; Linear->Count -> 4.0; Area->Linear -> 4.0; any->Attachment -> 4.0 and
-// thickness 0.0 (verified headless against the Windows dialog)
-TEST(CondStyle02_Spacing, AStyleChangePersistsTheTypeDefaultSpacingUnlessEdited)
+// Linear->Area untouched spacing keeps the stored value (it was 6.0 under the old rule "the type default unless edited"), as do
+// Linear->Count, Area->Linear and any->Attachment (they were 4.0); the thickness is the default of the new style (Attachment 0.0).
+// Windows b9902e6: the Spacing text is not reset by a style change and a type change saves the field, not the table.
+TEST(CondStyle02_Spacing, AStyleChangeKeepsTheSpacingTheFieldShows)
 {
     struct Row
     {
         ConditionType from;
         ConditionType to;
-        double spacing;
+        double thickness;
     };
     const Row rows[] = {
-        {ConditionType::Linear, ConditionType::Area, 6.0},      {ConditionType::Count, ConditionType::Area, 6.0},
-        {ConditionType::Linear, ConditionType::Count, 4.0},     {ConditionType::Area, ConditionType::Linear, 4.0},
-        {ConditionType::Linear, ConditionType::Attachment, 4.0}, {ConditionType::Area, ConditionType::Attachment, 4.0},
-        {ConditionType::Count, ConditionType::Attachment, 4.0}, {ConditionType::Attachment, ConditionType::Count, 4.0},
+        {ConditionType::Linear, ConditionType::Area, 4.0},       {ConditionType::Count, ConditionType::Area, 4.0},
+        {ConditionType::Linear, ConditionType::Count, 4.0},      {ConditionType::Area, ConditionType::Linear, 4.0},
+        {ConditionType::Linear, ConditionType::Attachment, 0.0}, {ConditionType::Area, ConditionType::Attachment, 0.0},
+        {ConditionType::Count, ConditionType::Attachment, 0.0},  {ConditionType::Attachment, ConditionType::Count, 4.0},
     };
     for (const Row &row : rows)
     {
         SCOPED_CONTEXT("from " + std::to_string(static_cast<int>(row.from)) + " to " + std::to_string(static_cast<int>(row.to)));
         Condition stored = notes_condition(row.from);
-        stored.spacing = 2.5; // any stored value: the field is untouched, so the type default is persisted
+        stored.spacing = 2.5; // any stored value: the field is untouched, so it is what the field shows that is saved
+        stored.thickness = 6.0;
         const StyleChange change = apply_style_change(stored, row.to, false);
         const Condition saved = condition_to_save(stored, change.condition, false);
-        CHECK_EQ(saved.spacing, row.spacing);
-        CHECK(save_changes(stored, change.condition).has(ConditionField::Spacing));
+        CHECK_EQ(saved.spacing, 2.5);
+        CHECK_EQ(saved.thickness, row.thickness);
+        const ConditionChanges changes = save_changes(stored, change.condition);
+        CHECK(changes.has(ConditionField::Spacing)); // equal to the stored value, written all the same on a style change
+        CHECK_EQ(changes.values.spacing, 2.5);
+        CHECK(changes.has(ConditionField::Thickness)); // the thickness is set on every style change too
+        CHECK_EQ(changes.values.thickness, row.thickness);
+        CHECK(changes.has(ConditionField::Backout));
+        CHECK(changes.has(ConditionField::ConditionType));
     }
 }
 
@@ -255,7 +267,7 @@ TEST(CondStyle02_Spacing, ASpacingEditedBeforeTheChangePersists)
     CHECK_EQ(condition_to_save(stored, form, false).spacing, 9.0);
 }
 
-// Without a style change an untouched spacing is no change at all (the type default applies only to a style change)
+// Without a style change an untouched spacing is no change at all (a field equal to the stored value is not written)
 TEST(CondStyle02_Spacing, WithoutAStyleChangeTheStoredSpacingStays)
 {
     Condition stored = notes_condition(ConditionType::Area);
@@ -265,20 +277,14 @@ TEST(CondStyle02_Spacing, WithoutAStyleChangeTheStoredSpacingStays)
     CHECK(collect_condition_changes(stored, saved).empty());
 }
 
-// The values a style change persists, per measurement system of the bid.
-//   IMPERIAL (= Windows, edit_condition_dialog.py:1445-1448): td["spacing"] / td["thickness"] / td["backout"], the imperial
-//   TYPE_DEFAULTS columns, in inches.
-//   METRIC (COND-STYLE-02, decided 2026-11-19: a deliberate DEVIATION from the literal Windows behaviour): the metric columns
-//   spacing_metric / thickness_metric as inches (mm / 25.4), the values _populate_defaults_for_type (:1241-1252) shows after the
-//   style change. Windows persists the imperial values even in a metric bid (possible Windows defect, see PORTING_BLOCKERS.md).
-//   The backout does not depend on the unit.
+// The values a type change takes from the table, per measurement system of the bid: the thickness (in inches) and the backout.
+//   IMPERIAL: td["thickness"] / td["backout"], the imperial TYPE_DEFAULTS columns (edit_condition_dialog.py:1236-1239, :1458-1463).
+//   METRIC: _type_default_thickness reads thickness_metric as inches (mm / 25.4), the value _populate_defaults_for_type
+//   (:1241-1252) shows after the style change (Windows b9902e6; before it Windows persisted the imperial value in a metric bid).
+//   The backout does not depend on the unit. There is no spacing default: a type change saves the Spacing field.
 TEST(CondStyle02_Spacing, TheTypeChangeDefaultsFollowTheMeasurementSystemOfTheBid)
 {
     // imperial: the Windows table values
-    CHECK_EQ(type_change_defaults(ConditionType::Linear, false).spacing, 4.0);
-    CHECK_EQ(type_change_defaults(ConditionType::Area, false).spacing, 6.0);
-    CHECK_EQ(type_change_defaults(ConditionType::Count, false).spacing, 4.0);
-    CHECK_EQ(type_change_defaults(ConditionType::Attachment, false).spacing, 4.0);
     CHECK_EQ(type_change_defaults(ConditionType::Linear, false).thickness, 4.0);
     CHECK_EQ(type_change_defaults(ConditionType::Area, false).thickness, 4.0);
     CHECK_EQ(type_change_defaults(ConditionType::Count, false).thickness, 4.0);
@@ -288,12 +294,8 @@ TEST(CondStyle02_Spacing, TheTypeChangeDefaultsFollowTheMeasurementSystemOfTheBi
     CHECK(type_change_defaults(ConditionType::Count, false).backout);
     CHECK(type_change_defaults(ConditionType::Attachment, false).backout);
 
-    // metric: spacing_metric Linear 100 / Area 150 / Count 100 / Attachment 100 mm, thickness_metric 100 / 100 / 100 / 0 mm
+    // metric: thickness_metric 100 / 100 / 100 / 0 mm
     // (the Windows mm_to_inches(mm) is mm / 25.4, values computed with python -B)
-    CHECK_EQ(type_change_defaults(ConditionType::Linear, true).spacing, 3.937007874015748);
-    CHECK_EQ(type_change_defaults(ConditionType::Area, true).spacing, 5.905511811023622);
-    CHECK_EQ(type_change_defaults(ConditionType::Count, true).spacing, 3.937007874015748);
-    CHECK_EQ(type_change_defaults(ConditionType::Attachment, true).spacing, 3.937007874015748);
     CHECK_EQ(type_change_defaults(ConditionType::Linear, true).thickness, 3.937007874015748);
     CHECK_EQ(type_change_defaults(ConditionType::Area, true).thickness, 3.937007874015748);
     CHECK_EQ(type_change_defaults(ConditionType::Count, true).thickness, 3.937007874015748);
@@ -303,15 +305,16 @@ TEST(CondStyle02_Spacing, TheTypeChangeDefaultsFollowTheMeasurementSystemOfTheBi
     CHECK(type_change_defaults(ConditionType::Count, true).backout);
     CHECK(type_change_defaults(ConditionType::Attachment, true).backout);
 
-    // a metric bid persists the metric table values: Linear -> Area writes 150 mm, not the imperial 6.0 in
+    // the spacing is the field's whatever the unit: Linear -> Area keeps the 100 mm the Spacing field shows (it neither becomes the
+    // 150 mm of the metric Area table nor the imperial 6.0 in), and the Thickness field's default is the metric one
     Condition stored = notes_condition(ConditionType::Linear);
     stored.spacing = 100.0 / 25.4;
     const StyleChange change = apply_style_change(stored, ConditionType::Area, true);
     const Condition saved = condition_to_save(stored, change.condition, true);
-    CHECK_EQ(saved.spacing, 5.905511811023622);
-    CHECK_STR_EQ(inches_to_display(saved.spacing, true), "150");
-    // the imperial bid keeps the Windows value for the same change
-    CHECK_EQ(condition_to_save(stored, apply_style_change(stored, ConditionType::Area, false).condition, false).spacing, 6.0);
+    CHECK_EQ(saved.spacing, stored.spacing);
+    CHECK_STR_EQ(inches_to_display(saved.spacing, true), "100");
+    CHECK_EQ(saved.thickness, type_change_defaults(ConditionType::Area, true).thickness);
+    CHECK_EQ(condition_to_save(stored, apply_style_change(stored, ConditionType::Area, false).condition, false).spacing, stored.spacing);
 }
 
 namespace
@@ -323,7 +326,7 @@ namespace
         return type == ConditionType::Count || type == ConditionType::Attachment;
     }
 
-    // Spacing 2.5 and thickness 6.0 are never a table value, so every style change is a real change of both.
+    // Spacing 2.5 and thickness 6.0 are never a table value, so the saved value shows whether a field or the table was written.
     Condition stored_of_style(ConditionType type)
     {
         Condition stored = notes_condition(type);
@@ -334,13 +337,12 @@ namespace
     }
 }
 
-// Metric bid, every pair of styles: Save persists style_dimension_defaults(to, true) for spacing and thickness, i.e. what the
-// dialog shows after the style change (thickness) and the TYPE_DEFAULTS metric columns; the backout is the table's.
-TEST(CondStyle02_Spacing, AMetricBidPersistsTheMetricTypeDefaultsForEveryStyleChange)
+// Metric bid, every pair of styles: Save writes the metric thickness default (style_dimension_defaults(to, true), what the dialog
+// shows after the style change and the TYPE_DEFAULTS thickness_metric column) and the table's backout; the spacing is the stored
+// 2.5 the Spacing field still shows, never the spacing_metric column (renamed from AMetricBidPersistsTheMetricTypeDefaultsForEveryStyleChange).
+TEST(CondStyle02_Spacing, AMetricBidSavesTheMetricThicknessAndTheSpacingItShowsForEveryStyleChange)
 {
-    const double spacing_mm[] = {100.0, 150.0, 100.0, 100.0}; // Linear, Area, Count, Attachment (spacing_metric)
     const double thickness_mm[] = {100.0, 100.0, 100.0, 0.0}; // thickness_metric
-    const char *spacing_text[] = {"100", "150", "100", "100"};
     const char *thickness_text[] = {"100", "100", "100", ""}; // 0 is shown as an empty field
     for (int from = 0; from < 4; ++from)
     {
@@ -355,9 +357,7 @@ TEST(CondStyle02_Spacing, AMetricBidPersistsTheMetricTypeDefaultsForEveryStyleCh
             const Condition saved = condition_to_save(stored, change.condition, true);
             const StyleDimensionDefaults shown = style_dimension_defaults(kStyles[to], true);
 
-            CHECK_EQ(saved.spacing, shown.spacing);
-            CHECK_EQ(saved.spacing, spacing_mm[to] / 25.4);
-            CHECK_STR_EQ(inches_to_display(saved.spacing, true), spacing_text[to]);
+            CHECK_EQ(saved.spacing, 2.5);
             CHECK_EQ(saved.thickness, shown.thickness);
             CHECK_EQ(saved.thickness, thickness_mm[to] / 25.4);
             CHECK_STR_EQ(inches_to_display(saved.thickness, true), thickness_text[to]);
@@ -369,21 +369,22 @@ TEST(CondStyle02_Spacing, AMetricBidPersistsTheMetricTypeDefaultsForEveryStyleCh
             CHECK(saved.condition_type == kStyles[to]);
 
             const ConditionChanges changes = save_changes(stored, change.condition, true);
-            CHECK(changes.has(ConditionField::Spacing));
+            CHECK(changes.has(ConditionField::Spacing)); // the field equals the stored value, written all the same on a style change
+            CHECK_EQ(changes.values.spacing, 2.5);
             CHECK(changes.has(ConditionField::Thickness));
             CHECK(changes.has(ConditionField::Backout));
             CHECK_EQ(changes.values.backout, count_like_style(kStyles[to]));
-            CHECK_EQ(changes.values.spacing, spacing_mm[to] / 25.4);
             CHECK_EQ(changes.values.thickness, thickness_mm[to] / 25.4);
         }
     }
 }
 
-// Imperial bid, every pair of styles: exactly the Windows TYPE_DEFAULTS table (edit_condition_dialog.py:90-143 imperial columns)
-TEST(CondStyle02_Spacing, AnImperialBidKeepsTheWindowsTableForEveryStyleChange)
+// Imperial bid, every pair of styles: the thickness is the Windows TYPE_DEFAULTS imperial column (edit_condition_dialog.py:94-147)
+// and the spacing is the stored 2.5 the field still shows, not the table's 4.0 / 6.0 (renamed from
+// AnImperialBidKeepsTheWindowsTableForEveryStyleChange).
+TEST(CondStyle02_Spacing, AnImperialBidSavesTheWindowsThicknessTableAndTheSpacingItShowsForEveryStyleChange)
 {
-    const double spacing_in[] = {4.0, 6.0, 4.0, 4.0}; // Linear, Area, Count, Attachment
-    const double thickness_in[] = {4.0, 4.0, 4.0, 0.0};
+    const double thickness_in[] = {4.0, 4.0, 4.0, 0.0}; // Linear, Area, Count, Attachment
     for (int from = 0; from < 4; ++from)
     {
         for (int to = 0; to < 4; ++to)
@@ -394,18 +395,21 @@ TEST(CondStyle02_Spacing, AnImperialBidKeepsTheWindowsTableForEveryStyleChange)
             const Condition stored = stored_of_style(kStyles[from]);
             const StyleChange change = apply_style_change(stored, kStyles[to], false);
             const Condition saved = condition_to_save(stored, change.condition, false);
-            CHECK_EQ(saved.spacing, spacing_in[to]);
+            CHECK_EQ(saved.spacing, 2.5);
             CHECK_EQ(saved.thickness, thickness_in[to]);
             CHECK_EQ(saved.backout, count_like_style(kStyles[to]));
             const ConditionChanges changes = save_changes(stored, change.condition, false);
-            CHECK_EQ(changes.values.spacing, spacing_in[to]);
+            CHECK(changes.has(ConditionField::Spacing)); // equal to the stored 2.5, written all the same on a style change
+            CHECK_EQ(changes.values.spacing, 2.5);
+            CHECK(changes.has(ConditionField::Thickness));
+            CHECK(changes.has(ConditionField::Backout));
             CHECK_EQ(changes.values.thickness, thickness_in[to]);
         }
     }
 }
 
-// The existing rule holds in a metric bid: a spacing or thickness the user typed (it differs from the stored value) wins over
-// the type default; what was not typed is the metric type default.
+// A metric bid keeps what the fields show: a spacing or thickness the user typed wins, a spacing that was not typed stays the
+// stored one, a thickness that was not typed is the metric default the field started from.
 TEST(CondStyle02_Spacing, AMetricBidKeepsWhatTheUserTypedAfterAStyleChange)
 {
     const Condition stored = stored_of_style(ConditionType::Linear);
@@ -424,7 +428,7 @@ TEST(CondStyle02_Spacing, AMetricBidKeepsWhatTheUserTypedAfterAStyleChange)
     typed.thickness = 5.5;
     const Condition saved = condition_to_save(stored, typed, true);
     CHECK_EQ(saved.thickness, 5.5);
-    CHECK_EQ(saved.spacing, 5.905511811023622);
+    CHECK_EQ(saved.spacing, stored.spacing); // not the 150 mm of the metric Area table
 
     // a Count has no thickness field: the table value is written whatever the form holds
     Condition count = apply_style_change(stored, ConditionType::Count, true).condition;
@@ -432,9 +436,10 @@ TEST(CondStyle02_Spacing, AMetricBidKeepsWhatTheUserTypedAfterAStyleChange)
     CHECK_EQ(condition_to_save(stored, count, true).thickness, 3.937007874015748);
 }
 
-// The thickness of a Linear / Area style is a type default only when its field still equals the stored thickness. A condition
-// created in a metric bid usually stores exactly the metric default (100 mm), so the field after the style change (100 mm)
-// equals the stored value and the table value is written: it must be the metric one, 100 mm = no change at all, and not the
+// The thickness of a Linear / Area style is what its field shows, also when that equals the stored thickness (the field wins;
+// before COND-STYLE-02 this was "the type default when the field still equals the stored thickness"). A condition created in a
+// metric bid usually stores exactly the metric default (100 mm), so the field after the style change (100 mm) equals the stored
+// value: 100 mm is what is saved (written on the style change all the same, edit_condition_dialog.py:1559, :1589), and not the
 // imperial 4.0 in = 101.6 mm.
 TEST(CondStyle02_Spacing, AMetricBidWritesTheMetricThicknessWhenTheFieldEqualsTheStoredOne)
 {
@@ -455,7 +460,10 @@ TEST(CondStyle02_Spacing, AMetricBidWritesTheMetricThicknessWhenTheFieldEqualsTh
             const Condition saved = condition_to_save(stored, change.condition, true);
             CHECK_EQ(saved.thickness, metric_thickness);
             CHECK_STR_EQ(inches_to_display(saved.thickness, true), "100");
-            CHECK_FALSE(save_changes(stored, change.condition, true).has(ConditionField::Thickness));
+            // a style change writes the Thickness although it equals the stored value (`type_changed or thickness != stored`)
+            const ConditionChanges changes = save_changes(stored, change.condition, true);
+            CHECK(changes.has(ConditionField::Thickness));
+            CHECK_EQ(changes.values.thickness, metric_thickness);
             // the same change in an imperial bid writes the imperial table value (Windows)
             const Condition imperial = condition_to_save(stored, apply_style_change(stored, kStyles[to], false).condition, false);
             CHECK_EQ(imperial.thickness, 4.0);
@@ -504,8 +512,8 @@ TEST(CondStyle02_Spacing, ATypeChangeWritesThicknessAndBackoutOfTheTable)
     CHECK_EQ(linear.thickness, 4.0);
 }
 
-// Area thickness differs from a typed 77: the reset text is the default, and a Linear / Area thickness the user typed AFTER the
-// change wins over the table value (the field wins when it differs from the stored value)
+// The Area style starts from the default thickness (the reset text), and a Linear / Area thickness the user typed AFTER the change
+// wins over the table value (the field wins, also when it equals the stored value: COND-STYLE-02)
 TEST(CondStyle02_Spacing, ATypedThicknessAfterTheChangeWins)
 {
     Condition stored = notes_condition(ConditionType::Count);
@@ -515,6 +523,375 @@ TEST(CondStyle02_Spacing, ATypedThicknessAfterTheChangeWins)
     typed.thickness = 5.5; // typed into the Thickness field of the Area style
     CHECK_EQ(condition_to_save(stored, typed, false).thickness, 5.5);
     CHECK_EQ(condition_to_save(stored, area.condition, false).thickness, 4.0);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// COND-STYLE-02, "what the field shows is what is saved": ports of the six tests of class EditConditionTypeChangeAndElevationTests
+// in tests/presentation/dialogs/test_edit_condition_dialog.py (:1233-1317, Windows b9902e6). On a type change Windows sends the
+// type default only for the thickness of a Count / Attachment (which has no Thickness field) and the backout; Linear / Area
+// thickness and the spacing are the parsed fields and are written even when they equal the stored value (`if type_changed or
+// ...`, edit_condition_dialog.py:1559, :1589, :1624). The Windows tests drive the dialog with an identity unit conversion, so
+// they pin the model values; the form built here is what the dialog holds after the switch (apply_style_change) plus what the
+// user typed (the .mm parses the field texts into those members before condition_to_save).
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    // The form after `target` was picked in the Style picker, before anything else was typed.
+    Condition form_after_switch(const Condition &stored, ConditionType target, bool metric)
+    {
+        return apply_style_change(stored, target, metric).condition;
+    }
+}
+
+// W1 test_a_metric_type_change_saves_the_metric_defaults_it_shows
+TEST(CondStyle02_FieldWins, AMetricTypeChangeSavesTheMetricDefaultsItShows)
+{
+    const double hundred_mm = mm_to_inches(100.0);
+    CHECK_EQ(hundred_mm, 3.937007874015748);
+    struct Row
+    {
+        ConditionType target;
+        double thickness;
+    };
+    const Row rows[] = {{ConditionType::Area, hundred_mm}, {ConditionType::Count, hundred_mm}, {ConditionType::Attachment, 0.0}};
+    for (const Row &row : rows)
+    {
+        SCOPED_CONTEXT("target " + std::to_string(static_cast<int>(row.target)));
+        Condition stored = notes_condition(ConditionType::Linear);
+        stored.thickness = hundred_mm;
+        stored.spacing = hundred_mm;
+        const Condition saved = condition_to_save(stored, form_after_switch(stored, row.target, true), true);
+        CHECK(saved.condition_type == row.target);
+        CHECK_EQ(saved.thickness, row.thickness);
+        CHECK_EQ(saved.spacing, hundred_mm);
+    }
+}
+
+// W2 test_an_imperial_type_change_still_saves_the_imperial_defaults
+TEST(CondStyle02_FieldWins, AnImperialTypeChangeSavesTheImperialDefaults)
+{
+    struct Row
+    {
+        ConditionType target;
+        double thickness;
+    };
+    const Row rows[] = {{ConditionType::Area, 4.0}, {ConditionType::Count, 4.0}, {ConditionType::Attachment, 0.0}};
+    for (const Row &row : rows)
+    {
+        SCOPED_CONTEXT("target " + std::to_string(static_cast<int>(row.target)));
+        Condition stored = notes_condition(ConditionType::Linear);
+        stored.thickness = 4.0;
+        stored.spacing = 4.0;
+        const Condition saved = condition_to_save(stored, form_after_switch(stored, row.target, false), false);
+        CHECK(saved.condition_type == row.target);
+        CHECK_EQ(saved.thickness, row.thickness);
+        CHECK_EQ(saved.spacing, 4.0);
+    }
+}
+
+// W3 test_a_metric_area_keeps_the_150_mm_spacing_it_shows (a regression guard: the metric Area default is 150 mm as well, so it
+// also passed before COND-STYLE-02 changed). The second half is not in the Windows test but follows from the same code: any other
+// spacing the field shows stays, it is never replaced by the 150 mm of the Area table.
+TEST(CondStyle02_FieldWins, AMetricAreaKeepsThe150mmSpacingItShows)
+{
+    Condition stored = notes_condition(ConditionType::Linear);
+    stored.thickness = 4.0;
+    stored.spacing = mm_to_inches(150.0);
+    const Condition form = form_after_switch(stored, ConditionType::Area, true);
+    CHECK_EQ(form.spacing, stored.spacing); // the Spacing text is not reset by a style change
+    const Condition saved = condition_to_save(stored, form, true);
+    CHECK_EQ(saved.spacing, stored.spacing);
+    CHECK_EQ(saved.spacing, 5.905511811023622);
+    CHECK_NE(saved.spacing, 6.0);
+
+    stored.spacing = mm_to_inches(120.0);
+    CHECK_EQ(condition_to_save(stored, form_after_switch(stored, ConditionType::Area, true), true).spacing, stored.spacing);
+}
+
+// W4 test_a_typed_spacing_survives_a_type_change: the typed 9 equals the stored 9 and used to be replaced by the Area default 6.0
+TEST(CondStyle02_FieldWins, ATypedSpacingEqualToTheStoredOneSurvivesATypeChange)
+{
+    for (double typed : {9.0, 7.0})
+    {
+        SCOPED_CONTEXT("typed " + std::to_string(typed));
+        Condition stored = notes_condition(ConditionType::Linear);
+        stored.thickness = 4.0;
+        stored.spacing = 9.0;
+        Condition form = form_after_switch(stored, ConditionType::Area, false);
+        form.spacing = typed;
+        form.thickness = 5.0;
+        const Condition saved = condition_to_save(stored, form, false);
+        CHECK(saved.condition_type == ConditionType::Area);
+        CHECK_EQ(saved.spacing, typed);
+        CHECK_EQ(saved.thickness, 5.0);
+    }
+}
+
+// W5 test_a_typed_thickness_equal_to_the_stored_one_survives_a_type_change, Linear -> Area and Area -> Linear: the typed 5 equals
+// the stored 5 and used to be replaced by the type default 4.0
+TEST(CondStyle02_FieldWins, ATypedThicknessEqualToTheStoredOneSurvivesATypeChange)
+{
+    const ConditionType pairs[][2] = {{ConditionType::Linear, ConditionType::Area}, {ConditionType::Area, ConditionType::Linear}};
+    for (const auto &pair : pairs)
+    {
+        SCOPED_CONTEXT("from " + std::to_string(static_cast<int>(pair[0])) + " to " + std::to_string(static_cast<int>(pair[1])));
+        Condition stored = notes_condition(pair[0]);
+        stored.thickness = 5.0;
+        stored.spacing = 4.0;
+        Condition form = form_after_switch(stored, pair[1], false);
+        CHECK_EQ(form.thickness, 4.0); // the Thickness field starts from the default of the new style
+        form.thickness = 5.0;          // the user types 5 into it
+        const Condition saved = condition_to_save(stored, form, false);
+        CHECK(saved.condition_type == pair[1]);
+        CHECK_EQ(saved.thickness, 5.0);
+    }
+}
+
+// W6 test_without_a_type_change_unchanged_fields_are_not_written: the typed 9 and 4 equal the stored values, nothing is a change
+TEST(CondStyle02_FieldWins, WithoutATypeChangeUnchangedFieldsAreNotWritten)
+{
+    Condition stored = notes_condition(ConditionType::Area);
+    stored.thickness = 4.0;
+    stored.spacing = 9.0;
+    Condition form = stored;
+    form.spacing = 9.0;
+    form.thickness = 4.0;
+    const Condition saved = condition_to_save(stored, form, false);
+    CHECK_EQ(saved.spacing, 9.0);
+    CHECK_EQ(saved.thickness, 4.0);
+    CHECK(collect_condition_changes(stored, saved).empty());
+    CHECK(save_changes(stored, form).empty()); // what the dialog hands to the store: nothing to write
+    // a field that differs is written, one that is equal is not (no type change)
+    form.spacing = 7.0;
+    const ConditionChanges changes = save_changes(stored, form);
+    CHECK(changes.has(ConditionField::Spacing));
+    CHECK_FALSE(changes.has(ConditionField::Thickness));
+    CHECK_FALSE(changes.has(ConditionField::Backout));
+    CHECK_EQ(changes.fields.count(), 1u);
+}
+
+// Every pair of styles in both measurement systems, stored spacing 2.5 and thickness 6.0 (never a table value), nothing typed: the
+// spacing is the field's (the stored 2.5, a style change never resets its text), the thickness of a Linear / Area is what its
+// field shows after the change (the default of the new style) and the thickness of a Count / Attachment is the default of the
+// table; the change set carries the spacing all the same (a style change writes it although it equals the stored one), whatever
+// the style.
+TEST(CondStyle02_FieldWins, AnUntouchedTypeChangeKeepsTheSpacingAndSavesTheThicknessItShows)
+{
+    for (bool metric : {false, true})
+    {
+        for (int from = 0; from < 4; ++from)
+        {
+            for (int to = 0; to < 4; ++to)
+            {
+                if (from == to)
+                    continue;
+                SCOPED_CONTEXT(std::string(metric ? "metric" : "imperial") + " from " + std::to_string(from) + " to " + std::to_string(to));
+                const Condition stored = stored_of_style(kStyles[from]);
+                const Condition form = form_after_switch(stored, kStyles[to], metric);
+                const Condition saved = condition_to_save(stored, form, metric);
+                const StyleDimensionDefaults defaults = style_dimension_defaults(kStyles[to], metric);
+                CHECK(saved.condition_type == kStyles[to]);
+                CHECK_EQ(saved.spacing, 2.5);
+                CHECK_EQ(saved.thickness, defaults.thickness);
+                if (!count_like_style(kStyles[to]))
+                    CHECK_EQ(saved.thickness, form.thickness); // the field wins
+                CHECK_EQ(saved.backout, count_like_style(kStyles[to]));
+                const ConditionChanges changes = save_changes(stored, form, metric);
+                CHECK(changes.has(ConditionField::Spacing)); // equal to the stored 2.5, written on a style change
+                CHECK_EQ(changes.values.spacing, 2.5);
+                CHECK(changes.has(ConditionField::ConditionType));
+            }
+        }
+    }
+}
+
+// COND-STYLE-02, literal write parity (user spec: "Spacing and the visible thickness are saved from the fields even when equal to the
+// stored value; without a type change, unchanged fields are left alone"). On a type change Windows puts the thickness and the
+// backout of the table, the Linear / Area thickness field (`if type_changed or ...`, :1559, :1589) and the spacing field
+// (:1624) into the DTO whatever the stored values are, so the UPDATE carries those columns although every one of them equals the
+// stored value. That matters where the stored column is NULL: the loader reads it as 0.0, the blank field parses to 0.0, Windows
+// writes 0.0. Here every stored value already equals what is saved (spacing 0.0 = NULL read back, the thickness and the backout
+// of the new style), so only the type itself differs; collect_condition_changes alone marks none of the three.
+TEST(CondStyle02_FieldWins, ATypeChangeWritesSpacingThicknessAndBackoutEvenWhenTheyEqualTheStoredValues)
+{
+    for (bool metric : {false, true})
+    {
+        for (int from = 0; from < 4; ++from)
+        {
+            for (int to = 0; to < 4; ++to)
+            {
+                if (from == to)
+                    continue;
+                SCOPED_CONTEXT(std::string(metric ? "metric" : "imperial") + " from " + std::to_string(from) + " to " + std::to_string(to));
+                const StyleDimensionDefaults table = style_dimension_defaults(kStyles[to], metric);
+                Condition stored = notes_condition(kStyles[from]);
+                stored.spacing = 0.0; // a NULL column, as the loader reads it
+                stored.thickness = table.thickness;
+                stored.backout = count_like_style(kStyles[to]);
+                const Condition form = form_after_switch(stored, kStyles[to], metric);
+                CHECK_EQ(form.spacing, 0.0); // a style change leaves the Spacing text alone
+
+                const Condition saved = condition_to_save(stored, form, metric);
+                CHECK_EQ(saved.spacing, stored.spacing);
+                CHECK_EQ(saved.thickness, stored.thickness);
+                CHECK_EQ(saved.backout, stored.backout);
+                const ConditionChanges by_value = collect_condition_changes(stored, saved);
+                CHECK_FALSE(by_value.has(ConditionField::Spacing));
+                CHECK_FALSE(by_value.has(ConditionField::Thickness));
+                CHECK_FALSE(by_value.has(ConditionField::Backout));
+
+                const ConditionChanges changes = condition_changes_for_save(stored, form, metric);
+                CHECK(changes.has(ConditionField::ConditionType));
+                CHECK(changes.has(ConditionField::Spacing));
+                CHECK(changes.has(ConditionField::Thickness));
+                CHECK(changes.has(ConditionField::Backout));
+                CHECK_EQ(changes.values.spacing, 0.0);
+                CHECK_EQ(changes.values.thickness, table.thickness);
+                CHECK_EQ(changes.values.backout, count_like_style(kStyles[to]));
+                // the three are added to what differs by value, nothing else is
+                std::bitset<kConditionFieldCount> expected = by_value.fields;
+                expected.set(static_cast<std::size_t>(ConditionField::Spacing));
+                expected.set(static_cast<std::size_t>(ConditionField::Thickness));
+                expected.set(static_cast<std::size_t>(ConditionField::Backout));
+                CHECK(changes.fields == expected);
+                // the condition to store is the one condition_to_save returns
+                CHECK(changes.values.condition_type == saved.condition_type);
+                CHECK_EQ(changes.values.uom1, saved.uom1);
+                CHECK_EQ(changes.values.calc_type1, saved.calc_type1);
+            }
+        }
+    }
+}
+
+// The other half of the spec: without a type change an unchanged field is left alone, so the change set is exactly the fields that
+// differ from the stored condition (collect_condition_changes of what condition_to_save returns), and Spacing, Thickness and
+// Backout are marked only when they differ: a rename, a typed spacing, a typed thickness, and a Count / Attachment whose form holds
+// another thickness (it has no Thickness field: nothing is written for it).
+TEST(CondStyle02_FieldWins, WithoutATypeChangeTheChangeSetIsExactlyTheFieldsThatDiffer)
+{
+    for (bool metric : {false, true})
+    {
+        for (ConditionType type : kStyles)
+        {
+            SCOPED_CONTEXT(std::string(metric ? "metric" : "imperial") + " style " + std::to_string(static_cast<int>(type)));
+            const Condition stored = stored_of_style(type);
+            Condition renamed = stored;
+            renamed.name = "Renamed";
+            Condition spacing = stored;
+            spacing.spacing = 3.0;
+            Condition thickness = stored;
+            thickness.thickness = 7.0;
+            for (const Condition &form : {stored, renamed, spacing, thickness})
+            {
+                const ConditionChanges expected = collect_condition_changes(stored, condition_to_save(stored, form, metric));
+                const ConditionChanges changes = save_changes(stored, form, metric);
+                CHECK(changes.fields == expected.fields);
+                CHECK_EQ(changes.values.spacing, expected.values.spacing);
+                CHECK_EQ(changes.values.thickness, expected.values.thickness);
+                CHECK_EQ(changes.values.backout, expected.values.backout);
+                CHECK_FALSE(changes.has(ConditionField::Backout));
+            }
+            CHECK(save_changes(stored, stored, metric).empty());
+            CHECK_EQ(save_changes(stored, spacing, metric).has(ConditionField::Spacing), true);
+            CHECK_EQ(save_changes(stored, renamed, metric).has(ConditionField::Spacing), false);
+            // a typed thickness is a change of a Linear / Area only
+            CHECK_EQ(save_changes(stored, thickness, metric).has(ConditionField::Thickness), !count_like_style(type));
+            CHECK_EQ(save_changes(stored, thickness, metric).has(ConditionField::Name), false);
+        }
+    }
+}
+
+// COND-STYLE-02: Windows has no Thickness field for a Count / Attachment, so a Save of one after a style change writes the table's
+// thickness whatever the form holds (_type_default_thickness, edit_condition_dialog.py:1236-1239, :1458-1463). The form here
+// holds another thickness (7.0) after the switch, which the dialog cannot produce (the field does not exist), so this test pins the
+// Core rule: imperial 4.0 for a Count and 0.0 for an Attachment, metric mm_to_inches(100) and 0.0. Without it, taking the form's
+// thickness (or the table's in one measurement system only) goes unnoticed because apply_style_change already sets the default.
+TEST(CondStyle02_FieldWins, ACountOrAttachmentSavesTheTableThicknessWhateverTheFormHolds)
+{
+    const double hundred_mm = mm_to_inches(100.0);
+    CHECK_EQ(hundred_mm, 3.937007874015748);
+    struct Row
+    {
+        ConditionType target;
+        double imperial;
+        double metric;
+    };
+    const Row rows[] = {{ConditionType::Count, 4.0, hundred_mm}, {ConditionType::Attachment, 0.0, 0.0}};
+    for (const Row &row : rows)
+    {
+        for (bool metric : {false, true})
+        {
+            for (ConditionType from : kStyles)
+            {
+                if (from == row.target)
+                    continue;
+                SCOPED_CONTEXT(std::string(metric ? "metric" : "imperial") + " from " + std::to_string(static_cast<int>(from)) +
+                               " to " + std::to_string(static_cast<int>(row.target)));
+                const double expected = metric ? row.metric : row.imperial;
+                const Condition stored = stored_of_style(from); // thickness 6.0, never a table value
+                Condition form = form_after_switch(stored, row.target, metric);
+                CHECK_EQ(form.thickness, expected); // the switch itself starts from the table value
+                form.thickness = 7.0;
+                const Condition saved = condition_to_save(stored, form, metric);
+                CHECK(saved.condition_type == row.target);
+                CHECK_EQ(saved.thickness, expected);
+                CHECK_NE(saved.thickness, 7.0);
+                const ConditionChanges changes = save_changes(stored, form, metric);
+                CHECK(changes.has(ConditionField::Thickness));
+                CHECK_EQ(changes.values.thickness, expected);
+            }
+        }
+        // without a style change the stored thickness stays whatever the form holds (a Count / Attachment has no Thickness field)
+        SCOPED_CONTEXT("no style change, style " + std::to_string(static_cast<int>(row.target)));
+        const Condition stored = stored_of_style(row.target);
+        Condition form = stored;
+        form.thickness = 7.0;
+        CHECK_EQ(condition_to_save(stored, form, false).thickness, 6.0);
+        CHECK_FALSE(save_changes(stored, form).has(ConditionField::Thickness));
+    }
+}
+
+// Inferred, not pinned by a Windows test: the Thickness field a Linear / Area form shows after a style change, parsed back the way
+// the dialog parses it (_parse_dimension_field), is the default the model holds, so what the field shows is what is saved in a
+// metric bid too (the Windows tests use an identity conversion and do not exercise the millimetre text).
+TEST(CondStyle02_FieldWins, TheMetricThicknessTheFieldShowsParsesBackToTheDefault)
+{
+    for (ConditionType to : {ConditionType::Linear, ConditionType::Area})
+    {
+        SCOPED_CONTEXT("target " + std::to_string(static_cast<int>(to)));
+        const Condition stored = stored_of_style(ConditionType::Count);
+        const Condition form = form_after_switch(stored, to, true);
+        const std::string shown = inches_to_display(form.thickness, true);
+        CHECK_STR_EQ(shown, "100");
+        Condition typed = form;
+        double parsed = -1.0;
+        CHECK_FALSE(parse_dimension_value(shown, "Thickness", true, parsed).has_value());
+        typed.thickness = parsed;
+        const Condition saved = condition_to_save(stored, typed, true);
+        CHECK_EQ(saved.thickness, mm_to_inches(100.0));
+    }
+}
+
+// Inferred, not pinned by a Windows test: a Thickness field the user blanked is 0.0 (_parse_dimension_field: blank text is 0.0)
+// and the field wins, also when the stored thickness is 0.0 as well (an Attachment's), where the old rule wrote the default.
+TEST(CondStyle02_FieldWins, ABlankedThicknessFieldIsSavedAsZeroOnATypeChange)
+{
+    for (ConditionType to : {ConditionType::Linear, ConditionType::Area})
+    {
+        for (double stored_thickness : {0.0, 6.0})
+        {
+            SCOPED_CONTEXT("target " + std::to_string(static_cast<int>(to)) + " stored " + std::to_string(stored_thickness));
+            Condition stored = notes_condition(ConditionType::Attachment);
+            stored.thickness = stored_thickness;
+            Condition form = form_after_switch(stored, to, false);
+            double parsed = -1.0;
+            CHECK_FALSE(parse_dimension_value("  ", "Thickness", false, parsed).has_value());
+            CHECK_EQ(parsed, 0.0);
+            form.thickness = parsed;
+            CHECK_EQ(condition_to_save(stored, form, false).thickness, 0.0);
+        }
+    }
 }
 
 // Shape: Count(shape Circle) -> Attachment keeps shape 1; Linear -> Count sets Square (0); Count -> Linear -> Count resets it
@@ -633,12 +1010,15 @@ TEST(CondM08_UnsupportedType, ASaveRewritesTheTypeLikeAStyleChange)
     CHECK(changes.has(ConditionField::ConditionType));
     CHECK(changes.values.condition_type == ConditionType::Linear);
     CHECK(changes.has(ConditionField::Name));
-    CHECK_EQ(changes.values.spacing, 4.0); // the type default of the style the type was rewritten to
-    CHECK(changes.has(ConditionField::Spacing));
+    // the spacing is the field's (the stored 2.5), not the type default of the style the type was rewritten to
+    CHECK_EQ(condition_to_save(stored, form, false).spacing, 2.5);
+    CHECK(changes.has(ConditionField::Spacing)); // the type is rewritten: the Spacing field is written although equal to the stored 2.5
+    CHECK_EQ(changes.values.spacing, 2.5);
+    // (what Windows saves for the THICKNESS of a stored unsupported type is not verified, so it is not pinned here)
 }
 
-// ... and in a metric bid the type default of the rewritten style is the metric one (COND-STYLE-02, decision of 2026-11-19)
-TEST(CondM08_UnsupportedType, ASaveRewritesTheTypeWithTheMetricDefaultsInAMetricBid)
+// ... also in a metric bid (COND-STYLE-02, Windows b9902e6: a type change saves the Spacing field, never the table)
+TEST(CondM08_UnsupportedType, ASaveRewritesTheTypeAndKeepsTheSpacingInAMetricBid)
 {
     Condition stored = notes_condition(ConditionType::Linear);
     stored.condition_type = static_cast<ConditionType>(4);
@@ -648,8 +1028,9 @@ TEST(CondM08_UnsupportedType, ASaveRewritesTheTypeWithTheMetricDefaultsInAMetric
     const ConditionChanges changes = save_changes(stored, form, true);
     CHECK(changes.has(ConditionField::ConditionType));
     CHECK(changes.values.condition_type == ConditionType::Linear);
-    CHECK_EQ(changes.values.spacing, 3.937007874015748); // 100 mm
-    CHECK(changes.has(ConditionField::Spacing));
+    CHECK_EQ(condition_to_save(stored, form, true).spacing, 2.5);
+    CHECK(changes.has(ConditionField::Spacing)); // the type is rewritten: the Spacing field is written although equal to the stored 2.5
+    CHECK_EQ(changes.values.spacing, 2.5);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

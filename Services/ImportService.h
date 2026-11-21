@@ -92,10 +92,13 @@ extern NSNotificationName const OSTRenderConfigChangedNotification;
 
 // Windows update_condition: writes only the fields in `changes`, scoped to the bid (the condition and any new layer / folder must belong to
 // it). NO, nothing written, when that is refused or a statement fails; an empty change set is a success without a write (COND-UPD-02,
-// COND-M05).
+// COND-M05). *errorText (errorText may be NULL) is the Windows text when a renumber would push another condition past the highest
+// condition number, 2147483647 (DLG-FINITE-01: nothing is written then, the other fields of the save included), and nil for every other
+// failure (the caller shows the generic text) and on success.
 + (BOOL)updateConditionWithUID:(NSString *)conditionUID
                          inBid:(NSString *)bidUID
-                       changes:(const ost_domain::ConditionChanges &)changes;
+                       changes:(const ost_domain::ConditionChanges &)changes
+                         error:(NSString **)errorText;
 
 + (NSString *)duplicateCondition:(NSString *)conditionUID
                            inBid:(NSString *)bidUID;

@@ -1,13 +1,19 @@
-// COND-ELEV-01 (decision of 2026-11-19, a deliberate deviation from the literal Windows save): after a Save of the Edit Condition
+// COND-ELEV-01 (decision of 2026-11-19; plain parity with Windows since b9902e6, kept as a pin): after a Save of the Edit Condition
 // dialog the in-memory condition gets is_top and z_value DERIVED FROM THE SAVED NAME with the derivation the loader uses, so
 // that memory equals what a reload shows. Before, condition_to_save copied what the dialog held (is_top from the Top / Bottom
 // segment, z from the elevation text): Top is the default segment, so a condition without an elevation was is_top = true in
-// memory and false / 0.0 after a reload, and the loader grammar does not read a metric text such as "3200" (it gives 0.0 / false
-// while the dialog's z is 125.98...), so the 3D position of the condition differed until the bid was reopened.
+// memory and false / 0.0 after a reload, and the dialog validated the elevation with display_to_inches, which reads texts the
+// loader grammar does not ("3200" in a metric bid, "10' 6.3\"": z 125.98 / 126.3 in the dialog, 0.0 / false after a reload), so the
+// 3D position of the condition differed until the bid was reopened.
+// Since Windows b9902e6 the dialog validates the elevation with the loader's own parser (elevation_text_inches: see
+// test_condition_elevation_dialog.cpp), so a text it accepts already has the number a reload gives. The derivation stays: a blank
+// elevation with the Top segment is is_top = true in the form but false after a reload (Windows reloads after the Save anyway), and
+// a name can be typed whole into the Name field, whatever it contains.
 //
-// Windows: infrastructure/parsers/position_parser.py:108-129 extract_z_value_from_name, read by
-// infrastructure/mdb/components/bid_data_reader.py:896-906 (an unreadable name, a ValueError, stores (0.0, False));
-// presentation/dialogs/edit_condition_dialog.py:1427-1441 puts the dialog's is_top / z_value into the DTO, but
+// Windows: infrastructure/parsers/position_parser.py:23-33 extract_z_value_from_name (= parse_elevation + elevation_text_inches,
+// domain/services/elevation_text.py:131-144), read by infrastructure/mdb/components/bid_data_reader.py:896-906 (an unreadable
+// name, a ValueError, stores (0.0, False));
+// presentation/dialogs/edit_condition_dialog.py:1423-1457 puts the dialog's is_top / z_value into the DTO, but
 // infrastructure/mdb/components/condition_operations.py update_condition writes only the Name column (is_top and z_value are no
 // columns) and Windows shows the reloaded condition. Every expected value below was computed by running the Windows
 // extract_z_value_from_name (Python 3.11.4, python -B) on the name, or is a row of the Windows oracle table
@@ -46,7 +52,7 @@ namespace
         {"Wall @T 12' 6 1/2\"", 150.5, true, "feet, inches and a fraction at the top"},
         {"Wall @B 5' 0\"", 60.0, false, "bottom"},
         {"Wall @ 12' 0\"", 144.0, false, "the legacy bare marker is a bottom"},
-        {"Wall @T 3200", 0.0, false, "a metric bid's text: the loader grammar needs a unit, the dialog's z is 125.98..."},
+        {"Wall @T 3200", 0.0, false, "a bare number: the loader grammar needs a unit (the dialog refuses it: only typed whole into the Name)"},
         {"Wall @B 3200", 0.0, false, "the same at the bottom"},
         {"Wall @T 3200 mm", 0.0, false, "a unit the grammar does not know"},
         {"Wall @T 3.2 m", 125.98425196850394, true, "metres"},
@@ -56,8 +62,8 @@ namespace
         {"Wall @T 1/0\"", 0.0, false, "the same at the top: not is_top"},
         {"Wall @T abc", 0.0, false, "text outside the grammar"},
         {"Wall @T", 0.0, false, "a marker without a value"},
-        {"Wall @T 10'6", 120.0, true, "the loader reads 120.0, the dialog's display_to_inches gives 126.0"},
-        {"Wall @T 10' 6.3\"", 0.0, false, "the loader grammar has no decimal inches (the dialog's z is 126.3)"},
+        {"Wall @T 10'6", 120.0, true, "feet only, 120.0: the dialog reads it the same way since b9902e6 (display_to_inches gave 126.0)"},
+        {"Wall @T 10' 6.3\"", 0.0, false, "the loader grammar has no decimal inches (the dialog refuses it; display_to_inches gave 126.3)"},
         {"Wall @B 1' 2 3/4\"", 14.75, false, "a mixed fraction"},
         {"Wall @T -3 1/2\"", -3.5, true, "a negative elevation"},
         {"Wall @T 5'x", 60.0, true, "trailing text after feet"},
@@ -75,11 +81,11 @@ namespace
         return c;
     }
 
-    // The form the dialog built for a condition named `name` before this decision (_validateAndCollectTextFields): is_top from
-    // the Top / Bottom segment (parse_elevation: no suffix is Top, the default segment), z from the elevation text. true when the
-    // name came from the elevation controls. false when the dialog would refuse that elevation text: the name is then taken as
-    // typed whole into the Name field with an empty elevation (Top segment, z 0.0); every name can be reached that way, because a
-    // base name may itself contain " @T 5' 0\"".
+    // The form the dialog builds for a condition named `name` (_validateAndCollectTextFields): is_top from the Top / Bottom
+    // segment (parse_elevation: no suffix is Top, the default segment), z from the elevation text (parse_elevation_z, which reads it
+    // with the loader's parser). true when the name came from the elevation controls. false when the dialog refuses that elevation
+    // text (one the loader cannot read): the name is then taken as typed whole into the Name field with an empty elevation (Top
+    // segment, z 0.0); every name can be reached that way, because a base name may itself contain " @T 5' 0\"".
     bool dialog_form(const Condition &stored, const std::string &name, bool metric, Condition &form)
     {
         const ost_domain::ElevationParts parts = ost_domain::parse_elevation(name);
@@ -197,7 +203,7 @@ TEST(CondElev01_SaveDerivesFromName, StaleStoredValuesAreReplacedAndNoFieldIsWri
     CHECK(ost_domain::collect_condition_changes(stored, ost_domain::condition_to_save(stored, stored, true)).empty());
 }
 
-// The result does not depend on the style: a style change (which also writes the type defaults) derives from the name as well.
+// The result does not depend on the style: a style change (which also writes the table's thickness of a Count and the backout) derives from the name as well.
 TEST(CondElev01_SaveDerivesFromName, AStyleChangeDerivesFromTheNameToo)
 {
     const Condition stored = stored_condition("Pier @B 4' 6\"");
@@ -324,9 +330,11 @@ TEST(CondElev01_ReloadParity, TheSavedInMemoryConditionEqualsTheReloadedOne)
         in_memory[i] = ost_domain::condition_to_save(stored, form, metric);
         REQUIRE(ost_store::update_condition(db.path(), bid_of(i), uid_of(i), ost_domain::collect_condition_changes(stored, in_memory[i])));
     }
-    // both ways to reach a name are in the table: the elevation controls (a suffix the dialog accepts) and a name typed whole
+    // both ways to reach a name are in the table: the elevation controls (a suffix the dialog accepts, i.e. one the loader reads:
+    // 93 of the 261 names since b9902e6, measured; it was 28 while the dialog validated with display_to_inches) and a name typed
+    // whole into the Name field (168; 233 before)
     CHECK(names.size() > 250);
-    CHECK(from_elevation_controls > 20);
+    CHECK(from_elevation_controls > 60);
     CHECK(names.size() - from_elevation_controls > 150);
 
     const ost_data::ProjectData imperial = ost_store::load_project(db.path(), "1");

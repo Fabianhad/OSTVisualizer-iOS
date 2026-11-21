@@ -4,14 +4,18 @@
 // unit of measure), extracted from _applyStyleDefaults: in EditConditionViewController.mm (imperial only there).
 //
 // Windows source of truth: ost_visualizer/presentation/dialogs/edit_condition_dialog.py
-//   TYPE_DEFAULTS (:90-143)               "spacing" / "spacing_metric", "thickness" / "thickness_metric", "uom1" / "uom1_metric"
-//   _DEFAULT_COUNT_WIDTH_IN / _MM (:144-145)
+//   TYPE_DEFAULTS (:94-147)               "spacing" / "spacing_metric", "thickness" / "thickness_metric", "uom1" / "uom1_metric"
+//   _DEFAULT_COUNT_WIDTH_IN / _MM (:148-149)
 //   _populate_defaults_for_type (:1241-1252)
 //     metric:   spacing = mm_to_inches(spacing_metric), thickness = mm_to_inches(thickness_metric),
 //               width = mm_to_inches(300.0), uom1 = uom1_metric
 //     imperial: spacing, thickness, width = 12.0, uom1 straight from the table
 // A style that is not in TYPE_DEFAULTS (the Windows table miss, td = {}) gets spacing 4.0 / 100 mm, thickness 4.0 / 100 mm,
 // uom1 0. The metric flag of a dialog is (bid.measure_base == 1).
+// The spacing mirrors the table, but a style change does not use it: Windows only puts it into the Spacing field when the dialog is
+// first populated (previous_type None, :1278-1280) and a Save writes the field, never the table value (COND-STYLE-02); the
+// thickness is what a style change shows in the Thickness field (_type_default_thickness, :1236-1239) and what a Count / Attachment
+// type change saves.
 #pragma once
 
 #include "DimensionFormat.hpp"

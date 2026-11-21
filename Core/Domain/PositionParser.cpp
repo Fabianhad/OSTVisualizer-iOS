@@ -440,7 +440,7 @@ namespace ost_domain
         // leftmost match, greedy quantifiers, ordered alternation, Unicode \s \d \b, optional IGNORECASE.
         // Supported syntax: literals, \s \d \b ^, [..] sets (no ranges), (..) (?:..) (?P<name>..), |, ? * +,
         // and \<punctuation> escapes. The pattern strings are copied verbatim from Windows (UTF-8 source; the
-        // prime U+2032 appears as the literal character, exactly as in position_parser.py / elevation_text.py).
+        // prime U+2032 appears as the literal character, exactly as in elevation_text.py).
         // -----------------------------------------------------------------------------------------------------
 
         struct Span
@@ -815,7 +815,7 @@ namespace ost_domain
         };
 
         // -----------------------------------------------------------------------------------------------------
-        // The Windows patterns (elevation_text.py and position_parser.py), copied verbatim
+        // The Windows patterns (elevation_text.py; position_parser.py only imports them since b9902e6), copied verbatim
         // -----------------------------------------------------------------------------------------------------
 
         // elevation_text.py (re.IGNORECASE, used with .match: anchored prefix)
@@ -850,7 +850,7 @@ namespace ost_domain
             return re;
         }
 
-        // position_parser.py::_parse_imperial_elevation (re.search, case-sensitive). Groups: 1 feet, 2 inches.
+        // elevation_text.py::_parse_imperial_elevation (:83-106; re.search, case-sensitive). Groups: 1 feet, 2 inches.
         const Regex &imperial_feet_inches()
         {
             static const Regex re(
@@ -868,7 +868,7 @@ namespace ost_domain
             return re;
         }
 
-        // position_parser.py::_parse_metric_elevation (re.search on the lower-cased text, case-sensitive)
+        // elevation_text.py::_parse_metric_elevation (:109-128; re.search on the lower-cased text, case-sensitive)
         const Regex &metric_m_plus_cm()
         {
             static const Regex re(R"re((-?\s*\d+(?:\.\d+)?)\s*m\s*(?:and|\+)?\s*(-?\s*\d+(?:\.\d+)?)\s*cm)re", false);
@@ -1023,7 +1023,7 @@ namespace ost_domain
             set_error(error, "could not convert string to float: '" + encode_utf8(text) + "'");
         }
 
-        // position_parser.py::_fraction_value
+        // elevation_text.py::_fraction_value (:44-51)
         bool fraction_value(const u32 &numerator_text, const u32 &denominator_text, double &out, std::string *error)
         {
             double numerator = 0.0, denominator = 0.0;
@@ -1565,8 +1565,36 @@ namespace ost_domain
         return cm / 2.54;
     }
 
+    ElevationTextStatus elevation_text_inches(const std::string &text, double &inches, std::string *error)
+    {
+        // elevation_text.py:131-144
+        const u32 elevation_text = strip(decode_utf8(text));
+        if (!is_elevation_u32(elevation_text))
+            return ElevationTextStatus::NotAnElevation;
+        const bool has_imperial = contains(elevation_text, U'\'') || contains(elevation_text, 0x2032) ||
+                                  contains(elevation_text, U'"');
+        // "m" in lowered or "cm" in lowered (the second test is implied by the first)
+        const bool has_metric = contains(py_lower(elevation_text), U'm');
+        if (has_imperial && !has_metric)
+        {
+            double value = 0.0;
+            if (!parse_imperial_u32(elevation_text, value, error))
+                return ElevationTextStatus::Raises;
+            inches = value;
+            return ElevationTextStatus::Value;
+        }
+        if (has_metric && !has_imperial)
+        {
+            inches = cm_to_inches(parse_metric_u32(elevation_text));
+            return ElevationTextStatus::Value;
+        }
+        return ElevationTextStatus::NotAnElevation; // units of both systems in one text
+    }
+
     bool extract_z_value_from_name(const std::string &name, double &z_inches, bool &is_top, std::string *error)
     {
+        // position_parser.py:23-33: parse_elevation, then elevation_text_inches of the value; None is (0.0, False), an exception
+        // propagates (here: false)
         z_inches = 0.0;
         is_top = false;
         if (name.empty() || name.find('@') == std::string::npos)
@@ -1574,28 +1602,17 @@ namespace ost_domain
         const ElevationParts parts = parse_elevation(name);
         if (parts.value.empty())
             return true;
-        const u32 elevation_text = strip(decode_utf8(parts.value));
-        if (!is_elevation_u32(elevation_text))
-            return true;
-        const bool top = (parts.type == 0);
-        const bool has_imperial = contains(elevation_text, U'\'') || contains(elevation_text, 0x2032) ||
-                                  contains(elevation_text, U'"');
-        // "m" in lowered or "cm" in lowered (the second test is implied by the first)
-        const bool has_metric = contains(py_lower(elevation_text), U'm');
-        if (has_imperial && !has_metric)
+        double inches = 0.0;
+        switch (elevation_text_inches(parts.value, inches, error))
         {
-            double inches = 0.0;
-            if (!parse_imperial_u32(elevation_text, inches, error))
-                return false;
+        case ElevationTextStatus::Value:
             z_inches = inches;
-            is_top = top;
+            is_top = (parts.type == 0);
             return true;
-        }
-        if (has_metric && !has_imperial)
-        {
-            z_inches = cm_to_inches(parse_metric_u32(elevation_text));
-            is_top = top;
-            return true;
+        case ElevationTextStatus::Raises:
+            return false;
+        case ElevationTextStatus::NotAnElevation:
+            break;
         }
         return true;
     }

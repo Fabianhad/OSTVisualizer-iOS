@@ -165,7 +165,7 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
     field.font = [UIFont systemFontOfSize:16];
     field.textAlignment = NSTextAlignmentRight;
     field.textColor = [UIColor secondaryLabelColor];
-    field.placeholder = _metric ? @"e.g. 3200" : @"e.g. 10' 6\"";
+    field.placeholder = [NSString stringWithUTF8String:ost_domain::elevation_placeholder(_metric).c_str()];
     field.tag = kTagElevVal;
     field.delegate = self;
     field.returnKeyType = UIReturnKeyDone;

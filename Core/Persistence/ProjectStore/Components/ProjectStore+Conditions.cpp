@@ -1,5 +1,6 @@
 // ProjectStore component — condition CRUD and render config.
 #include "../ProjectStore_Internal.hpp"
+#include "../../../Domain/ConditionFormRules.hpp"
 
 #include <array>
 #include <cctype>
@@ -114,48 +115,78 @@ namespace ost_store
             return true;
         }
 
+        // How the reference-number shift of an update ended: Failed is any statement problem (the caller rolls back and
+        // reports the generic failure), Overflow is Windows' ConditionNumberOverflowError (the caller rolls back and reports
+        // its text).
+        enum class RefShift
+        {
+            Done,
+            Failed,
+            Overflow
+        };
+
         // Windows _shift_conflicting_ref_nos_for_update: when the condition's number really changes and another
         // condition of the bid already holds the new number, every condition of the bid from that number up (except this
-        // one) moves up by one. A stored RefNo of NULL counts as "not the new number" (Windows would raise on it).
-        bool shift_conflicting_ref_nos(ost_db::OstDatabase &db, long long bid_uid, long long condition_uid,
-                                       long long new_ref_no)
+        // one) moves up by one. A stored RefNo of NULL is "different from the new number" (b9902e6; before it Windows
+        // raised on it, COND-UPD-02): the conflict check runs as for any number, and a row without a number is never
+        // shifted (NULL >= n is not true, NULL + 1 stays NULL). Before the shift, MAX(RefNo) of the rows it would move
+        // (the bid's rows from the new number up, this condition excluded) must be below the highest condition number,
+        // else the shift would carry that row past it: Overflow, nothing written (DLG-FINITE-01). The MAX of no row, or of
+        // rows without a number, is NULL: no overflow.
+        RefShift shift_conflicting_ref_nos(ost_db::OstDatabase &db, long long bid_uid, long long condition_uid,
+                                           long long new_ref_no)
         {
             if (!db.column_exists("BidConditions", "RefNo"))
-                return false;
+                return RefShift::Failed;
             {
                 ost_db::Statement stmt = db.prepare("SELECT [RefNo] FROM [BidConditions] WHERE [UID] = ? AND [BidUID] = ?");
                 if (!stmt.valid())
-                    return false;
+                    return RefShift::Failed;
                 stmt.bind_int64(1, condition_uid);
                 stmt.bind_int64(2, bid_uid);
                 if (!stmt.step())
-                    return !stmt.failed(); // no such row: nothing to shift
+                    return stmt.failed() ? RefShift::Failed : RefShift::Done; // no such row: nothing to shift
                 if (stmt.column_type(0) != ost_db::Statement::TypeNull && stmt.column_int64(0) == new_ref_no)
-                    return true;
+                    return RefShift::Done;
             }
             bool taken = false;
             {
                 ost_db::Statement stmt = db.prepare(
                     "SELECT [UID] FROM [BidConditions] WHERE [BidUID] = ? AND [RefNo] = ? AND [UID] <> ?");
                 if (!stmt.valid())
-                    return false;
+                    return RefShift::Failed;
                 stmt.bind_int64(1, bid_uid);
                 stmt.bind_int64(2, new_ref_no);
                 stmt.bind_int64(3, condition_uid);
                 taken = stmt.step();
                 if (stmt.failed())
-                    return false;
+                    return RefShift::Failed;
             }
             if (!taken)
-                return true;
+                return RefShift::Done;
+            {
+                ost_db::Statement stmt = db.prepare(
+                    "SELECT MAX([RefNo]) FROM [BidConditions] WHERE [BidUID] = ? AND [RefNo] >= ? AND [UID] <> ?");
+                if (!stmt.valid())
+                    return RefShift::Failed;
+                stmt.bind_int64(1, bid_uid);
+                stmt.bind_int64(2, new_ref_no);
+                stmt.bind_int64(3, condition_uid);
+                const ost_db::StepResult result = stmt.step_result();
+                if (result == ost_db::StepResult::Error)
+                    return RefShift::Failed;
+                if (result == ost_db::StepResult::Row && stmt.column_type(0) != ost_db::Statement::TypeNull &&
+                    stmt.column_int64(0) >= ost_domain::kMaxConditionNumber)
+                    return RefShift::Overflow;
+            }
             ost_db::Statement stmt = db.prepare(
                 "UPDATE [BidConditions] SET [RefNo] = [RefNo] + 1 WHERE [BidUID] = ? AND [RefNo] >= ? AND [UID] <> ?");
             if (!stmt.valid())
-                return false;
+                return RefShift::Failed;
             stmt.bind_int64(1, bid_uid);
             stmt.bind_int64(2, new_ref_no);
             stmt.bind_int64(3, condition_uid);
-            return stmt.run();
+            return stmt.run() ? RefShift::Done : RefShift::Failed;
         }
 
         // new_ost_guid (Windows _new_ost_guid) lives in ProjectStore_Internal.hpp: the takeoff restore needs it as well.
@@ -167,11 +198,14 @@ namespace ost_store
     bool update_condition(const std::string &db_path,
                           const std::string &bid_uid,
                           const std::string &condition_uid,
-                          const ost_domain::ConditionChanges &changes)
+                          const ost_domain::ConditionChanges &changes,
+                          std::string *error)
     {
         using ost_domain::ConditionField;
         using ost_db::Statement;
 
+        if (error)
+            error->clear();
         // `if not changes: return True`, before the database is even opened.
         if (changes.empty())
             return true;
@@ -306,8 +340,22 @@ namespace ost_store
         if (folder_id && !require_bid_scoped_uid(db, "BidConditionFolders", *folder_id, bid_int))
             return fail();
 
-        if (changes.has(ConditionField::RefNo) && !shift_conflicting_ref_nos(db, bid_int, condition_int, v.ref_no))
-            return fail();
+        // The shift runs before the UPDATE of the columns, in the same transaction: an overflow rolls back everything, the other
+        // fields of the same save included (Windows raises ConditionNumberOverflowError before _execute_update_values).
+        if (changes.has(ConditionField::RefNo))
+        {
+            switch (shift_conflicting_ref_nos(db, bid_int, condition_int, v.ref_no))
+            {
+            case RefShift::Done:
+                break;
+            case RefShift::Overflow:
+                if (error)
+                    *error = ost_domain::condition_number_overflow_message(v.ref_no);
+                return fail();
+            case RefShift::Failed:
+                return fail();
+            }
+        }
 
         // A column the schema lacks is skipped (Windows _filter_existing_write_values); with none left there is nothing
         // to write, which Windows reports as an unsupported schema.

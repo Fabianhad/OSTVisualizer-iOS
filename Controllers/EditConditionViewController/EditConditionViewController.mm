@@ -362,20 +362,23 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   auto storedIt = _conditionsMap.find(_condition.uid);
   const ost_domain::Condition stored =
       (storedIt != _conditionsMap.end()) ? storedIt->second : _condition;
-  const ost_domain::Condition toSave =
-      ost_domain::condition_to_save(stored, _condition, _metric);
+  // Core builds the whole save: the condition to store is changes.values, the fields are those that differ from the stored condition
+  // plus, on a style change, Spacing / Thickness / Backout even when equal (COND-STYLE-02).
   const ost_domain::ConditionChanges changes =
-      ost_domain::collect_condition_changes(stored, toSave);
+      ost_domain::condition_changes_for_save(stored, _condition, _metric);
+  const ost_domain::Condition toSave = changes.values;
   if (changes.empty()) {
     // an empty change set is a success without a write
     [self _markFormSaved];
     return YES;
   }
 
+  NSString *failureMessage = nil;
   if (_delegate && ![_delegate editConditionViewController:self
                                           didSaveCondition:toSave
-                                                   changes:changes]) {
-    [self _showSaveFailedAlert];
+                                                   changes:changes
+                                            failureMessage:&failureMessage]) {
+    [self _showSaveFailedAlertWithMessage:failureMessage];
     return NO;
   }
 
@@ -391,8 +394,11 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   return YES;
 }
 
-- (void)_showSaveFailedAlert {
-  const ost_domain::FormIssue issue = ost_domain::condition_save_failed_issue();
+// "Save Failed" with the reason the store gave (the Windows text of a renumber that would push another condition past the highest
+// condition number, DLG-FINITE-01), or the generic text when it gave none (COND-UPD-03); Core picks (condition_save_failed_issue).
+- (void)_showSaveFailedAlertWithMessage:(NSString *)message {
+  const ost_domain::FormIssue issue =
+      ost_domain::condition_save_failed_issue(OSTStdString(message));
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:OSTString(issue.title)
                        message:OSTString(issue.message)
@@ -581,9 +587,11 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     return [self _refuseWithIssue:*issue focusTag:kTagName];
   }
 
-  // The elevation text is kept as typed: it becomes the suffix of the name (COND-ELEV-01). A text that is no finite number is refused,
-  // like Windows, but the saved condition does not take is_top or z from the form: condition_to_save derives both from the saved
-  // NAME like a reload does (decided 2026-11-19), so the number checked here is not stored anywhere.
+  // The elevation text is kept as typed: it becomes the suffix of the name (COND-ELEV-01). It is validated with the loader's own
+  // parser (parse_elevation_z calls elevation_text_inches, Windows b9902e6): a text the loader cannot read (a bare number, mm, units
+  // of both systems, "5'" alone, a zero denominator) is refused with the forms that are accepted, like Windows. The saved condition
+  // does not take is_top or z from the form: condition_to_save derives both from the saved NAME like a reload does (decided
+  // 2026-11-19); for a text that passed, the number checked here is the one that derivation gives, so memory equals a reload.
   const std::string elevValue = ost_import::text_rules::py_strip(
       OSTStdString([self _cachedTextForTag:kTagElevVal]));
   const int elevType =

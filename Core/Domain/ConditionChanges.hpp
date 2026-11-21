@@ -7,6 +7,7 @@
 // writes exactly the columns of the fields in the DTO (condition_operations.py update_condition/_FIELD_TO_COLUMN).
 #pragma once
 #include "Condition.hpp"
+#include "ConditionFormRules.hpp"
 #include <bitset>
 #include <cstddef>
 #include <string>
@@ -149,21 +150,30 @@ namespace ost_domain
     // number (Windows _shift_conflicting_ref_nos_for_update): when the number really changes and another condition already
     // holds it, every other condition from that number up moves up by one. Call it BEFORE the edited condition is stored
     // back into `conditions`, and only after the database update succeeded.
-    inline void shift_conflicting_ref_nos(std::unordered_map<std::string, Condition> &conditions,
+    // Like the store (DLG-FINITE-01) it refuses a shift that would carry a condition past kMaxConditionNumber: it then changes
+    // nothing and returns false (the store has refused the same renumber, so after a successful update this never happens; it
+    // keeps an int from overflowing on a map that has drifted from the database). A number that is free, a number the condition
+    // already holds and a condition that is not in the map are not refusals: true. A condition without a number reads as 0
+    // (NULL in the file) and is never shifted, because the new number is at least 1.
+    inline bool shift_conflicting_ref_nos(std::unordered_map<std::string, Condition> &conditions,
                                           const std::string &condition_uid, int new_ref_no)
     {
         auto current = conditions.find(condition_uid);
         if (current == conditions.end() || current->second.ref_no == new_ref_no)
-            return;
+            return true;
         bool taken = false;
         for (const auto &pair : conditions)
             if (pair.first != condition_uid && pair.second.ref_no == new_ref_no)
                 taken = true;
         if (!taken)
-            return;
+            return true;
+        for (const auto &pair : conditions)
+            if (pair.first != condition_uid && pair.second.ref_no >= new_ref_no && pair.second.ref_no >= kMaxConditionNumber)
+                return false;
         for (auto &pair : conditions)
             if (pair.first != condition_uid && pair.second.ref_no >= new_ref_no)
                 pair.second.ref_no += 1;
+        return true;
     }
 
 }

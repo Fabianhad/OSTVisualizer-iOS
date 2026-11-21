@@ -157,13 +157,16 @@
 
 - (BOOL)editConditionViewController:(EditConditionViewController *)vc
                    didSaveCondition:(const ost_domain::Condition &)condition
-                            changes:(const ost_domain::ConditionChanges &)changes {
+                            changes:(const ost_domain::ConditionChanges &)changes
+                     failureMessage:(NSString **)failureMessage {
   // The write comes first and writes only the changed fields, together with the shift of the neighbours' numbers when the number
-  // is taken (COND-UPD-02). When it fails nothing in memory changes and the dialog says so (COND-UPD-03).
+  // is taken (COND-UPD-02). When it fails nothing in memory changes and the dialog says so (COND-UPD-03), with the store's text when
+  // it gave one: a renumber that would push another condition past the highest condition number (DLG-FINITE-01).
   NSString *conditionUID = [NSString stringWithUTF8String:condition.uid.c_str()];
   if (![ImportService updateConditionWithUID:conditionUID
                                        inBid:self.bidUID
-                                     changes:changes])
+                                     changes:changes
+                                       error:failureMessage])
     return NO;
 
   ost_data::ProjectData &project = self.projectService.mutableProject;

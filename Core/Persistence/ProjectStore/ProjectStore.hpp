@@ -226,10 +226,16 @@ namespace ost_store
     // Returns false and writes nothing when the condition is not one of the bid's, when a new layer / folder does not
     // belong to the bid, when a uid is not a number, or when any statement fails. An empty change set is a success
     // without touching the database.
+    // A renumber whose shift would carry another condition of the bid past the highest condition number (the numbers
+    // from the new one up move up by one, and one of them is already 2147483647) fails before anything is written, the
+    // other fields of the same save included (Windows ConditionNumberOverflowError, DLG-FINITE-01): `error`, when given,
+    // is then ost_domain::condition_number_overflow_message(new number). Every other failure leaves `error` empty (the
+    // caller shows the generic text), and so does a success.
     bool update_condition(const std::string &db_path,
                           const std::string &bid_uid,
                           const std::string &condition_uid,
-                          const ost_domain::ConditionChanges &changes);
+                          const ost_domain::ConditionChanges &changes,
+                          std::string *error = nullptr);
 
     bool shift_condition_ref_nos(const std::string &db_path,
                                  const std::string &bid_uid,

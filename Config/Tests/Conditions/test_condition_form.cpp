@@ -1,8 +1,9 @@
 // The field rules of the Edit Condition dialog (ConditionFormRules.hpp): COND-REF-01 (condition number is validated, not
-// coerced), COND-VAL-01 (Display Size and plain numbers), DLG-RISE-01 (Area rise / run are absolute), UI-MSG-01 (alert
-// wording), COND-ELEV-01 (the elevation text is kept verbatim and validated; the saved z / is_top come from the name:
-// test_condition_elevation.cpp), COND-TRIM-01 (Trim and Curved Segment exclude
-// each other), COL-PICK-01 (the colour writes ColorFill only).
+// coerced), DLG-FINITE-01 (the condition number is capped at 2147483647 with a message of its own, and the save-failed alert
+// carries the store's reason), COND-VAL-01 (Display Size and plain numbers), DLG-RISE-01 (Area rise / run are absolute), UI-MSG-01
+// (alert wording), COND-ELEV-01 (the elevation text is kept verbatim and validated with the loader's parser, elevation_text_inches; the
+// saved z / is_top come from the name: test_condition_elevation_dialog.cpp, test_condition_elevation.cpp), COND-TRIM-01 (Trim
+// and Curved Segment exclude each other), COL-PICK-01 (the colour writes ColorFill only).
 //
 // Windows oracle: ost_visualizer/presentation/dialogs/edit_condition_dialog.py (_validate_and_build_dto, _parse_dimension_field,
 // _on_color_changed, _sync_linear_trim_curved_state) with tests/presentation/dialogs/test_edit_condition_dialog.py. Python
@@ -22,6 +23,7 @@ using namespace ost_domain;
 namespace
 {
     constexpr const char *kRefNoMessage = "Condition number must be a positive whole number.";
+    constexpr const char *kRangeMessage = "Condition number must be between 1 and 2147483647.";
 
     // text -> the alert it is refused with, or "" when it is accepted
     std::string ref_no_issue(const std::string &text, int &value)
@@ -90,13 +92,89 @@ TEST(CondRef01_ConditionNumber, TheC0SeparatorsAroundANumberAreStrippedLikePytho
     CHECK_EQ(value, 4711);
 }
 
-// A number beyond the int range of a Condition cannot be stored: refused with the same alert (Windows would accept it up to
-// the 64 bit range of the database column).
-TEST(CondRef01_ConditionNumber, ANumberBeyondTheStorableRangeIsRefused)
+// A number above the highest condition number cannot be stored (an Access Long, a Condition's int): refused with the RANGE message,
+// not the 'positive whole number' one (DLG-FINITE-01, Windows b9902e6). Was ANumberBeyondTheStorableRangeIsRefused, which pinned
+// the old message for 2147483648 and 99999999999999999999 and the wrong premise that Windows accepts up to 64 bits.
+// Port of tests/presentation/dialogs/test_edit_condition_dialog.py::test_edit_condition_caps_the_condition_number_at_the_access_limit
+// ('2147483648' and ' 99999999999999999999 '); the other rows are iOS cases of the same refusal (a number that parses as 64 bit, a sign,
+// underscores, Unicode digits, leading zeros, the largest and the first too large 64 bit number).
+TEST(CondRef01_ConditionNumber, ANumberAboveTheHighestConditionNumberIsRefusedWithTheRangeMessage)
 {
-    int value = 0;
-    CHECK_STR_EQ(ref_no_issue("2147483648", value), kRefNoMessage);
-    CHECK_STR_EQ(ref_no_issue("99999999999999999999", value), kRefNoMessage);
+    const char *texts[] = {"2147483648",
+                           " 99999999999999999999 ",
+                           "99999999999",
+                           "+2147483648",
+                           "2_147_483_648",
+                           "0002147483648",
+                           "9223372036854775807",
+                           "9223372036854775808",
+                           "\xD9\xA2\xD9\xA1\xD9\xA4\xD9\xA7\xD9\xA4\xD9\xA8\xD9\xA3\xD9\xA6\xD9\xA4\xD9\xA8"}; // ARABIC-INDIC 2147483648
+    for (const char *text : texts)
+    {
+        SCOPED_CONTEXT(std::string("text '") + text + "'");
+        int value = 4711;
+        CHECK_STR_EQ(ref_no_issue(text, value), kRangeMessage);
+        CHECK_EQ(value, 4711); // untouched on a refusal
+    }
+}
+
+// The order of Windows' checks: text that is not a whole number and a value below 1 come first, so a NEGATIVE number, however
+// large, keeps the 'positive whole number' message; only a number above the highest condition number gets the range message.
+// (-99999999999999999999 and -9223372036854775809 do not fit in 64 bits: the parser reports an overflow without a sign.)
+TEST(DlgFinite01_ConditionNumber, ANegativeNumberKeepsThePositiveWholeNumberMessageHoweverLarge)
+{
+    const char *texts[] = {"-99999999999999999999", "  -99999999999999999999  ", "-9223372036854775809", "-9223372036854775808",
+                           "-2147483649",           "-2147483648",               "-1",                   "0",
+                           "",                      "   ",                      "abc",                  "1.5",
+                           "-",                     "+",                         "2147483648x",          "- 2147483648"};
+    for (const char *text : texts)
+    {
+        SCOPED_CONTEXT(std::string("text '") + text + "'");
+        int value = 4711;
+        CHECK_STR_EQ(ref_no_issue(text, value), kRefNoMessage);
+        CHECK_EQ(value, 4711);
+    }
+}
+
+// Port of ...::test_edit_condition_caps_the_condition_number_at_the_access_limit (the third part): the highest number itself is
+// accepted and the change set of a condition with number 7 is exactly {ref_no: 2147483647}; so is the number just below it.
+TEST(DlgFinite01_ConditionNumber, TheHighestConditionNumberIsAcceptedAndIsTheOnlyChange)
+{
+    Condition stored;
+    stored.uid = "1";
+    stored.name = "Condition 1";
+    stored.condition_type = ConditionType::Linear;
+    stored.ref_no = 7;
+    stored.is_top = true;
+    stored.uom1 = stored.uom2 = stored.uom3 = -1;
+
+    for (const char *text : {"2147483647", " 2147483647 ", "2_147_483_647"})
+    {
+        SCOPED_CONTEXT(std::string("text '") + text + "'");
+        Condition form = stored;
+        int ref_no = 0;
+        CHECK_FALSE(parse_condition_number(text, ref_no).has_value());
+        CHECK_EQ(ref_no, 2147483647);
+        form.ref_no = ref_no;
+        const ConditionChanges changes = collect_condition_changes(stored, condition_to_save(stored, form, false));
+        CHECK(changes.has(ConditionField::RefNo));
+        CHECK_EQ(changes.fields.count(), 1u);
+        CHECK_EQ(changes.values.ref_no, 2147483647);
+    }
+    int below = 0;
+    CHECK_FALSE(parse_condition_number("2147483646", below).has_value());
+    CHECK_EQ(below, 2147483646);
+}
+
+// update_condition_dto.py MAX_CONDITION_NUMBER and the two texts of the field, character for character.
+TEST(DlgFinite01_ConditionNumber, TheLimitAndTheTwoMessagesAreTheWindowsOnes)
+{
+    CHECK_EQ(kMaxConditionNumber, 2147483647);
+    CHECK_EQ(kMaxConditionNumber, std::numeric_limits<int>::max());
+    CHECK_STR_EQ(kConditionNumberPositiveMessage, "Condition number must be a positive whole number.");
+    CHECK_STR_EQ(kConditionNumberRangeMessage, "Condition number must be between 1 and 2147483647.");
+    CHECK_STR_EQ(kConditionNumberRangeMessage,
+                 "Condition number must be between 1 and " + std::to_string(kMaxConditionNumber) + ".");
 }
 
 // With condition ref 7 and the text ' 8 ' the change set is exactly {ref_no: 8}
@@ -264,7 +342,7 @@ TEST(CondVal01_RiseRun, AnEmptyFieldIsZeroAndANumberIsTheNumber)
 // DLG-FINITE-01 (Rise / Run half; decided 2026-11-19: follow Windows)
 // ---------------------------------------------------------------------------------------------------------------------
 
-// edit_condition_dialog.py :1539 / :1551 (Linear) and :1569 / :1581 (Area, abs()): float(self._rise_edit.text() or "0"). The field
+// edit_condition_dialog.py :1562 / :1574 (Linear) and :1592 / :1604 (Area, abs()): float(self._rise_edit.text() or "0"). The field
 // is not stripped and only an EMPTY text is blank, so a text of white space reaches float(). Python 3.11.4 (python -B, builtins):
 // float(t) is a ValueError for ' ', '   ', '\t', '\xa0', '\u2003', '\u3000', ' \n', '\r', '\x0b', '\x0c', '\x1c', '\x1f',
 // '\x85' and '\u2028' (str.strip() removes every one of them, float() has no number left), shown as "Rise must be a number." /
@@ -352,7 +430,7 @@ TEST(DlgFinite01_RiseRun, WhiteSpaceAroundANumberAndTheOtherRefusalsStayAsTheyWe
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Test plan: Area condition with rise text '-3' run '12' -> saved rise 3.0 run 12.0; Linear condition with rise '-3' -> -3.0
-// (edit_condition_dialog.py :1566-1593, abs(float(...)) for every style but Linear).
+// (edit_condition_dialog.py :1585-1614, the branch of every style but Linear: abs(float(...)) at :1592 / :1604).
 TEST(DlgRise01_AreaSlope, AreaRiseAndRunAreAbsoluteLinearKeepsTheSign)
 {
     double area_rise = 0.0, area_run = 0.0, linear_rise = 0.0;
@@ -407,26 +485,40 @@ TEST(Msg01_Dimension, BlankIsZeroAndTextIsTheWindowsParse)
     CHECK(parse_dimension_value("25.4 mm", "Height", false, inches).has_value());
 }
 
-// Port of ...::test_edit_condition_rejects_non_finite_numeric_values ("elevation": '"nan" is not a valid elevation.') and the
-// COND-ELEV-01 test plan: "10'6" -> z 126.0, "10' 6.3\"" -> z 126.3, empty -> 0.0
+// Port of ...::test_edit_condition_rejects_non_finite_numeric_values ("elevation": 'nan' is refused, with the imperial hint since
+// b9902e6) and of the COND-ELEV-01 rule of b9902e6: the text is read with the loader's parser (elevation_text_inches), not with
+// display_to_inches. So "10'6" is feet only, 120.0 (display_to_inches gave 126.0), decimal inches are no elevation (display_to_inches
+// gave 126.3), a bare metric number is refused (it was read as millimetres) and metres are accepted; empty is 0.0, never validated.
+// The whole table, both modes, Top / Bottom and the reload: test_condition_elevation_dialog.cpp.
 TEST(CondElev01_Elevation, TheTextGivesZAndNanIsRefused)
 {
+    const std::string imperial_hint = "Use feet and inches with unit marks, for example 10' 6\".";
+    const std::string metric_hint = "Use metres or centimetres, for example \"3.2 m\" or \"320 cm\".";
+
     double z = -1.0;
     CHECK_FALSE(parse_elevation_z("10'6", false, z).has_value());
-    CHECK_EQ(z, 126.0);
-    CHECK_FALSE(parse_elevation_z("10' 6.3\"", false, z).has_value());
-    CHECK_EQ(z, 126.3);
+    CHECK_EQ(z, 120.0);
+    z = -1.0;
+    const auto decimal_inches = parse_elevation_z("10' 6.3\"", false, z);
+    REQUIRE(decimal_inches.has_value());
+    CHECK_STR_EQ(decimal_inches->title, "Invalid Value");
+    CHECK_STR_EQ(decimal_inches->message, "\"10' 6.3\"\" is not a valid elevation. " + imperial_hint); // the text 10' 6.3" in quotes
+    CHECK_EQ(z, -1.0);
     CHECK_FALSE(parse_elevation_z("", false, z).has_value());
     CHECK_EQ(z, 0.0);
     z = -1.0;
     const auto issue = parse_elevation_z("nan", false, z);
     REQUIRE(issue.has_value());
     CHECK_STR_EQ(issue->title, "Invalid Value");
-    CHECK_STR_EQ(issue->message, "\"nan\" is not a valid elevation.");
+    CHECK_STR_EQ(issue->message, "\"nan\" is not a valid elevation. " + imperial_hint);
     CHECK_EQ(z, -1.0);
-    // a metric bid reads millimetres
-    CHECK_FALSE(parse_elevation_z("3200", true, z).has_value());
-    CHECK_EQ(z, 125.98425196850394);
+    // a metric bid: a bare number is refused with the metric hint (it was millimetres), metres are read
+    const auto bare = parse_elevation_z("3200", true, z);
+    REQUIRE(bare.has_value());
+    CHECK_STR_EQ(bare->message, "\"3200\" is not a valid elevation. " + metric_hint);
+    CHECK_EQ(z, -1.0);
+    CHECK_FALSE(parse_elevation_z("3.2 m", true, z).has_value());
+    CHECK_NEAR(z, 320.0 / 2.54, 1e-9);
 }
 
 TEST(Msg01_Name, AnEmptyNameIsAValidationError)
@@ -449,6 +541,39 @@ TEST(Msg01_SaveFailed, TheWindowsWording)
     const FormIssue issue = condition_save_failed_issue();
     CHECK_STR_EQ(issue.title, "Save Failed");
     CHECK_STR_EQ(issue.message, "Failed to save condition to database.");
+}
+
+// DLG-FINITE-01: the dialog shows result.error under "Save Failed" (edit_condition_dialog.py :1787-1794); the use case's error is the
+// overflow text for a ConditionNumberOverflowError and the generic text for every other failure, so an empty detail is the generic one.
+TEST(DlgFinite01_SaveFailed, ADetailReplacesTheGenericTextUnderTheSameTitle)
+{
+    const FormIssue detailed = condition_save_failed_issue(condition_number_overflow_message(2));
+    CHECK_STR_EQ(detailed.title, "Save Failed");
+    CHECK_STR_EQ(detailed.message,
+                 "Condition number 2 cannot be used: the conditions numbered 2 and up would move up by one, and one of them is "
+                 "already 2147483647, the highest condition number.");
+
+    const FormIssue free_text = condition_save_failed_issue("Some other reason.");
+    CHECK_STR_EQ(free_text.title, "Save Failed");
+    CHECK_STR_EQ(free_text.message, "Some other reason.");
+
+    const FormIssue empty = condition_save_failed_issue(std::string());
+    CHECK_STR_EQ(empty.title, "Save Failed");
+    CHECK_STR_EQ(empty.message, "Failed to save condition to database.");
+}
+
+// condition_operations.py :636-641, with the number of the renumber filled in twice and the limit once (Windows tests: N = 2 and 3).
+TEST(DlgFinite01_SaveFailed, TheOverflowMessageIsTheWindowsTextForTheNumberTyped)
+{
+    CHECK_STR_EQ(condition_number_overflow_message(2),
+                 "Condition number 2 cannot be used: the conditions numbered 2 and up would move up by one, and one of them is "
+                 "already 2147483647, the highest condition number.");
+    CHECK_STR_EQ(condition_number_overflow_message(3),
+                 "Condition number 3 cannot be used: the conditions numbered 3 and up would move up by one, and one of them is "
+                 "already 2147483647, the highest condition number.");
+    CHECK_STR_EQ(condition_number_overflow_message(2147483647),
+                 "Condition number 2147483647 cannot be used: the conditions numbered 2147483647 and up would move up by one, and "
+                 "one of them is already 2147483647, the highest condition number.");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

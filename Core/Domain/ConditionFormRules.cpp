@@ -3,6 +3,7 @@
 
 #include "../Import/TextRules.hpp"
 #include "DimensionFormat.hpp"
+#include "PositionParser.hpp"
 
 #include <algorithm>
 #include <climits>
@@ -50,22 +51,46 @@ namespace ost_domain
             z_inches = 0.0;
             return std::nullopt;
         }
-        const std::optional<double> value = finite_inches(stripped, metric);
-        if (!value)
-            return invalid_value(quoted(stripped) + " is not a valid elevation.");
-        z_inches = *value;
+        // `try: parsed = elevation_text_inches(elev_value) except ValueError: parsed = None`, then `parsed is None or not
+        // isfinite(parsed)`: None, a text that raises and a non-finite number are the same refusal. (Windows lets an OverflowError
+        // through; here every Raises is a refusal.)
+        double inches = 0.0;
+        if (elevation_text_inches(stripped, inches) != ElevationTextStatus::Value || !std::isfinite(inches))
+            return invalid_value(quoted(stripped) + " is not a valid elevation. " +
+                                 (metric ? kElevationHintMetric : kElevationHintImperial));
+        z_inches = inches;
         return std::nullopt;
+    }
+
+    std::string elevation_placeholder(bool metric)
+    {
+        return metric ? "e.g. 3.2 m" : "e.g. 10' 6\"";
     }
 
     std::optional<FormIssue> parse_condition_number(const std::string &text, int &ref_no)
     {
-        // int(ref_no_text) with ref_no_text = text.strip(); ValueError and ref_no < 1 give the same alert. str.strip() removes the
-        // C0 separators U+001C..U+001F too, which int() itself does not accept around a number: strip first, like the dialog.
+        // int(ref_no_text) with ref_no_text = text.strip(), then Windows' three checks in this order (:1465-1490): ValueError and
+        // ref_no < 1 give the same "positive whole number" alert, ref_no > MAX_CONDITION_NUMBER the range alert. str.strip() removes
+        // the C0 separators U+001C..U+001F too, which int() itself does not accept around a number: strip first, like the dialog.
+        using ost_import::text_rules::NumberParse;
+        const std::string stripped = ost_import::text_rules::py_strip(text);
         long long value = 0;
-        const ost_import::text_rules::NumberParse parsed =
-            ost_import::text_rules::py_parse_int(ost_import::text_rules::py_strip(text), value);
-        if (parsed != ost_import::text_rules::NumberParse::Ok || value < 1 || value > INT_MAX)
-            return invalid_value("Condition number must be a positive whole number.");
+        switch (ost_import::text_rules::py_parse_int(stripped, value))
+        {
+        case NumberParse::Ok:
+            break;
+        case NumberParse::Invalid:
+            return invalid_value(kConditionNumberPositiveMessage);
+        case NumberParse::Overflow:
+            // a whole number beyond 64 bits (Python int() has no such limit). The parser reports it without a sign, so the sign
+            // decides which check Windows would have reached first: a negative number is below 1, a positive one above the highest.
+            return invalid_value(!stripped.empty() && stripped.front() == '-' ? kConditionNumberPositiveMessage
+                                                                              : kConditionNumberRangeMessage);
+        }
+        if (value < 1)
+            return invalid_value(kConditionNumberPositiveMessage);
+        if (value > kMaxConditionNumber)
+            return invalid_value(kConditionNumberRangeMessage);
         ref_no = static_cast<int>(value);
         return std::nullopt;
     }
@@ -123,9 +148,18 @@ namespace ost_domain
         return std::nullopt;
     }
 
-    FormIssue condition_save_failed_issue()
+    std::string condition_number_overflow_message(int new_ref_no)
     {
-        return FormIssue{"Save Failed", "Failed to save condition to database."};
+        const std::string number = std::to_string(new_ref_no);
+        return "Condition number " + number + " cannot be used: the conditions numbered " + number +
+               " and up would move up by one, and one of them is already " + std::to_string(kMaxConditionNumber) +
+               ", the highest condition number.";
+    }
+
+    FormIssue condition_save_failed_issue(const std::string &detail)
+    {
+        // `result.error or ...`: an empty error is the generic text
+        return FormIssue{"Save Failed", detail.empty() ? std::string("Failed to save condition to database.") : detail};
     }
 
     void set_trim(Condition &condition, bool on)

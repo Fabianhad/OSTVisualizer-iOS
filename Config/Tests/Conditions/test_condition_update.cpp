@@ -1,12 +1,18 @@
 // COND-UPD-01 (alias DBP-16), COND-UPD-02 (aliases DLG-SAVE-01, COND-M06), COND-UPD-03 and COND-M05 (and, through the
 // shared update transaction, the Core side of COND-M03): saving a condition writes only the columns of the fields that
-// changed, writes NULL for a cleared reference or note, is scoped to the bid, and reports a failed write.
+// changed, writes NULL for a cleared reference or note, is scoped to the bid, and reports a failed write. The last section before
+// the failed-write one is the reference-number shift at the edges of the number line (Windows b9902e6): DLG-FINITE-01 (a renumber
+// whose shift would push another condition past 2147483647 fails before it writes anything and says why) and COND-UPD-02 (a
+// condition without a number is "different from the new number", the normal conflict check runs and such rows are never shifted).
 //
 // Windows: ost_visualizer/infrastructure/mdb/components/condition_operations.py update_condition,
 // application/dtos/update_condition_dto.py, presentation/dialogs/edit_condition_dialog.py _validate_and_build_dto.
 #include "ConditionsTestSupport.hpp"
 
+#include "Domain/ConditionFormRules.hpp"
+
 #include <functional>
+#include <unordered_map>
 
 using ost_ctest::TempDb;
 using ost_domain::Condition;
@@ -765,6 +771,368 @@ TEST(ConditionUpdate, TheInMemoryRefNoShiftIgnoresAnUnknownConditionAndAnUnchang
     CHECK_EQ(project.conditions.at("1").ref_no, 2);
     CHECK_EQ(project.conditions.at("2").ref_no, 3);
     CHECK_EQ(project.conditions.at("3").ref_no, 3);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// DLG-FINITE-01 (the highest condition number) and COND-UPD-02 (a condition without a number): the reference-number shift at the
+// edges of the number line (Windows b9902e6, condition_operations.py _shift_conflicting_ref_nos_for_update)
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    constexpr int kHighestNumber = 2147483647;
+
+    // the Windows texts for N = 2 and N = 3, written out so that a typo in the Core text cannot hide in both places
+    constexpr const char *kOverflowForTwo =
+        "Condition number 2 cannot be used: the conditions numbered 2 and up would move up by one, and one of them is already "
+        "2147483647, the highest condition number.";
+    constexpr const char *kOverflowForThree =
+        "Condition number 3 cannot be used: the conditions numbered 3 and up would move up by one, and one of them is already "
+        "2147483647, the highest condition number.";
+
+    // bid 1: 10 -> 1, 11 -> 2, 12 -> 3; bid 2: 20 -> 1 (Windows test_condition_operations._numbered)
+    void seed_numbered_world(const TempDb &db)
+    {
+        db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (1, 1, 'Bid', 1)");
+        db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (2, 1, 'Bid', 2)");
+        for (const char *row : {"(10, 1, 1)", "(11, 1, 2)", "(12, 1, 3)", "(20, 2, 1)"})
+            db.must(std::string("INSERT INTO BidConditions (UID, BidUID, RefNo) VALUES ") + row);
+    }
+
+    // "uid:RefNo" of every condition, a NULL RefNo as 'NULL' (Windows _refs: None)
+    std::string ref_list(const TempDb &db)
+    {
+        return db.list("SELECT UID || ':' || COALESCE(RefNo, 'NULL') FROM BidConditions ORDER BY UID");
+    }
+
+    ConditionChanges ref_and_name(int ref_no, const std::string &name)
+    {
+        ConditionChanges changes = ref_change(ref_no);
+        changes.values.name = name;
+        changes.mark(ConditionField::Name);
+        return changes;
+    }
+}
+
+// Port of ConditionOperationsPersistenceTests.test_a_renumber_whose_shift_would_pass_the_highest_number_changes_nothing: the shift
+// from number 2 up would carry condition 12 (2147483647) to 2147483648, so the save fails before it writes anything (the new name of
+// the same save included); a free number below the highest one needs no shift; taking the highest number from its holder is the same
+// overflow; the holder itself can still move down (its own number is not part of the shift).
+TEST(DlgFinite01_ConditionNumberLimit, ARenumberWhoseShiftWouldPassTheHighestNumberChangesNothing)
+{
+    TempDb db("limit_store_world");
+    REQUIRE(db.schema_ok());
+    seed_numbered_world(db);
+    db.must("UPDATE BidConditions SET RefNo = 2147483647 WHERE UID = 12");
+    db.must("UPDATE BidConditions SET Name = 'kept' WHERE UID = 10");
+    const std::string before = db.dump("BidConditions");
+
+    std::string error = "stale";
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "10", ref_and_name(2, "renamed"), &error));
+    CHECK_STR_EQ(error, kOverflowForTwo);
+    CHECK_STR_EQ(db.dump("BidConditions"), before);
+    CHECK_STR_EQ(db.text("SELECT Name FROM BidConditions WHERE UID = 10"), "kept");
+
+    error = "stale";
+    CHECK(ost_store::update_condition(db.path(), "1", "10", ref_change(2147483646), &error));
+    CHECK_STR_EQ(error, "");
+    CHECK_STR_EQ(ref_list(db), "10:2147483646,11:2,12:2147483647,20:1");
+
+    error.clear();
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "11", ref_change(2147483647), &error));
+    CHECK_STR_EQ(error, ost_domain::condition_number_overflow_message(2147483647));
+    CHECK_STR_EQ(ref_list(db), "10:2147483646,11:2,12:2147483647,20:1");
+
+    error = "stale";
+    CHECK(ost_store::update_condition(db.path(), "1", "12", ref_change(2), &error));
+    CHECK_STR_EQ(error, "");
+    CHECK_STR_EQ(ref_list(db), "10:2147483647,11:3,12:2,20:1");
+}
+
+// Port of UpdateConditionUseCaseTests.test_a_shift_past_the_highest_number_fails_through_the_use_case: bid 7 holds 1, 2, 3, 4 and
+// bid 8 holds 3; condition 13 takes the highest number. Renumbering 11 to 3 fails with the text for N = 3 although numbers 5 up to
+// 2147483646 are free (a gap hides nothing: the shift moves every number from 3 up) and every number stays as it was. The probe is
+// scoped to the bid (WHERE [BidUID] = ?): the same holder in ANOTHER bid never blocks (inferred from the Windows SQL, not a Windows test).
+TEST(DlgFinite01_ConditionNumberLimit, AGapBelowTheHighestNumberHidesNothingAndOnlyTheOwnBidCounts)
+{
+    TempDb db("limit_use_case_world");
+    REQUIRE(db.schema_ok());
+    db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (7, 1, 'Bid', 1)");
+    db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (8, 1, 'Bid', 2)");
+    for (const char *row : {"(10, 7, 1, 'a')", "(11, 7, 2, 'b')", "(12, 7, 3, 'c')", "(13, 7, 4, 'd')", "(20, 8, 3, 'other bid')"})
+        db.must(std::string("INSERT INTO BidConditions (UID, BidUID, RefNo, Name) VALUES ") + row);
+    db.must("UPDATE BidConditions SET RefNo = 2147483647 WHERE UID = 13");
+    const std::string before = db.dump("BidConditions");
+
+    std::string error;
+    CHECK_FALSE(ost_store::update_condition(db.path(), "7", "11", ref_change(3), &error));
+    CHECK_STR_EQ(error, kOverflowForThree);
+    CHECK_STR_EQ(db.dump("BidConditions"), before);
+
+    // the highest number now sits on condition 20 of the OTHER bid (and 13 is an ordinary number): bid 7's probe does not see it
+    db.must("UPDATE BidConditions SET RefNo = 13 WHERE UID = 13");
+    db.must("UPDATE BidConditions SET RefNo = 2147483647 WHERE UID = 20");
+    error = "stale";
+    CHECK(ost_store::update_condition(db.path(), "7", "11", ref_change(3), &error));
+    CHECK_STR_EQ(error, "");
+    CHECK_STR_EQ(ref_list(db), "10:1,11:3,12:4,13:14,20:2147483647");
+}
+
+// Port of ConditionNumberLimitRealAccessTests._limits_through_real_access (the rows and the two saves; it runs on Access with the
+// use case there): bid 11 holds 1, 2 and 2147483647, all named 'kept'. Renumbering 1 to 2 together with a new name fails with the text
+// for N = 2 and changes nothing; renumbering 2 to 2147483646 (free) succeeds and renames.
+TEST(DlgFinite01_ConditionNumberLimit, ThePortedRealAccessRowsFailOnceAndSucceedOnce)
+{
+    TempDb db("limit_real_access_rows");
+    REQUIRE(db.schema_ok());
+    db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (11, 1, 'B', 1)");
+    for (const char *row : {"(1, 11, 1, 'kept')", "(2, 11, 2, 'kept')", "(3, 11, 2147483647, 'kept')"})
+        db.must(std::string("INSERT INTO BidConditions (UID, BidUID, RefNo, Name) VALUES ") + row);
+    const std::string rows = "SELECT UID || ':' || RefNo || ':' || Name FROM BidConditions ORDER BY UID";
+    REQUIRE_EQ(db.list(rows), "1:1:kept,2:2:kept,3:2147483647:kept");
+
+    std::string error;
+    CHECK_FALSE(ost_store::update_condition(db.path(), "11", "1", ref_and_name(2, "renamed"), &error));
+    CHECK_STR_EQ(error, kOverflowForTwo);
+    CHECK_STR_EQ(db.list(rows), "1:1:kept,2:2:kept,3:2147483647:kept");
+
+    CHECK(ost_store::update_condition(db.path(), "11", "2", ref_and_name(2147483646, "renamed"), &error));
+    CHECK_STR_EQ(error, "");
+    CHECK_STR_EQ(db.list(rows), "1:1:kept,2:2147483646:renamed,3:2147483647:kept");
+}
+
+// Windows tests the probe with `>= 2147483647`, not `==`: a number a file already holds above the limit (an older iOS build wrote
+// 2147483648 into the 64 bit column) blocks a shift that would move it up as well.
+TEST(DlgFinite01_ConditionNumberLimit, ANumberAlreadyAboveTheHighestOneBlocksTheShiftToo)
+{
+    TempDb db("limit_above_limit");
+    REQUIRE(db.schema_ok());
+    seed_numbered_world(db);
+    db.must("UPDATE BidConditions SET RefNo = 2147483648 WHERE UID = 12");
+    const std::string before = db.dump("BidConditions");
+
+    std::string error;
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "10", ref_change(2), &error));
+    CHECK_STR_EQ(error, kOverflowForTwo);
+    CHECK_STR_EQ(db.dump("BidConditions"), before);
+}
+
+// The failure has a channel of its own: the overflow comes back as its text, every other failure leaves `error` empty (the dialog
+// then shows the generic text), a success and an empty change set clear a text left over from before, and a caller without an
+// `error` still gets false (the ~40 other call sites).
+TEST(DlgFinite01_ConditionNumberLimit, TheOverflowIsToldApartFromAnOrdinaryFailure)
+{
+    TempDb db("limit_error_channel");
+    REQUIRE(db.schema_ok());
+    seed_numbered_world(db);
+    db.must("UPDATE BidConditions SET RefNo = 2147483647 WHERE UID = 12");
+
+    std::string error = "stale";
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "10", ref_change(2), &error));
+    CHECK_STR_EQ(error, kOverflowForTwo);
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "10", ref_change(2))); // no `error`: only the bool
+
+    // an unknown condition, a uid that is no number and a write the database refuses: false with NO text
+    ConditionChanges rename;
+    rename.values.name = "Renamed";
+    rename.mark(ConditionField::Name);
+    error = "stale";
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "99", rename, &error));
+    CHECK_STR_EQ(error, "");
+    error = "stale";
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "x", rename, &error));
+    CHECK_STR_EQ(error, "");
+    const std::string trigger = db.block("BidConditions", "UPDATE");
+    error = "stale";
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "10", rename, &error));
+    CHECK_STR_EQ(error, "");
+    // the overflow is found before the first write, so it is the overflow even where every write would fail
+    CHECK_FALSE(ost_store::update_condition(db.path(), "1", "10", ref_change(2), &error));
+    CHECK_STR_EQ(error, kOverflowForTwo);
+    db.unblock(trigger);
+
+    error = "stale";
+    CHECK(ost_store::update_condition(db.path(), "1", "10", rename, &error));
+    CHECK_STR_EQ(error, "");
+    error = "stale";
+    CHECK(ost_store::update_condition(db.path(), "1", "10", ConditionChanges(), &error)); // an empty change set
+    CHECK_STR_EQ(error, "");
+}
+
+// The in-memory twin follows the store: the same renumber is refused (nothing changes, no int overflows) or shifts like the database
+// did. Matrix over every condition of a world whose condition 13 holds the highest number and every number that is taken, free
+// or the highest one.
+TEST(DlgFinite01_ConditionNumberLimit, TheInMemoryShiftRefusesWhatTheStoreRefusesAndEqualsItOtherwise)
+{
+    for (const char *uid : {"10", "11", "12", "13"})
+    {
+        for (int new_ref : {1, 2, 3, 4, 2147483646, 2147483647})
+        {
+            SCOPED_CONTEXT(std::string("condition ") + uid + " takes number " + std::to_string(new_ref));
+            TempDb db("limit_in_memory");
+            REQUIRE(db.schema_ok());
+            db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (1, 1, 'Bid', 1)");
+            db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo) VALUES (2, 1, 'Bid', 2)");
+            for (const char *row : {"(10, 1, 1)", "(11, 1, 2)", "(12, 1, 3)", "(13, 1, 2147483647)", "(20, 2, 2)"})
+                db.must(std::string("INSERT INTO BidConditions (UID, BidUID, RefNo) VALUES ") + row);
+
+            ost_data::ProjectData in_memory = ost_store::load_project(db.path(), "1");
+            REQUIRE_EQ(in_memory.conditions.size(), size_t(4));
+            const std::string before = db.dump("BidConditions");
+            std::string error;
+            const bool stored = ost_store::update_condition(db.path(), "1", uid, ref_change(new_ref), &error);
+            const bool shifted = ost_domain::shift_conflicting_ref_nos(in_memory.conditions, uid, new_ref);
+            CHECK(shifted == stored);
+            if (stored)
+            {
+                CHECK_STR_EQ(error, "");
+                in_memory.conditions[uid].ref_no = new_ref;
+            }
+            else
+            {
+                CHECK_STR_EQ(error, ost_domain::condition_number_overflow_message(new_ref));
+                CHECK_STR_EQ(db.dump("BidConditions"), before);
+            }
+
+            const ost_data::ProjectData reloaded = ost_store::load_project(db.path(), "1");
+            REQUIRE_EQ(reloaded.conditions.size(), size_t(4));
+            for (const auto &pair : reloaded.conditions)
+                CHECK_EQ(in_memory.conditions.at(pair.first).ref_no, pair.second.ref_no);
+        }
+    }
+}
+
+// The same rule on a bare map, where an int would overflow: nothing moves when a condition that would be shifted already holds the
+// highest number (the call says so with false); the holder of that number moves down (it is not shifted itself); a free number and an
+// unknown condition are not refusals.
+TEST(DlgFinite01_ConditionNumberLimit, TheInMemoryShiftNeverPushesAConditionPastTheHighestNumber)
+{
+    std::unordered_map<std::string, Condition> conditions;
+    const std::vector<std::pair<std::string, int>> numbers = {{"1", 1}, {"2", 2}, {"3", kHighestNumber}};
+    for (const auto &entry : numbers)
+    {
+        Condition c;
+        c.uid = entry.first;
+        c.ref_no = entry.second;
+        conditions[c.uid] = c;
+    }
+
+    CHECK_FALSE(ost_domain::shift_conflicting_ref_nos(conditions, "1", 2));
+    CHECK_EQ(conditions.at("1").ref_no, 1);
+    CHECK_EQ(conditions.at("2").ref_no, 2);
+    CHECK_EQ(conditions.at("3").ref_no, kHighestNumber);
+    CHECK_FALSE(ost_domain::shift_conflicting_ref_nos(conditions, "2", kHighestNumber));
+    CHECK_EQ(conditions.at("2").ref_no, 2);
+    CHECK_EQ(conditions.at("3").ref_no, kHighestNumber);
+
+    CHECK(ost_domain::shift_conflicting_ref_nos(conditions, "3", 2)); // the holder moves down: 2 moves up, 3 is left to the caller
+    CHECK_EQ(conditions.at("1").ref_no, 1);
+    CHECK_EQ(conditions.at("2").ref_no, 3);
+    CHECK_EQ(conditions.at("3").ref_no, kHighestNumber);
+
+    CHECK(ost_domain::shift_conflicting_ref_nos(conditions, "1", 5));  // free: no shift, no refusal
+    CHECK(ost_domain::shift_conflicting_ref_nos(conditions, "99", 2)); // not in the map: nothing to shift
+    CHECK_EQ(conditions.at("2").ref_no, 3);
+}
+
+// Port of ConditionOperationsPersistenceTests.test_a_condition_without_a_reference_number_takes_one_like_any_other (COND-UPD-02, a PIN:
+// Windows b9902e6 made a NULL RefNo "different from the new number", the iOS store always did): conditions 13 and 14 have no number.
+// 13 takes 9, which nobody holds: no shift and 14 stays NULL. 14 takes 2, which 11 holds: the normal conflict check runs, 11, 12 and 13
+// move up by one, bid 2 is untouched and no NULL row is shifted (here none is left to see; see the next test).
+TEST(CondUpd02_NullRefNo, AConditionWithoutAReferenceNumberTakesOneLikeAnyOther)
+{
+    TempDb db("null_refno_takes_one");
+    REQUIRE(db.schema_ok());
+    seed_numbered_world(db);
+    for (const char *uid : {"13", "14"})
+        db.must(std::string("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type) VALUES (") + uid + ", 1, NULL, 'c', 0)");
+    REQUIRE_EQ(ref_list(db), "10:1,11:2,12:3,13:NULL,14:NULL,20:1");
+    REQUIRE_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 13"), "null");
+
+    CHECK(ost_store::update_condition(db.path(), "1", "13", ref_change(9)));
+    CHECK_STR_EQ(ref_list(db), "10:1,11:2,12:3,13:9,14:NULL,20:1");
+    CHECK_STR_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 14"), "null");
+
+    CHECK(ost_store::update_condition(db.path(), "1", "14", ref_change(2)));
+    CHECK_STR_EQ(ref_list(db), "10:1,11:3,12:4,13:10,14:2,20:1");
+    CHECK_STR_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 14"), "integer");
+}
+
+// COND-UPD-02, the NULL guard of the "same number" early return: a NULL RefNo is "different from the new number" even when the new
+// number is 0 (Windows b9902e6 `current_row[0] is not None and int(current_row[0]) == new_ref_no`); a store that read NULL as 0 would
+// return early here. Conditions 13 (RefNo NULL) and 14 (RefNo 0) beside the usual world; 13 takes 0. The expected rows come from
+// reading the Windows SQL (condition_operations.py :600-641, the statements also run on an in-memory sqlite copy of the rows): the
+// current value is NULL, so the early return does not fire; the conflict probe (BidUID = 1, RefNo = 0, UID <> 13) finds 14; MAX(RefNo)
+// of the rows from 0 up (10, 11, 12, 14) is 3, no overflow; every row of the bid with RefNo >= 0 except 13 moves up (10 to 2, 11 to 3,
+// 12 to 4, 14 to 1; 13 is NULL and not part of it); then 13 is written as 0; bid 2 is never touched. An early return would leave
+// '10:1,11:2,12:3,13:0,14:0,20:1' (two conditions numbered 0).
+TEST(CondUpd02_NullRefNo, ANullReferenceNumberIsDifferentFromTheNewNumberZero)
+{
+    TempDb db("null_refno_takes_zero");
+    REQUIRE(db.schema_ok());
+    seed_numbered_world(db);
+    db.must("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type) VALUES (13, 1, NULL, 'c', 0)");
+    db.must("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type) VALUES (14, 1, 0, 'c', 0)");
+    REQUIRE_EQ(ref_list(db), "10:1,11:2,12:3,13:NULL,14:0,20:1");
+    REQUIRE_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 13"), "null");
+
+    CHECK(ost_store::update_condition(db.path(), "1", "13", ref_change(0)));
+    CHECK_STR_EQ(ref_list(db), "10:2,11:3,12:4,13:0,14:1,20:1");
+    CHECK_STR_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 13"), "integer");
+
+    // the same number again is the early return: 13 holds 0 now, nothing moves
+    CHECK(ost_store::update_condition(db.path(), "1", "13", ref_change(0)));
+    CHECK_STR_EQ(ref_list(db), "10:2,11:3,12:4,13:0,14:1,20:1");
+}
+
+// COND-UPD-02: a shift that DOES happen never touches a row without a number (NULL >= n is not true and NULL + 1 stays NULL), and a NULL
+// row is no conflict either: renumbering 12 to 1 moves 10 and 11 up, and the two NULL rows keep their storage class NULL.
+TEST(CondUpd02_NullRefNo, ARowWithoutAReferenceNumberIsNeverShifted)
+{
+    TempDb db("null_refno_never_shifted");
+    REQUIRE(db.schema_ok());
+    seed_numbered_world(db);
+    for (const char *uid : {"15", "16"})
+        db.must(std::string("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type) VALUES (") + uid + ", 1, NULL, 'c', 0)");
+
+    CHECK(ost_store::update_condition(db.path(), "1", "12", ref_change(1)));
+    CHECK_STR_EQ(ref_list(db), "10:2,11:3,12:1,15:NULL,16:NULL,20:1");
+    CHECK_STR_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 15"), "null");
+    CHECK_STR_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 16"), "null");
+
+    // a number no one holds is free although two rows hold no number at all: nothing is shifted
+    CHECK(ost_store::update_condition(db.path(), "1", "10", ref_change(7)));
+    CHECK_STR_EQ(ref_list(db), "10:7,11:3,12:1,15:NULL,16:NULL,20:1");
+}
+
+// COND-UPD-02, the in-memory counterpart: a stored NULL reads as 0 (the dialog shows "0"), the shift leaves such a condition at 0 like the
+// database leaves the row NULL, and the project in memory equals a reload of the database after the same renumber.
+TEST(CondUpd02_NullRefNo, TheInMemoryShiftReadsNullAsZeroAndLeavesItAloneLikeTheDatabase)
+{
+    TempDb db("null_refno_in_memory");
+    REQUIRE(db.schema_ok());
+    seed_numbered_world(db);
+    for (const char *uid : {"13", "14"})
+        db.must(std::string("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type) VALUES (") + uid + ", 1, NULL, 'c', 0)");
+
+    ost_data::ProjectData in_memory = ost_store::load_project(db.path(), "1");
+    REQUIRE_EQ(in_memory.conditions.size(), size_t(5));
+    CHECK_EQ(in_memory.conditions.at("13").ref_no, 0);
+    CHECK_EQ(in_memory.conditions.at("14").ref_no, 0);
+
+    REQUIRE(ost_store::update_condition(db.path(), "1", "14", ref_change(2)));
+    in_memory.shift_conflicting_ref_nos("14", 2);
+    in_memory.conditions["14"].ref_no = 2;
+
+    const ost_data::ProjectData reloaded = ost_store::load_project(db.path(), "1");
+    REQUIRE_EQ(reloaded.conditions.size(), size_t(5));
+    for (const auto &pair : reloaded.conditions)
+        CHECK_EQ(in_memory.conditions.at(pair.first).ref_no, pair.second.ref_no);
+    CHECK_EQ(in_memory.conditions.at("10").ref_no, 1);
+    CHECK_EQ(in_memory.conditions.at("11").ref_no, 3);
+    CHECK_EQ(in_memory.conditions.at("12").ref_no, 4);
+    CHECK_EQ(in_memory.conditions.at("13").ref_no, 0); // still without a number, in memory and in the file
+    CHECK_STR_EQ(db.text("SELECT typeof(RefNo) FROM BidConditions WHERE UID = 13"), "null");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
