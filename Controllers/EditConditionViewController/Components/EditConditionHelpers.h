@@ -14,7 +14,6 @@ std::string reassembleElevation(const std::string &baseName, int type, const std
 // ost_domain::display_to_inches and the parse_* functions of Core/Domain/ConditionFormRules.hpp.
 NSString *inchesToDisplay(double inches, bool metric);
 
-NSArray<NSString *> *styleLabels(void);
 NSArray<NSString *> *patternLabels(void);
 NSArray<NSString *> *shapeLabels(void);
 

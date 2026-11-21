@@ -9,10 +9,6 @@
 
 // --- Label arrays ---
 
-NSArray<NSString *> *styleLabels() {
-  return @[ @"Linear", @"Area", @"Count", @"Attachment" ];
-}
-
 NSArray<NSString *> *patternLabels() {
   return @[
     @"None", @"Solid", @"Horizontal", @"Vertical", @"Backward Diagonal",

@@ -11,6 +11,8 @@
 #include "Domain/ConditionChoices.hpp"
 #include "Domain/ConditionTree.hpp"
 
+#include <climits>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -408,4 +410,122 @@ TEST(CondPlace01_LayerShow, PlacementIsOnlyRestoredInThe2DView)
     PlacementRestoreState now = state_after_suspension(suspended, &condition);
     now.takeoff_2d_view_active = false;
     CHECK(restore_of_suspended_placement(suspended, std::string("L1"), now) == SuspendedPlacementOutcome::Drop);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// COND-M08 (Windows 49a2d59, edit_condition_dialog.py): a stored type outside Linear / Area /
+// Count / Attachment is kept. The style choice lists the four styles (_STYLE_ITEMS :64-69) and then, only for such a type, ONE
+// disabled entry "Unknown (N)" (_sync_unknown_style_item :970-978) that is the current style; the layout is Area-like
+// (_apply_dimensions_visibility :547 `is_area = not is_count and not is_linear`, _build_advanced_tab :740).
+// Windows tests: EditConditionUnknownTypeTests.test_an_unknown_type_is_shown_as_a_disabled_unknown_item and
+// test_moving_to_a_known_condition_removes_the_unknown_item.
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    // types the database may hold outside 0..3 (the owner's 7 and -1, a neighbour, a large one and the int limits)
+    const int kUnknownTypes[] = {7, -1, 4, 99, INT_MAX, INT_MIN};
+
+    void check_the_four_styles(const std::vector<StyleChoice> &choices)
+    {
+        REQUIRE(choices.size() >= 4u);
+        CHECK_EQ(static_cast<int>(choices[0].type), 0);
+        CHECK_STR_EQ(choices[0].label, "Linear");
+        CHECK_EQ(static_cast<int>(choices[1].type), 1);
+        CHECK_STR_EQ(choices[1].label, "Area");
+        CHECK_EQ(static_cast<int>(choices[2].type), 2);
+        CHECK_STR_EQ(choices[2].label, "Count");
+        CHECK_EQ(static_cast<int>(choices[3].type), 3);
+        CHECK_STR_EQ(choices[3].label, "Attachment");
+        for (std::size_t i = 0; i < 4; ++i)
+            CHECK(choices[i].enabled);
+    }
+}
+
+// the four styles in the Windows order, all choosable, when no unknown type is stored
+TEST(CondM08_UnknownStyle, TheChoiceListsTheFourStylesInTheWindowsOrder)
+{
+    const std::vector<StyleChoice> choices = condition_style_choices(std::nullopt);
+    CHECK_EQ(choices.size(), 4u);
+    check_the_four_styles(choices);
+}
+
+// _sync_unknown_style_item: the entry comes AFTER Attachment, carries the raw number, and is disabled
+TEST(CondM08_UnknownStyle, AnUnknownTypeAddsADisabledEntryAfterAttachment)
+{
+    for (int n : kUnknownTypes)
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(n));
+        const std::optional<ConditionType> unknown = unknown_style_type(static_cast<ConditionType>(n));
+        REQUIRE(unknown.has_value());
+        CHECK_EQ(static_cast<int>(*unknown), n);
+
+        const std::vector<StyleChoice> choices = condition_style_choices(unknown);
+        REQUIRE_EQ(choices.size(), 5u);
+        check_the_four_styles(choices);
+        CHECK_EQ(static_cast<int>(choices[4].type), n);
+        CHECK_STR_EQ(choices[4].label, "Unknown (" + std::to_string(n) + ")");
+        CHECK_FALSE(choices[4].enabled);
+    }
+    // the literal texts of the Windows test (7 and -1)
+    const std::vector<StyleChoice> seven = condition_style_choices(unknown_style_type(static_cast<ConditionType>(7)));
+    REQUIRE_EQ(seven.size(), 5u);
+    CHECK_STR_EQ(seven[4].label, "Unknown (7)");
+    const std::vector<StyleChoice> minus_one = condition_style_choices(unknown_style_type(static_cast<ConditionType>(-1)));
+    REQUIRE_EQ(minus_one.size(), 5u);
+    CHECK_STR_EQ(minus_one[4].label, "Unknown (-1)");
+}
+
+// test_moving_to_a_known_condition_removes_the_unknown_item: a known type has no entry. The Core functions have no memory: what is
+// listed follows the condition that is loaded. This test checks the four known types (no unknown entry, four enabled choices) and a
+// stored -1 (one disabled entry, "Unknown (-1)"). The replacement of an entry by the next unknown type (7, then -1) and its removal
+// on the next load are properties of the editor, not of Core: the .mm ivar _unknownStyleType is set by _normalizeLoadedCondition at
+// both load points (EditConditionViewController.mm :95 init and :699 _loadConditionAtIndex), so loading another condition replaces
+// or removes it. That is not host-testable (Obj-C, compiled on CI and never run on a device).
+TEST(CondM08_UnknownStyle, AKnownTypeHasNoUnknownEntry)
+{
+    for (ConditionType known : {ConditionType::Linear, ConditionType::Area, ConditionType::Count, ConditionType::Attachment})
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(static_cast<int>(known)));
+        const std::optional<ConditionType> unknown = unknown_style_type(known);
+        CHECK_FALSE(unknown.has_value());
+        const std::vector<StyleChoice> choices = condition_style_choices(unknown);
+        CHECK_EQ(choices.size(), 4u);
+        check_the_four_styles(choices);
+    }
+    // a stored -1 (the Windows oracle for the choice of a -1 condition is [0,1,2,3,-1]), then Linear: nothing of the first is kept
+    // ([0,1,2,3]); the 7 step of the Windows test is not built here (see the comment above the test)
+    const std::vector<StyleChoice> after_minus_one = condition_style_choices(unknown_style_type(static_cast<ConditionType>(-1)));
+    REQUIRE_EQ(after_minus_one.size(), 5u);
+    CHECK_STR_EQ(after_minus_one[4].label, "Unknown (-1)");
+    CHECK_EQ(condition_style_choices(unknown_style_type(ConditionType::Linear)).size(), 4u);
+}
+
+// the text of the Style row (the old styleLabels()[static_cast<int>(type)] was the NSRangeException for 7)
+TEST(CondM08_UnknownStyle, TheStyleLabelIsTheStyleNameOrUnknownWithTheRawNumber)
+{
+    CHECK_STR_EQ(condition_style_label(ConditionType::Linear), "Linear");
+    CHECK_STR_EQ(condition_style_label(ConditionType::Area), "Area");
+    CHECK_STR_EQ(condition_style_label(ConditionType::Count), "Count");
+    CHECK_STR_EQ(condition_style_label(ConditionType::Attachment), "Attachment");
+    CHECK_STR_EQ(condition_style_label(static_cast<ConditionType>(7)), "Unknown (7)");
+    CHECK_STR_EQ(condition_style_label(static_cast<ConditionType>(-1)), "Unknown (-1)");
+    CHECK_STR_EQ(condition_style_label(static_cast<ConditionType>(4)), "Unknown (4)");
+    for (int n : kUnknownTypes)
+        CHECK_STR_EQ(condition_style_label(static_cast<ConditionType>(n)), "Unknown (" + std::to_string(n) + ")");
+}
+
+// the layout the editor builds and saves for a type: an unknown type is Area-like (no Height / Width / Depth / Display Size, no
+// Shape, no Connect / Trim / Curved Segment / Drop-Run / Add Length)
+TEST(CondM08_UnknownStyle, TheLayoutOfAnUnknownTypeIsAreaLike)
+{
+    CHECK(editor_layout(ConditionType::Linear) == EditorLayout::Linear);
+    CHECK(editor_layout(ConditionType::Area) == EditorLayout::Area);
+    CHECK(editor_layout(ConditionType::Count) == EditorLayout::CountLike);
+    CHECK(editor_layout(ConditionType::Attachment) == EditorLayout::CountLike);
+    for (int n : kUnknownTypes)
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(n));
+        CHECK(editor_layout(static_cast<ConditionType>(n)) == EditorLayout::Area);
+    }
 }

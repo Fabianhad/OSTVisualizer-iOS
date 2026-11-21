@@ -10,6 +10,7 @@
 #include "ConditionsTestSupport.hpp"
 
 #include "Domain/ConditionFormRules.hpp"
+#include "Domain/ConditionStyleChange.hpp"
 
 #include <functional>
 #include <unordered_map>
@@ -1061,7 +1062,7 @@ TEST(CondUpd02_NullRefNo, AConditionWithoutAReferenceNumberTakesOneLikeAnyOther)
 // COND-UPD-02, the NULL guard of the "same number" early return: a NULL RefNo is "different from the new number" even when the new
 // number is 0 (Windows b9902e6 `current_row[0] is not None and int(current_row[0]) == new_ref_no`); a store that read NULL as 0 would
 // return early here. Conditions 13 (RefNo NULL) and 14 (RefNo 0) beside the usual world; 13 takes 0. The expected rows come from
-// reading the Windows SQL (condition_operations.py :600-641, the statements also run on an in-memory sqlite copy of the rows): the
+// reading the Windows SQL (condition_operations.py :614-655, the statements also run on an in-memory sqlite copy of the rows): the
 // current value is NULL, so the early return does not fire; the conflict probe (BidUID = 1, RefNo = 0, UID <> 13) finds 14; MAX(RefNo)
 // of the rows from 0 up (10, 11, 12, 14) is 3, no overflow; every row of the bid with RefNo >= 0 except 13 moves up (10 to 2, 11 to 3,
 // 12 to 4, 14 to 1; 13 is NULL and not part of it); then 13 is written as 0; bid 2 is never touched. An early return would leave
@@ -1222,4 +1223,98 @@ TEST(ConditionUpdate, AStoredReferenceThatDoesNotResolveNeverBlocksTheSave)
     moved.layer_uid = "31"; // a layer of bid 2
     CHECK_FALSE(save(db, "1", "10", edited, moved));
     CHECK_EQ(db.text("SELECT Name || '|' || BidLayerUID FROM BidConditions WHERE UID = 10"), "Saved|999");
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// COND-M08 (Windows 49a2d59, edit_condition_dialog.py): a condition whose stored Type is outside 0-3
+// (7, -1) opens with that type kept (_load_condition :839-847) and a Save writes only what changed: a notes-only edit writes only the
+// Notes column and leaves the Type column, whatever it holds, as it was (:1464-1474); choosing a real style writes the Type and the
+// defaults of the style. The whole path from the row in the database: load_project, the form of the editor, the change set of a
+// Save, update_condition.
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    // bid 1 with the condition of a stored type outside 0-3 (10) and a neighbour of a real type (11). Every UOM is -1 (a stored
+    // NULL unit loads as 0 and condition_to_save writes -1 for a slot without a quantity, which has nothing to do with the type);
+    // SnapToLinear -1 is the value of a condition the app wrote (a NULL loads as 0, which the Area style resets to -1). The row has
+    // Round Quantity on with Round to 0.5: a Linear / Area would carry that over a style change, "Unknown (N)" carries nothing.
+    void seed_unknown_type_world(const TempDb &db, int type)
+    {
+        db.must("INSERT INTO Bids (UID, BidProjectUID, JobName, BidNo, MeasureBase) VALUES (1, 1, 'Bid', 1, 0)");
+        db.must("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type, Thickness, Height, Spacing, UOM1, UOM2, UOM3, "
+                "SnapToLinear, RoundQuantity, RoundUp, Notes) VALUES (10, 1, 1, 'Odd', " +
+                std::to_string(type) + ", 4.0, 8.0, 2.5, -1, -1, -1, -1, -1, 0.5, 'old')");
+        db.must("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type, Thickness, Height, Spacing, UOM1, UOM2, UOM3, "
+                "SnapToLinear, RoundQuantity, RoundUp, Notes) VALUES (11, 1, 2, 'Next', 1, 4.0, 0.0, 0.0, -1, -1, -1, -1, 0, 0.0, 'keep')");
+    }
+}
+
+// test_editing_only_the_notes_saves_only_the_notes: the row of the condition changes in the Notes column only (the Type column
+// still holds 7 / -1 as an integer), the neighbour is untouched. Run in an imperial and in a metric bid (the bid's MeasureBase and the
+// system the change set is built for agree): the system takes part in the change set (a style change reads the metric defaults), and
+// a notes-only edit must write the Notes column alone in both.
+TEST(CondM08_UnknownStyle, ANotesOnlySaveWritesOnlyTheNotesColumn)
+{
+    for (const bool metric : {false, true})
+    {
+        for (int type : {7, -1})
+        {
+            SCOPED_CONTEXT("stored type " + std::to_string(type) + (metric ? " metric bid" : " imperial bid"));
+            TempDb db(std::string(type < 0 ? "m08_notes_minus1" : "m08_notes_plus7") + (metric ? "_metric" : "_imperial"));
+            REQUIRE(db.schema_ok());
+            seed_unknown_type_world(db, type);
+            if (metric)
+                db.must("UPDATE Bids SET MeasureBase = 1 WHERE UID = 1"); // bid 1 is metric (the fixture's default is imperial)
+            const std::string row_before = db.row("BidConditions", "10", {"Notes"});
+            const std::string neighbour_before = db.row("BidConditions", "11");
+
+            const Condition stored = ost_store::load_project(db.path(), "1").conditions.at("10");
+            CHECK(stored.condition_type == static_cast<ost_domain::ConditionType>(type)); // the loader keeps the raw value
+            Condition form = ost_domain::condition_form_for_edit(stored);
+            form.notes = "edited";
+            const ConditionChanges changes = ost_domain::condition_changes_for_save(stored, form, metric);
+            CHECK_EQ(changes.fields.count(), size_t(1));
+            CHECK(changes.has(ConditionField::Notes));
+            CHECK(ost_store::update_condition(db.path(), "1", "10", changes));
+
+            CHECK_EQ(db.row("BidConditions", "10", {"Notes"}), row_before);
+            CHECK_EQ(db.text("SELECT CAST(Notes AS TEXT) FROM BidConditions WHERE UID = 10"), "edited");
+            CHECK_EQ(db.text("SELECT Type || ':' || typeof(Type) FROM BidConditions WHERE UID = 10"), std::to_string(type) + ":integer");
+            CHECK_EQ(db.row("BidConditions", "11"), neighbour_before);
+        }
+    }
+}
+
+// test_picking_a_real_type_still_changes_the_type: Unknown (7) -> Area writes Type 1 and the defaults of the Area style, and no
+// other column of the row changes. The stored Round Quantity / Round to are NOT carried from an unknown style (Windows
+// _shared_options(7) is {}), so the Area style writes them back to its defaults.
+TEST(CondM08_UnknownStyle, ChoosingARealTypeWritesTheTypeColumnAndItsDefaults)
+{
+    TempDb db("m08_pick_area");
+    REQUIRE(db.schema_ok());
+    seed_unknown_type_world(db, 7);
+    const std::vector<std::string> written = {"Type", "Thickness", "Backout", "Spacing", "Quantity1", "UOM1",
+                                              "DisplayGridWhileDrawing", "RoundQuantity", "RoundUp"};
+    const std::string row_before = db.row("BidConditions", "10", written);
+
+    const Condition stored = ost_store::load_project(db.path(), "1").conditions.at("10");
+    const Condition form =
+        ost_domain::apply_style_change(ost_domain::condition_form_for_edit(stored), ost_domain::ConditionType::Area, false).condition;
+    const ConditionChanges changes = ost_domain::condition_changes_for_save(stored, form, false);
+    CHECK(changes.has(ConditionField::ConditionType));
+    CHECK(ost_store::update_condition(db.path(), "1", "10", changes));
+
+    CHECK_EQ(db.text("SELECT Type || ':' || typeof(Type) FROM BidConditions WHERE UID = 10"), "1:integer");
+    CHECK_EQ(db.text("SELECT quote(Backout) FROM BidConditions WHERE UID = 10"), "0");
+    CHECK_EQ(db.text("SELECT quote(Thickness) FROM BidConditions WHERE UID = 10"), "4.0");
+    CHECK_EQ(db.text("SELECT quote(Spacing) FROM BidConditions WHERE UID = 10"), "2.5"); // the field's value, written on a type change
+    CHECK_EQ(db.text("SELECT quote(Quantity1) FROM BidConditions WHERE UID = 10"), "11");
+    CHECK_EQ(db.text("SELECT quote(UOM1) FROM BidConditions WHERE UID = 10"), "5");
+    CHECK_EQ(db.text("SELECT quote(DisplayGridWhileDrawing) FROM BidConditions WHERE UID = 10"), "1");
+    CHECK_EQ(db.text("SELECT quote(RoundQuantity) FROM BidConditions WHERE UID = 10"), "0");
+    CHECK_EQ(db.text("SELECT quote(RoundUp) FROM BidConditions WHERE UID = 10"), "0.0");
+    CHECK_EQ(db.text("SELECT CAST(Notes AS TEXT) FROM BidConditions WHERE UID = 10"), "old");
+    // nothing else of the row changed
+    CHECK_EQ(db.row("BidConditions", "10", written), row_before);
 }

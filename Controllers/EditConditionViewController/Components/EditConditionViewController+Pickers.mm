@@ -1,5 +1,6 @@
 #import "../EditConditionViewController_Internal.h"
 #import "EditConditionHelpers.h"
+#include "../../../Core/Domain/ConditionChoices.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
 
 @interface EditConditionViewController (Pickers) <
@@ -47,24 +48,25 @@
 
 #pragma mark - Style / Type / Layer Pickers
 
+// The style choice (Windows _STYLE_ITEMS and _sync_unknown_style_item, edit_condition_dialog.py :64-69, :970-978): Linear, Area,
+// Count, Attachment, then for a stored type outside the four a greyed "Unknown (N)" entry that cannot be chosen (COND-M08). The
+// list and the labels come from Core; the current style is shown by the Style row.
 - (void)_showPickerForStyle {
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:@"Style"
                        message:nil
                 preferredStyle:UIAlertControllerStyleActionSheet];
-  NSArray *labels = styleLabels();
-  for (NSInteger i = 0; i < (NSInteger)labels.count; i++) {
-    NSInteger typeVal = i;
-    [alert
-        addAction:[UIAlertAction
-                      actionWithTitle:labels[i]
-                                style:UIAlertActionStyleDefault
-                              handler:^(UIAlertAction *a) {
-                                [self
-                                    _applyStyleChangeTo:
-                                        static_cast<ost_domain::ConditionType>(
-                                            typeVal)];
-                              }]];
+  for (const auto &choice :
+       ost_domain::condition_style_choices(_unknownStyleType)) {
+    const ost_domain::ConditionType type = choice.type;
+    UIAlertAction *action = [UIAlertAction
+        actionWithTitle:[NSString stringWithUTF8String:choice.label.c_str()]
+                  style:UIAlertActionStyleDefault
+                handler:^(UIAlertAction *a) {
+                  [self _applyStyleChangeTo:type];
+                }];
+    action.enabled = choice.enabled ? YES : NO;
+    [alert addAction:action];
   }
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel

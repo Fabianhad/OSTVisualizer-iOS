@@ -1,5 +1,6 @@
 #import "../EditConditionViewController_Internal.h"
 #import "EditConditionHelpers.h"
+#include "../../../Core/Domain/ConditionChoices.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
 #include "../../../Core/Domain/DimensionFormat.hpp"
 #include <cmath>
@@ -61,9 +62,9 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
 }
 
 - (NSInteger)_appearanceRowCount {
-  bool isCount =
-      (_condition.condition_type == ost_domain::ConditionType::Count ||
-       _condition.condition_type == ost_domain::ConditionType::Attachment);
+  // only Count / Attachment have a Shape row; a type outside the four is Area-like and has none (COND-M08)
+  const bool isCount = (ost_domain::editor_layout(_condition.condition_type) ==
+                        ost_domain::EditorLayout::CountLike);
   NSInteger count = 2; // Color + Pattern
   if (isLinePattern(_condition.pattern))
     count++; // Spacing
@@ -98,8 +99,11 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
   case TopRow::Style: {
     UITableViewCell *cell = [self _detailCell:tableView id:@"StyleCell"];
     cell.textLabel.text = @"Style";
-    cell.detailTextLabel.text =
-        styleLabels()[static_cast<int>(_condition.condition_type)];
+    // "Linear" / "Area" / "Count" / "Attachment", or "Unknown (N)" for a stored type outside the four (COND-M08)
+    cell.detailTextLabel.text = [NSString
+        stringWithUTF8String:ost_domain::condition_style_label(
+                                 _condition.condition_type)
+                                 .c_str()];
     if (_styleDisabled) {
       cell.accessoryType = UITableViewCellAccessoryNone;
       cell.textLabel.textColor = [UIColor tertiaryLabelColor];

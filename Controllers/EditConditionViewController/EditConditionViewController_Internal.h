@@ -3,6 +3,7 @@
 
 #import "EditConditionViewController.h"
 #include "../../Core/Domain/UomService.hpp"
+#include <optional>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -109,6 +110,10 @@ struct ElevationParts
     BOOL _dirty;
     NSArray *_savedFormState;
     BOOL _styleDisabled;
+    // The stored type of the loaded condition when it is outside Linear / Area / Count / Attachment: the style choice then lists a
+    // disabled "Unknown (N)" entry after Attachment (COND-M08). It is set at every load (init and Previous / Next, both through
+    // _normalizeLoadedCondition), so loading another condition replaces or removes it.
+    std::optional<ost_domain::ConditionType> _unknownStyleType;
     NSInteger _currentIndex;
 
     UITextField *_nameField;

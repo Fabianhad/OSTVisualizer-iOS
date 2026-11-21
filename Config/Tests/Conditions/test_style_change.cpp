@@ -3,7 +3,7 @@
 // (what the field shows is what is saved: on a style change the Spacing and the Linear / Area Thickness are written from their
 // fields even when equal to the stored value, only the thickness of a Count / Attachment and the backout come from the table, a
 // metric bid's thickness default is metric; the shape is reset only when entering Count / Attachment from another style),
-// COND-M08 (an unsupported stored type shows Linear), COND-METRIC-01 (the defaults of a metric bid are millimetres),
+// COND-M08 (a stored type outside 0-3 is kept), COND-METRIC-01 (the defaults of a metric bid are millimetres),
 // COL-PICK-01 (a save never writes ColorLine).
 //
 // Windows oracle: ost_visualizer/presentation/dialogs/edit_condition_dialog.py _on_style_changed / _populate_defaults_for_type /
@@ -21,7 +21,11 @@
 #include "Domain/DimensionFormat.hpp"
 
 #include <algorithm>
+#include <bitset>
+#include <initializer_list>
+#include <optional>
 #include <string>
+#include <vector>
 
 using namespace ost_domain;
 
@@ -51,6 +55,49 @@ namespace
     ConditionChanges save_changes(const Condition &stored, const Condition &form, bool metric = false)
     {
         return condition_changes_for_save(stored, form, metric);
+    }
+
+    // tests/presentation/dialogs/test_edit_condition_dialog.py EditConditionUnknownTypeTests._dialog: Condition(uid c1, name "Odd",
+    // condition_type N, ref_no 7, is_top True, uom1..3 -1, thickness 4.0, height 8.0), everything else at its default
+    Condition unknown_condition(int type)
+    {
+        Condition c = notes_condition(ConditionType::Linear);
+        c.name = "Odd";
+        c.condition_type = static_cast<ConditionType>(type);
+        c.thickness = 4.0;
+        c.height = 8.0;
+        return c;
+    }
+
+    // every control of the other styles away from its default (the "rich" values of the Windows oracle of the verification)
+    Condition rich_unknown_condition(int type)
+    {
+        Condition c = unknown_condition(type);
+        c.spacing = 2.5;
+        c.pattern = Pattern::Horizontal;
+        c.rise = -3.0;
+        c.run = -4.0;
+        c.display_name = true;
+        c.round_up = 0.5;
+        c.round_quantity = true;
+        c.shape = ShapeId::Rectangle;
+        c.width = 5.0;
+        return c;
+    }
+
+    bool fields_are(const ConditionChanges &changes, std::initializer_list<ConditionField> expected)
+    {
+        std::bitset<kConditionFieldCount> want;
+        for (ConditionField field : expected)
+            want.set(static_cast<std::size_t>(field));
+        return changes.fields == want;
+    }
+
+    // what the dialog does: load the condition into the form, pick the style (apply_style_change on the form), Save
+    ConditionChanges pick_from(const Condition &stored, ConditionType new_type, bool metric)
+    {
+        const StyleChange change = apply_style_change(condition_form_for_edit(stored), new_type, metric);
+        return save_changes(stored, change.condition, metric);
     }
 }
 
@@ -278,9 +325,9 @@ TEST(CondStyle02_Spacing, WithoutAStyleChangeTheStoredSpacingStays)
 }
 
 // The values a type change takes from the table, per measurement system of the bid: the thickness (in inches) and the backout.
-//   IMPERIAL: td["thickness"] / td["backout"], the imperial TYPE_DEFAULTS columns (edit_condition_dialog.py:1236-1239, :1458-1463).
+//   IMPERIAL: td["thickness"] / td["backout"], the imperial TYPE_DEFAULTS columns (edit_condition_dialog.py:1250-1253, :1474-1479).
 //   METRIC: _type_default_thickness reads thickness_metric as inches (mm / 25.4), the value _populate_defaults_for_type
-//   (:1241-1252) shows after the style change (Windows b9902e6; before it Windows persisted the imperial value in a metric bid).
+//   (:1255-1266) shows after the style change (Windows b9902e6; before it Windows persisted the imperial value in a metric bid).
 //   The backout does not depend on the unit. There is no spacing default: a type change saves the Spacing field.
 TEST(CondStyle02_Spacing, TheTypeChangeDefaultsFollowTheMeasurementSystemOfTheBid)
 {
@@ -379,7 +426,7 @@ TEST(CondStyle02_Spacing, AMetricBidSavesTheMetricThicknessAndTheSpacingItShowsF
     }
 }
 
-// Imperial bid, every pair of styles: the thickness is the Windows TYPE_DEFAULTS imperial column (edit_condition_dialog.py:94-147)
+// Imperial bid, every pair of styles: the thickness is the Windows TYPE_DEFAULTS imperial column (edit_condition_dialog.py:97-150)
 // and the spacing is the stored 2.5 the field still shows, not the table's 4.0 / 6.0 (renamed from
 // AnImperialBidKeepsTheWindowsTableForEveryStyleChange).
 TEST(CondStyle02_Spacing, AnImperialBidSavesTheWindowsThicknessTableAndTheSpacingItShowsForEveryStyleChange)
@@ -439,7 +486,7 @@ TEST(CondStyle02_Spacing, AMetricBidKeepsWhatTheUserTypedAfterAStyleChange)
 // The thickness of a Linear / Area style is what its field shows, also when that equals the stored thickness (the field wins;
 // before COND-STYLE-02 this was "the type default when the field still equals the stored thickness"). A condition created in a
 // metric bid usually stores exactly the metric default (100 mm), so the field after the style change (100 mm) equals the stored
-// value: 100 mm is what is saved (written on the style change all the same, edit_condition_dialog.py:1559, :1589), and not the
+// value: 100 mm is what is saved (written on the style change all the same, edit_condition_dialog.py:1575, :1605), and not the
 // imperial 4.0 in = 101.6 mm.
 TEST(CondStyle02_Spacing, AMetricBidWritesTheMetricThicknessWhenTheFieldEqualsTheStoredOne)
 {
@@ -527,10 +574,10 @@ TEST(CondStyle02_Spacing, ATypedThicknessAfterTheChangeWins)
 
 // ---------------------------------------------------------------------------------------------------------------------
 // COND-STYLE-02, "what the field shows is what is saved": ports of the six tests of class EditConditionTypeChangeAndElevationTests
-// in tests/presentation/dialogs/test_edit_condition_dialog.py (:1233-1317, Windows b9902e6). On a type change Windows sends the
+// in tests/presentation/dialogs/test_edit_condition_dialog.py (:1233-1317, the same lines in Windows b9902e6 and 49a2d59). On a type change Windows sends the
 // type default only for the thickness of a Count / Attachment (which has no Thickness field) and the backout; Linear / Area
 // thickness and the spacing are the parsed fields and are written even when they equal the stored value (`if type_changed or
-// ...`, edit_condition_dialog.py:1559, :1589, :1624). The Windows tests drive the dialog with an identity unit conversion, so
+// ...`, edit_condition_dialog.py:1575, :1605, :1640). The Windows tests drive the dialog with an identity unit conversion, so
 // they pin the model values; the form built here is what the dialog holds after the switch (apply_style_change) plus what the
 // user typed (the .mm parses the field texts into those members before condition_to_save).
 // ---------------------------------------------------------------------------------------------------------------------
@@ -708,8 +755,8 @@ TEST(CondStyle02_FieldWins, AnUntouchedTypeChangeKeepsTheSpacingAndSavesTheThick
 
 // COND-STYLE-02, literal write parity (user spec: "Spacing and the visible thickness are saved from the fields even when equal to the
 // stored value; without a type change, unchanged fields are left alone"). On a type change Windows puts the thickness and the
-// backout of the table, the Linear / Area thickness field (`if type_changed or ...`, :1559, :1589) and the spacing field
-// (:1624) into the DTO whatever the stored values are, so the UPDATE carries those columns although every one of them equals the
+// backout of the table, the Linear / Area thickness field (`if type_changed or ...`, :1575, :1605) and the spacing field
+// (:1640) into the DTO whatever the stored values are, so the UPDATE carries those columns although every one of them equals the
 // stored value. That matters where the stored column is NULL: the loader reads it as 0.0, the blank field parses to 0.0, Windows
 // writes 0.0. Here every stored value already equals what is saved (spacing 0.0 = NULL read back, the thickness and the backout
 // of the new style), so only the type itself differs; collect_condition_changes alone marks none of the three.
@@ -803,7 +850,7 @@ TEST(CondStyle02_FieldWins, WithoutATypeChangeTheChangeSetIsExactlyTheFieldsThat
 }
 
 // COND-STYLE-02: Windows has no Thickness field for a Count / Attachment, so a Save of one after a style change writes the table's
-// thickness whatever the form holds (_type_default_thickness, edit_condition_dialog.py:1236-1239, :1458-1463). The form here
+// thickness whatever the form holds (_type_default_thickness, edit_condition_dialog.py:1250-1253, :1474-1479). The form here
 // holds another thickness (7.0) after the switch, which the dialog cannot produce (the field does not exist), so this test pins the
 // Core rule: imperial 4.0 for a Count and 0.0 for an Attachment, metric mm_to_inches(100) and 0.0. Without it, taking the form's
 // thickness (or the table's in one measurement system only) goes unnoticed because apply_style_change already sets the default.
@@ -986,51 +1033,334 @@ TEST(CondUpd02_ConditionToSave, ASlotWithoutAQuantityHasTheUnitMinusOne)
     CHECK_EQ(changes.fields.count(), 3u);
 }
 
-// COND-M08, decision a: the editor shows Linear for a type the database holds outside 0..3; a Save then rewrites the type
-TEST(CondM08_UnsupportedType, TheEditorShowsLinear)
+// ---------------------------------------------------------------------------------------------------------------------
+// COND-M08 (Windows 49a2d59, edit_condition_dialog.py): a stored condition type outside 0..3 is KEPT.
+// The editor opens with the type unchanged (_load_condition :839-847 selects the disabled "Unknown (N)" item and stores the raw type
+// in _style_type), the layout is Area-like (:547, :740, :1601), a Save without a style choice writes only what changed (a notes-only
+// edit writes only the notes: ct == cond.condition_type, so type_changed is False, :1464-1474), and picking a real style is a type
+// change from an unknown previous style (_on_style_changed :1215-1226: nothing is carried, _populate_defaults_for_type).
+// Windows tests: EditConditionUnknownTypeTests (:1432) test_editing_only_the_notes_saves_only_the_notes,
+// test_picking_a_real_type_still_changes_the_type, test_a_condition_with_takeoffs_keeps_its_unknown_type,
+// test_linear_branches_skip_widgets_that_were_never_built; the expected field sets of the picks are the dto keys of the Windows
+// dialog driven headless for this verification (plus the iOS-only Connect field of COND-EXTRA-01, which Windows has no control for).
+// ---------------------------------------------------------------------------------------------------------------------
+
+// the form of a loaded condition: the stored type stays, whatever it is; Trim / Curved Segment never both on (COND-TRIM-01)
+TEST(CondM08_UnknownStyle, TheFormOfALoadedConditionKeepsTheStoredType)
 {
-    CHECK(editor_condition_type(ConditionType::Linear) == ConditionType::Linear);
-    CHECK(editor_condition_type(ConditionType::Area) == ConditionType::Area);
-    CHECK(editor_condition_type(ConditionType::Count) == ConditionType::Count);
-    CHECK(editor_condition_type(ConditionType::Attachment) == ConditionType::Attachment);
-    CHECK(editor_condition_type(static_cast<ConditionType>(4)) == ConditionType::Linear);
-    CHECK(editor_condition_type(static_cast<ConditionType>(-1)) == ConditionType::Linear);
-    CHECK(editor_condition_type(static_cast<ConditionType>(99)) == ConditionType::Linear);
+    for (int n : {7, -1, 4, 99})
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(n));
+        const Condition stored = unknown_condition(n);
+        const Condition form = condition_form_for_edit(stored);
+        CHECK(form.condition_type == static_cast<ConditionType>(n));
+        CHECK_STR_EQ(form.name, "Odd");
+    }
+    for (ConditionType known : {ConditionType::Linear, ConditionType::Area, ConditionType::Count, ConditionType::Attachment})
+        CHECK(condition_form_for_edit(unknown_condition(static_cast<int>(known))).condition_type == known);
+
+    // the one normalisation of a load
+    Condition both = notes_condition(ConditionType::Linear);
+    both.trim = true;
+    both.is_curved_segment = true;
+    const Condition form = condition_form_for_edit(both);
+    CHECK(form.trim);
+    CHECK_FALSE(form.is_curved_segment);
+    CHECK(form.condition_type == ConditionType::Linear);
 }
 
-TEST(CondM08_UnsupportedType, ASaveRewritesTheTypeLikeAStyleChange)
+// test_editing_only_the_notes_saves_only_the_notes (7 and -1, and the same in a metric bid): saved == [{"notes": "edited"}]: no
+// type, no spacing, no thickness, no backout. The fixtures store quantity 0 / UOM -1 on purpose: Windows also resets a stored
+// quantity that the type's option list does not offer to (none) on every save (edit_condition_dialog.py :897-898, :984-990,
+// :1658-1664 in 49a2d59), which iOS does not port (owner decision, recorded in the documents), so a type-7 row WITH a stored
+// quantity writes only the notes on iOS.
+TEST(CondM08_UnknownStyle, ANotesOnlyEditWritesOnlyTheNotes)
 {
-    Condition stored = notes_condition(ConditionType::Linear);
-    stored.condition_type = static_cast<ConditionType>(4);
-    stored.spacing = 2.5;
-    Condition form = stored;
-    form.condition_type = editor_condition_type(stored.condition_type);
-    form.name = "Renamed";
-    const ConditionChanges changes = save_changes(stored, form);
-    CHECK(changes.has(ConditionField::ConditionType));
-    CHECK(changes.values.condition_type == ConditionType::Linear);
-    CHECK(changes.has(ConditionField::Name));
-    // the spacing is the field's (the stored 2.5), not the type default of the style the type was rewritten to
-    CHECK_EQ(condition_to_save(stored, form, false).spacing, 2.5);
-    CHECK(changes.has(ConditionField::Spacing)); // the type is rewritten: the Spacing field is written although equal to the stored 2.5
-    CHECK_EQ(changes.values.spacing, 2.5);
-    // (what Windows saves for the THICKNESS of a stored unsupported type is not verified, so it is not pinned here)
+    for (int n : {7, -1})
+        for (bool metric : {false, true})
+        {
+            SCOPED_CONTEXT("stored type " + std::to_string(n) + (metric ? " metric" : " imperial"));
+            const Condition stored = unknown_condition(n);
+            Condition form = condition_form_for_edit(stored);
+            form.notes = "edited";
+            const ConditionChanges changes = save_changes(stored, form, metric);
+            CHECK(fields_are(changes, {ConditionField::Notes}));
+            CHECK_EQ(changes.fields.count(), 1u);
+            CHECK(changes.values.condition_type == stored.condition_type);
+            CHECK_STR_EQ(changes.values.notes, "edited");
+            CHECK_EQ(changes.values.thickness, 4.0);
+            CHECK_EQ(changes.values.spacing, stored.spacing);
+        }
 }
 
-// ... also in a metric bid (COND-STYLE-02, Windows b9902e6: a type change saves the Spacing field, never the table)
-TEST(CondM08_UnsupportedType, ASaveRewritesTheTypeAndKeepsTheSpacingInAMetricBid)
+// the same with many stored values away from the defaults (Windows oracle: still only {"notes": "edited"}), and for stored types far
+// outside 0..3 as well (4, 99 and the ends of an int: the save path must not treat any of them as a type change; found by the
+// independent mutation re-check, mutant: |type| > 1000 counts as a type change)
+TEST(CondM08_UnknownStyle, ANotesOnlyEditOfAConditionWithManyStoredValuesWritesOnlyTheNotes)
 {
-    Condition stored = notes_condition(ConditionType::Linear);
-    stored.condition_type = static_cast<ConditionType>(4);
-    stored.spacing = 2.5;
-    Condition form = stored;
-    form.condition_type = editor_condition_type(stored.condition_type);
-    const ConditionChanges changes = save_changes(stored, form, true);
-    CHECK(changes.has(ConditionField::ConditionType));
+    for (int n : {7, -1, 4, 99, 2147483647, -2147483647 - 1})
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(n));
+        Condition stored = rich_unknown_condition(n);
+        stored.rise = 3.0; // the Area-like form shows abs(rise) / abs(run) (DLG-RISE-01), so a positive value is what a reload saves
+        stored.run = 4.0;
+        stored.color_fill = 0x336699;
+        stored.depth = 6.0;
+        stored.grid = true;
+        stored.grid_size1 = 12.0;
+        stored.grid_size2 = 24.0;
+        stored.gap = 1.0;
+        stored.display_dimension = true;
+        stored.display_grid_while_drawing = true;
+        stored.drop_run = true;
+        stored.drop_value = 2.0;
+        stored.trim = true;
+        stored.connect = true;
+        stored.backout = true; // the table backout of a type change is not written without a type change
+        Condition form = condition_form_for_edit(stored);
+        form.notes = "edited";
+        const ConditionChanges changes = save_changes(stored, form, false);
+        CHECK(fields_are(changes, {ConditionField::Notes}));
+        CHECK(changes.values.condition_type == stored.condition_type);
+        CHECK(changes.values.backout);
+    }
+}
+
+// The layout of an unknown type is the Area one for the save too (Windows :1601-1630, :1712-1741): the controls an Area has are
+// written when they change, the ones it has not (Height, Width, Depth, Display Size, Shape, Drop/Run, Add Length, Connect, Trim,
+// Curved Segment) are not taken from the form, and the type stays. The same edits on a stored Area give the same change set.
+TEST(CondM08_UnknownStyle, EditingTheAreaControlsOfAnUnknownTypeSavesLikeAnArea)
+{
+    const auto edit = [](Condition &form)
+    {
+        // the controls of the Area layout
+        form.thickness = 6.0;
+        form.rise = 1.5;
+        form.run = 2.0;
+        form.round_quantity = true;
+        form.round_up = 0.25;
+        form.grid = true;
+        form.grid_size1 = 12.0;
+        form.grid_size2 = 24.0;
+        form.gap = 1.0;
+        form.display_grid_while_drawing = true;
+        form.display_dimension = true;
+        form.display_name = true;
+        form.snap_to_linear = 0; // iOS-only (COND-EXTRA-01), kept for every Area-like layout
+        // controls this layout does not have: whatever the form holds for them is not saved
+        form.height = 9.0;
+        form.width = 9.0;
+        form.depth = 9.0;
+        form.display_size = 50.0;
+        form.shape = ShapeId::Circle;
+        form.drop_run = true;
+        form.drop_value = 1.0;
+        form.trim = true;
+        form.is_curved_segment = true;
+        form.connect = true;
+        form.connect_tolerance = 3.0;
+    };
+    const ConditionChanges area = [&]
+    {
+        const Condition stored = unknown_condition(1); // a real Area with the same values
+        Condition form = condition_form_for_edit(stored);
+        edit(form);
+        return save_changes(stored, form, false);
+    }();
+    CHECK(fields_are(area, {ConditionField::Thickness, ConditionField::Rise, ConditionField::Run, ConditionField::RoundQuantity,
+                            ConditionField::RoundUp, ConditionField::Grid, ConditionField::GridSize1, ConditionField::GridSize2,
+                            ConditionField::Gap, ConditionField::DisplayGridWhileDrawing, ConditionField::DisplayDimension,
+                            ConditionField::DisplayName, ConditionField::SnapToLinear}));
+    for (int n : {7, -1})
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(n));
+        const Condition stored = unknown_condition(n);
+        Condition form = condition_form_for_edit(stored);
+        edit(form);
+        const ConditionChanges changes = save_changes(stored, form, false);
+        CHECK(changes.fields == area.fields);
+        CHECK(changes.values.condition_type == stored.condition_type);
+        CHECK_FALSE(changes.has(ConditionField::ConditionType));
+        CHECK_EQ(changes.values.thickness, 6.0);
+        CHECK_EQ(changes.values.height, stored.height); // no Height control: the stored 8.0 stays
+        CHECK_EQ(changes.values.width, stored.width);
+        CHECK(changes.values.shape == stored.shape);
+        CHECK_FALSE(changes.values.trim);
+        CHECK_FALSE(changes.values.drop_run);
+        CHECK_FALSE(changes.values.connect);
+    }
+}
+
+// the Linear-only switches (drop_run, trim, curved, add length) do not exist for the Area-like layout: with the OLD loader (Linear
+// shown) the curved flag below would have been rewritten with the type, the spacing, the thickness and the backout
+TEST(CondM08_UnknownStyle, ANotesOnlyEditKeepsTrimAndCurvedOfAnUnknownType)
+{
+    Condition stored = unknown_condition(7);
+    stored.trim = true;
+    stored.is_curved_segment = true;
+    Condition form = condition_form_for_edit(stored);
+    form.notes = "edited";
+    const ConditionChanges changes = save_changes(stored, form, false);
+    CHECK(fields_are(changes, {ConditionField::Notes}));
+    CHECK(changes.values.trim);
+    CHECK(changes.values.is_curved_segment);
+    CHECK(changes.values.condition_type == static_cast<ConditionType>(7));
+}
+
+// test_picking_a_real_type_still_changes_the_type: the type and the defaults of the style are written, nothing else of the stored
+// row (the plain fixture has nothing the old style could carry). The dto keys are those of the Windows dialog driven headless.
+TEST(CondM08_UnknownStyle, ChoosingARealTypeWritesTheTypeAndItsDefaults)
+{
+    for (int n : {7, -1})
+        for (bool metric : {false, true})
+        {
+            SCOPED_CONTEXT("stored type " + std::to_string(n) + (metric ? " metric" : " imperial"));
+            const Condition stored = unknown_condition(n);
+            // the form starts from the stored type: it is the "previous style" of the pick (N, not Linear)
+            REQUIRE(condition_form_for_edit(stored).condition_type == static_cast<ConditionType>(n));
+            const double thick = metric ? mm_to_inches(100.0) : 4.0;
+            const double width = metric ? mm_to_inches(300.0) : 12.0;
+
+            {
+                SCOPED_CONTEXT("to Linear");
+                const ConditionChanges c = pick_from(stored, ConditionType::Linear, metric);
+                CHECK(fields_are(c, {ConditionField::ConditionType, ConditionField::Height, ConditionField::Thickness,
+                                     ConditionField::Backout, ConditionField::Spacing, ConditionField::CalcType1,
+                                     ConditionField::Uom1, ConditionField::Connect}));
+                CHECK(c.values.condition_type == ConditionType::Linear);
+                CHECK_EQ(c.values.height, 0.0);
+                CHECK_EQ(c.values.thickness, thick);
+                CHECK_FALSE(c.values.backout);
+                CHECK_EQ(c.values.spacing, 0.0);
+                CHECK_EQ(c.values.calc_type1, 1);
+                CHECK_EQ(c.values.uom1, metric ? 13 : 2);
+                CHECK(c.values.connect);
+                CHECK(c.values.pattern == stored.pattern);
+            }
+            {
+                SCOPED_CONTEXT("to Area");
+                const ConditionChanges c = pick_from(stored, ConditionType::Area, metric);
+                CHECK(fields_are(c, {ConditionField::ConditionType, ConditionField::Thickness, ConditionField::Backout,
+                                     ConditionField::Spacing, ConditionField::CalcType1, ConditionField::Uom1,
+                                     ConditionField::DisplayGridWhileDrawing}));
+                CHECK(c.values.condition_type == ConditionType::Area);
+                CHECK_EQ(c.values.thickness, thick);
+                CHECK_FALSE(c.values.backout);
+                CHECK_EQ(c.values.spacing, 0.0);
+                CHECK_EQ(c.values.calc_type1, 11);
+                CHECK_EQ(c.values.uom1, metric ? 14 : 5);
+                CHECK(c.values.display_grid_while_drawing);
+                CHECK(c.values.pattern == stored.pattern);
+            }
+            for (ConditionType count_like : {ConditionType::Count, ConditionType::Attachment})
+            {
+                SCOPED_CONTEXT(count_like == ConditionType::Count ? "to Count" : "to Attachment");
+                const ConditionChanges c = pick_from(stored, count_like, metric);
+                CHECK(fields_are(c, {ConditionField::ConditionType, ConditionField::Height, ConditionField::Width,
+                                     ConditionField::Thickness, ConditionField::Backout, ConditionField::Spacing,
+                                     ConditionField::CalcType1, ConditionField::Uom1, ConditionField::Connect}));
+                CHECK(c.values.condition_type == count_like);
+                CHECK_EQ(c.values.height, 0.0);
+                CHECK_EQ(c.values.width, width);
+                CHECK_EQ(c.values.thickness, count_like == ConditionType::Count ? thick : 0.0); // Attachment: 0 in both systems
+                CHECK(c.values.backout);
+                CHECK_EQ(c.values.spacing, 0.0);
+                CHECK_EQ(c.values.calc_type1, 23);
+                CHECK_EQ(c.values.uom1, 0);
+                CHECK(c.values.connect);
+                CHECK(c.values.pattern == stored.pattern);
+            }
+        }
+}
+
+// Picking a real style from "Unknown (N)": nothing is carried (N has neither Display Name nor rounding), so the controls of the new
+// style restart from the style's defaults, the shape is reset for Count / Attachment, spacing and pattern stay (Windows oracle, the
+// "rich" table: spacing 2.5 kept and written, rounding and Display Name reset, shape Square)
+TEST(CondM08_UnknownStyle, ChoosingARealTypeResetsWhatTheOldTypeDidNotCarry)
+{
+    for (int n : {7, -1})
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(n));
+        const Condition stored = rich_unknown_condition(n);
+        REQUIRE(condition_form_for_edit(stored).condition_type == static_cast<ConditionType>(n));
+        {
+            SCOPED_CONTEXT("to Linear");
+            const ConditionChanges c = pick_from(stored, ConditionType::Linear, false);
+            CHECK(fields_are(c, {ConditionField::ConditionType, ConditionField::Height, ConditionField::Thickness,
+                                 ConditionField::Backout, ConditionField::Spacing, ConditionField::CalcType1,
+                                 ConditionField::Uom1, ConditionField::Connect, ConditionField::Rise, ConditionField::Run,
+                                 ConditionField::RoundQuantity, ConditionField::RoundUp}));
+            CHECK_EQ(c.values.rise, 0.0);
+            CHECK_EQ(c.values.run, 0.0);
+            CHECK_FALSE(c.values.round_quantity);
+            CHECK_EQ(c.values.round_up, 0.0);
+            CHECK_EQ(c.values.spacing, 2.5);
+            CHECK_EQ(c.values.height, 0.0);
+            CHECK_FALSE(c.has(ConditionField::DisplayName)); // a Linear has no Display Name control
+        }
+        {
+            SCOPED_CONTEXT("to Area");
+            const ConditionChanges c = pick_from(stored, ConditionType::Area, false);
+            CHECK(fields_are(c, {ConditionField::ConditionType, ConditionField::Thickness, ConditionField::Backout,
+                                 ConditionField::Spacing, ConditionField::CalcType1, ConditionField::Uom1,
+                                 ConditionField::DisplayGridWhileDrawing, ConditionField::Rise, ConditionField::Run,
+                                 ConditionField::RoundQuantity, ConditionField::RoundUp, ConditionField::DisplayName}));
+            CHECK_FALSE(c.values.round_quantity);
+            CHECK_EQ(c.values.round_up, 0.0);
+            CHECK_FALSE(c.values.display_name);
+            CHECK(c.values.display_grid_while_drawing);
+            CHECK_EQ(c.values.spacing, 2.5);
+        }
+        for (ConditionType count_like : {ConditionType::Count, ConditionType::Attachment})
+        {
+            SCOPED_CONTEXT(count_like == ConditionType::Count ? "to Count" : "to Attachment");
+            const ConditionChanges c = pick_from(stored, count_like, false);
+            CHECK(fields_are(c, {ConditionField::ConditionType, ConditionField::Height, ConditionField::Width,
+                                 ConditionField::Thickness, ConditionField::Backout, ConditionField::Spacing,
+                                 ConditionField::CalcType1, ConditionField::Uom1, ConditionField::Connect, ConditionField::Shape,
+                                 ConditionField::DisplayName}));
+            CHECK(c.values.shape == ShapeId::Square); // from the Rectangle of the stored condition
+            CHECK_FALSE(c.values.display_name);
+            CHECK_EQ(c.values.width, 12.0); // from 5.0
+            CHECK_EQ(c.values.height, 0.0);
+            CHECK_EQ(c.values.spacing, 2.5);
+            // rise, run and the rounding have no control in a Count / Attachment: the stored values stay
+            CHECK_FALSE(c.has(ConditionField::Rise));
+            CHECK_FALSE(c.has(ConditionField::Run));
+            CHECK_FALSE(c.has(ConditionField::RoundQuantity));
+            CHECK_FALSE(c.has(ConditionField::RoundUp));
+        }
+    }
+}
+
+// Port of the assertions of test_linear_branches_skip_widgets_that_were_never_built that iOS can state, as an iOS CHARACTERISATION of
+// the Linear branch of the change set (the Core half); it pins no COND-M08 rule (the keeping of the stored type and the notes-only
+// save are pinned by the tests around it). The stored unknown type 7 with the form forced to Linear and every Linear-only value
+// equal to the stored one: the type change and the notes are written, and none of the six fields the Windows test names
+// (drop_run, drop_value, trim, is_curved_segment, round_quantity, round_up) is. The state of the Windows test (signals blocked
+// over widgets that were built for another style) is unreachable on iOS: every control exists in every layout that needs it (the
+// rows and the save branch both follow editor_layout(type)). The whole field set is NOT compared, because it is not the same on
+// both sides: the real Windows dialog
+// driven headless for that state (type 7, combo forced to Linear, notes edited) sends {backout False, condition_type 0, height 0.0,
+// notes, spacing 0.0, thickness 0.0} (Height and a Thickness of 0.0 too, because its Linear widgets were never populated and are
+// still read), where iOS writes the Type, the Notes and the Spacing, Thickness and Backout of the style change from the stored values.
+TEST(CondM08_UnknownStyle, LinearOnlyFieldsThatEqualTheStoredOnesAreNotWritten)
+{
+    const Condition stored = unknown_condition(7);
+    Condition form = condition_form_for_edit(stored);
+    form.condition_type = ConditionType::Linear;
+    form.notes = "edited";
+    const ConditionChanges changes = save_changes(stored, form, false);
+    CHECK(changes.has(ConditionField::ConditionType)); // Windows: dto.get("condition_type") == TYPE_LINEAR
     CHECK(changes.values.condition_type == ConditionType::Linear);
-    CHECK_EQ(condition_to_save(stored, form, true).spacing, 2.5);
-    CHECK(changes.has(ConditionField::Spacing)); // the type is rewritten: the Spacing field is written although equal to the stored 2.5
-    CHECK_EQ(changes.values.spacing, 2.5);
+    CHECK(changes.has(ConditionField::Notes)); // Windows: dto.get("notes") == "edited"
+    CHECK_STR_EQ(changes.values.notes, "edited");
+    CHECK_FALSE(changes.has(ConditionField::DropRun));
+    CHECK_FALSE(changes.has(ConditionField::DropValue));
+    CHECK_FALSE(changes.has(ConditionField::Trim));
+    CHECK_FALSE(changes.has(ConditionField::IsCurvedSegment));
+    CHECK_FALSE(changes.has(ConditionField::RoundQuantity));
+    CHECK_FALSE(changes.has(ConditionField::RoundUp));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

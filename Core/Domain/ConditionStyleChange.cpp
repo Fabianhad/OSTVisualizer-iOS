@@ -1,11 +1,22 @@
 // Layer: Domain. See ConditionStyleChange.hpp.
 #include "ConditionStyleChange.hpp"
 
+#include "ConditionChoices.hpp"
 #include "ConditionFormRules.hpp"
 #include "PositionParser.hpp"
 
 namespace ost_domain
 {
+
+    Condition condition_form_for_edit(const Condition &stored)
+    {
+        // _load_condition (:839-847; Windows 49a2d59) selects the stored type as it is, a type outside
+        // 0..3 as the disabled "Unknown (N)" item with _style_type = N, so the form keeps it and a Save without a style choice
+        // finds form type == stored type (type_changed False, :1474). Only Trim / Curved Segment are normalised (COND-TRIM-01).
+        Condition form = stored;
+        normalize_trim_curved(form);
+        return form;
+    }
 
     namespace
     {
@@ -137,11 +148,12 @@ namespace ost_domain
 
     TypeChangeDefaults type_change_defaults(ConditionType type, bool metric)
     {
-        // TYPE_DEFAULTS: thickness and backout, what a type change sends (edit_condition_dialog.py:1458-1463). The thickness is
-        // _type_default_thickness (:1236-1239): the metric column (mm_to_inches(thickness_metric)) in a metric bid, the imperial
+        // TYPE_DEFAULTS: thickness and backout, what a type change sends (edit_condition_dialog.py:1474-1479). The thickness is
+        // _type_default_thickness (:1250-1253): the metric column (mm_to_inches(thickness_metric)) in a metric bid, the imperial
         // one otherwise, the same values apply_style_change puts into the Thickness field. The backout does not depend on the
-        // unit. The spacing has no default here: a type change saves the Spacing field (COND-STYLE-02). Unknown styles fall back
-        // to 4.0 (100 mm) / False.
+        // unit. The spacing has no default here: a type change saves the Spacing field (COND-STYLE-02). Only a real style is ever
+        // the target of a type change (the "Unknown (N)" entry of the style choice is disabled, COND-M08); a type outside the four
+        // would get 4.0 (100 mm) / False.
         const StyleDimensionDefaults dimensions = style_dimension_defaults(type, metric);
         bool backout = false;
         switch (type)
@@ -168,7 +180,7 @@ namespace ost_domain
         // the dialog held: the Top segment (default) with an empty elevation is false / 0.0 after a reload (a text the dialog accepts
         // already has the number a reload gives: it is validated with the loader's own parser, elevation_text_inches, since Windows
         // b9902e6). COND-ELEV-01, decided 2026-11-19: memory equals a reload (Windows takes the dialog's values into the DTO,
-        // edit_condition_dialog.py:1455-1457, but shows the reloaded condition).
+        // edit_condition_dialog.py:1471-1473, but shows the reloaded condition).
         out.name = form.name;
         derive_elevation_from_name(out.name, out.z_value, out.is_top);
         out.condition_type = type;
@@ -189,8 +201,10 @@ namespace ost_domain
         out.uom3 = form.calc_type3 == 0 ? -1 : form.uom3;
         out.notes = form.notes;
 
-        // The controls of the style
-        if (is_count_like(type))
+        // The controls of the style: Linear, Count / Attachment, and everything else (Area and a stored type outside 0..3, COND-M08)
+        // is the Area-like branch (edit_condition_dialog.py :1601-1630, :1712-1741)
+        const EditorLayout layout = editor_layout(type);
+        if (layout == EditorLayout::CountLike)
         {
             out.height = form.height;
             out.width = form.width;
@@ -201,7 +215,7 @@ namespace ost_domain
             out.connect = form.connect;
             out.connect_tolerance = form.connect_tolerance;
         }
-        else if (type == ConditionType::Linear)
+        else if (layout == EditorLayout::Linear)
         {
             out.height = form.height;
             out.thickness = form.thickness;
@@ -233,9 +247,9 @@ namespace ost_domain
             out.snap_to_linear = form.snap_to_linear;
         }
 
-        // A style that differs from the stored one (edit_condition_dialog.py:1458-1463): dto.set("thickness",
+        // A style that differs from the stored one (edit_condition_dialog.py:1474-1479): dto.set("thickness",
         // _type_default_thickness(td)) and dto.set("backout", td["backout"]); the spacing is NOT taken from the table. What the
-        // fields show is what is saved: the spacing (:1624) and the Thickness of a Linear / Area (:1559, :1589) are written from
+        // fields show is what is saved: the spacing (:1640) and the Thickness of a Linear / Area (:1575, :1605) are written from
         // the field on a style change even when equal to the stored value (`if type_changed or value != stored`), which is the
         // `out.spacing` / `out.thickness` copied from the form above (condition_changes_for_save marks those columns as written
         // on a style change). Only a Count / Attachment, which has no Thickness field,
@@ -254,9 +268,9 @@ namespace ost_domain
     ConditionChanges condition_changes_for_save(const Condition &stored, const Condition &form, bool metric)
     {
         ConditionChanges changes = collect_condition_changes(stored, condition_to_save(stored, form, metric));
-        // `type_changed = ct != cond.condition_type` (edit_condition_dialog.py:1458): on a style change the DTO always carries the
-        // thickness and the backout of the table (:1459-1463), the Linear / Area thickness field (:1559, :1589:
-        // `if type_changed or thickness != cond.thickness`) and the spacing field (:1624), so the UPDATE writes those columns even
+        // `type_changed = ct != cond.condition_type` (edit_condition_dialog.py:1474): on a style change the DTO always carries the
+        // thickness and the backout of the table (:1475-1479), the Linear / Area thickness field (:1575, :1605:
+        // `if type_changed or thickness != cond.thickness`) and the spacing field (:1640), so the UPDATE writes those columns even
         // when the value equals the stored one (observable where the stored column is NULL: Windows writes 0.0). The values are
         // already in `changes.values` (condition_to_save). Without a style change nothing is added: an unchanged field is left alone.
         if (form.condition_type != stored.condition_type)

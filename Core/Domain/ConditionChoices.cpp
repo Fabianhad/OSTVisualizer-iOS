@@ -3,8 +3,10 @@
 
 #include "../Import/TextRules.hpp"
 #include "ConditionTree.hpp"
+#include "UomService.hpp"
 
 #include <algorithm>
+#include <string>
 
 namespace ost_domain
 {
@@ -71,17 +73,63 @@ namespace ost_domain
         return uids;
     }
 
-    ConditionType editor_condition_type(ConditionType stored)
+    namespace
     {
-        switch (stored)
+        // edit_condition_dialog.py _STYLE_ITEMS (:64-69): the four styles in the order of the style combo
+        struct StyleName
+        {
+            ConditionType type;
+            const char *label;
+        };
+        const StyleName kStyleNames[] = {{ConditionType::Linear, "Linear"},
+                                         {ConditionType::Area, "Area"},
+                                         {ConditionType::Count, "Count"},
+                                         {ConditionType::Attachment, "Attachment"}};
+    }
+
+    std::optional<ConditionType> unknown_style_type(ConditionType stored)
+    {
+        // _KNOWN_STYLE_TYPES (:70) = the four types of _STYLE_ITEMS = the types the quantity calculation supports
+        if (is_supported_condition_type(stored))
+            return std::nullopt;
+        return stored;
+    }
+
+    std::vector<StyleChoice> condition_style_choices(const std::optional<ConditionType> &unknown)
+    {
+        std::vector<StyleChoice> choices;
+        choices.reserve(5);
+        for (const StyleName &style : kStyleNames)
+            choices.push_back(StyleChoice{style.type, style.label, true});
+        // _sync_unknown_style_item (:970-978): the entry of the stored type is added after Attachment and disabled
+        if (unknown.has_value())
+            choices.push_back(StyleChoice{*unknown, condition_style_label(*unknown), false});
+        return choices;
+    }
+
+    std::string condition_style_label(ConditionType type)
+    {
+        for (const StyleName &style : kStyleNames)
+            if (style.type == type)
+                return style.label;
+        // f"Unknown ({condition_type})" (:977): the raw integer, so "Unknown (-1)"
+        return "Unknown (" + std::to_string(static_cast<int>(type)) + ")";
+    }
+
+    EditorLayout editor_layout(ConditionType type)
+    {
+        switch (type)
         {
         case ConditionType::Linear:
-        case ConditionType::Area:
+            return EditorLayout::Linear;
         case ConditionType::Count:
         case ConditionType::Attachment:
-            return stored;
+            return EditorLayout::CountLike;
+        case ConditionType::Area:
+            break;
         }
-        return ConditionType::Linear;
+        // Area and every other type: `is_area = not is_count and not is_linear` (:547), the Area branch of _build_advanced_tab (:740)
+        return EditorLayout::Area;
     }
 
 }

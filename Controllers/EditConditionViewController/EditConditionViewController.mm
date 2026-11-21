@@ -125,12 +125,15 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   return self;
 }
 
-// What the form shows of a condition that is loaded into it: a style the dialog does not know shows Linear (COND-M08), Trim and
-// Curved Segment never show both (COND-TRIM-01). A Save writes these values only when something else makes the form dirty.
+// What the form shows of a condition that is loaded into it (Windows _load_condition, edit_condition_dialog.py :839-847 of the
+// Windows 49a2d59): the stored style stays as it is (COND-M08). A type outside Linear / Area / Count /
+// Attachment adds the disabled "Unknown (N)" entry to the style choice (_unknownStyleType, replaced or removed at the next load) and
+// is built Area-like, and a Save without a style choice keeps it. Trim and Curved Segment never show both (COND-TRIM-01). A Save
+// writes these values only when something else makes the form dirty.
 - (void)_normalizeLoadedCondition {
-  _condition.condition_type =
-      ost_domain::editor_condition_type(_condition.condition_type);
-  ost_domain::normalize_trim_curved(_condition);
+  _condition = ost_domain::condition_form_for_edit(_condition);
+  _unknownStyleType =
+      ost_domain::unknown_style_type(_condition.condition_type);
 }
 
 #pragma mark - Lifecycle
@@ -187,12 +190,12 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
 - (void)_rebuildDimRows {
   _dimRows.clear();
-  bool isCount =
-      (_condition.condition_type == ost_domain::ConditionType::Count ||
-       _condition.condition_type == ost_domain::ConditionType::Attachment);
-  bool isLinear =
-      (_condition.condition_type == ost_domain::ConditionType::Linear);
-  bool isArea = (_condition.condition_type == ost_domain::ConditionType::Area);
+  // a type outside Linear / Area / Count / Attachment is Area-like (COND-M08, edit_condition_dialog.py :547)
+  const ost_domain::EditorLayout layout =
+      ost_domain::editor_layout(_condition.condition_type);
+  const bool isCount = (layout == ost_domain::EditorLayout::CountLike);
+  const bool isLinear = (layout == ost_domain::EditorLayout::Linear);
+  const bool isArea = (layout == ost_domain::EditorLayout::Area);
 
   if (isCount) {
     _dimRows.push_back(
@@ -226,11 +229,11 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
 - (void)_rebuildAdvRows {
   _advRows.clear();
-  bool isCount =
-      (_condition.condition_type == ost_domain::ConditionType::Count ||
-       _condition.condition_type == ost_domain::ConditionType::Attachment);
-  bool isLinear =
-      (_condition.condition_type == ost_domain::ConditionType::Linear);
+  // everything that is not Linear or Count / Attachment is the Area rows, a type outside the four included (COND-M08)
+  const ost_domain::EditorLayout layout =
+      ost_domain::editor_layout(_condition.condition_type);
+  const bool isCount = (layout == ost_domain::EditorLayout::CountLike);
+  const bool isLinear = (layout == ost_domain::EditorLayout::Linear);
 
   if (isCount) {
     _advRows.push_back(
@@ -417,7 +420,9 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 // The text a dimension / plain field shows for the value of _condition: Core inches_to_display, str(value) (Python repr, so the text
 // is the stored value, not six digits: DLG-PREC-01), str(int(display_size)); the Area style shows abs(rise) / abs(run) (DLG-RISE-01).
 - (NSString *)_textForTag:(NSInteger)tag {
-  const bool area = (_condition.condition_type == ost_domain::ConditionType::Area);
+  // abs(rise) / abs(run) for every Area-like layout, a type outside the four included (COND-M08)
+  const bool area = (ost_domain::editor_layout(_condition.condition_type) ==
+                     ost_domain::EditorLayout::Area);
   switch (tag) {
   case kTagHeight:
     return inchesToDisplay(_condition.height, _metric);
@@ -589,7 +594,10 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
   // The elevation text is kept as typed: it becomes the suffix of the name (COND-ELEV-01). It is validated with the loader's own
   // parser (parse_elevation_z calls elevation_text_inches, Windows b9902e6): a text the loader cannot read (a bare number, mm, units
-  // of both systems, "5'" alone, a zero denominator) is refused with the forms that are accepted, like Windows. The saved condition
+  // of both systems, "5'" alone, a zero denominator) is refused with the forms that are accepted, like Windows. The dialog also
+  // refuses a text without a closing inch mark in which a letter or digit follows the foot mark ("5'6", "10'6", "5'abc"; "5'x" and
+  // "5'6\"" pass), which the loader would read as the feet alone (elevation_text_needs_closing_inch_mark, called by parse_elevation_z;
+  // Windows 49a2d59, edit_condition_dialog.py :72, :1444); the alert is the same. The saved condition
   // does not take is_top or z from the form: condition_to_save derives both from the saved NAME like a reload does (decided
   // 2026-11-19); for a text that passed, the number checked here is the one that derivation gives, so memory equals a reload.
   const std::string elevValue = ost_import::text_rules::py_strip(
@@ -613,11 +621,12 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     return [self _refuseWithIssue:*issue focusTag:kTagRefNo];
   }
 
-  const bool isCount =
-      (form.condition_type == ost_domain::ConditionType::Count ||
-       form.condition_type == ost_domain::ConditionType::Attachment);
-  const bool isLinear =
-      (form.condition_type == ost_domain::ConditionType::Linear);
+  // The fields to parse are those of the layout the editor built (a type outside the four is Area-like, COND-M08), so no field that
+  // was never built is read.
+  const ost_domain::EditorLayout layout =
+      ost_domain::editor_layout(form.condition_type);
+  const bool isCount = (layout == ost_domain::EditorLayout::CountLike);
+  const bool isLinear = (layout == ost_domain::EditorLayout::Linear);
 
   if (isCount) {
     if (![self _parseDimensionTag:kTagHeight label:@"Height" outValue:&form.height] ||

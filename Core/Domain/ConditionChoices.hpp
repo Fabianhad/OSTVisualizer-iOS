@@ -11,7 +11,9 @@
 //   ost_visualizer/presentation/dialogs/edit_condition_dialog.py _SHAPE_ITEMS   (COND-SHAPE-01)
 //   ost_visualizer/presentation/components/conditions_sidebar.py
 //                                collect_ordered_condition_uids                 (COND-NAV-01)
-//   ost_visualizer/presentation/dialogs/edit_condition_dialog.py :841,1204-1207 (COND-M08)
+//   ost_visualizer/presentation/dialogs/edit_condition_dialog.py :64-70, :839-848, :970-978, :547, :740
+//                                _STYLE_ITEMS, _load_condition, _sync_unknown_style_item, the Area-like layout (COND-M08;
+//                                Windows 49a2d59)
 //   ost_visualizer/presentation/coordinators/placement_coordinator.py enter, handlers/condition_action_handler.py
 //                                _finish_condition_duplicate                    (COND-PLACE-01, COND-M07)
 #pragma once
@@ -57,9 +59,37 @@ namespace ost_domain
                                                           const std::unordered_map<std::string, ConditionFolder> &folders,
                                                           const std::unordered_map<std::string, CdnType> &cdn_types);
 
-    // COND-M08: the style the editor shows. The database can hold a type outside Linear / Area / Count / Attachment; the Windows
-    // style combo then falls back to its first entry, Linear (a save then writes that type). Every supported type is shown as it is.
-    ConditionType editor_condition_type(ConditionType stored);
+    // COND-M08 (Windows 49a2d59): the style choice of the Edit Condition dialog. Windows _STYLE_ITEMS
+    // (edit_condition_dialog.py:64-69) is Linear 0,
+    // Area 1, Count 2, Attachment 3. A stored type outside 0..3 adds ONE more entry AFTER them, "Unknown (N)" with N the raw stored
+    // integer, disabled (it can never be chosen) and shown as the current style (_sync_unknown_style_item :970-978, called by
+    // _load_condition :844; removed when another condition is loaded).
+    struct StyleChoice
+    {
+        ConditionType type; // the raw value: Linear..Attachment, or the unknown stored type N
+        std::string label;  // "Linear" / "Area" / "Count" / "Attachment" / "Unknown (N)"
+        bool enabled;       // false only for the unknown entry
+    };
+
+    // The raw stored type when it is outside Linear / Area / Count / Attachment, else nullopt.
+    std::optional<ConditionType> unknown_style_type(ConditionType stored);
+
+    // The four styles in the Windows order, then (only when `unknown` has a value) the disabled "Unknown (N)" entry.
+    std::vector<StyleChoice> condition_style_choices(const std::optional<ConditionType> &unknown);
+
+    // The text of the Style row: the style name, or "Unknown (N)" with N = static_cast<int>(type) (so "Unknown (-1)").
+    std::string condition_style_label(ConditionType type);
+
+    // The layout the editor builds and saves for a type: Linear; Count and Attachment -> CountLike; Area and every other type ->
+    // Area (edit_condition_dialog.py:547 `is_area = not is_count and not is_linear`, :740 the Area branch of _build_advanced_tab,
+    // :1601 / :1712 the Area-like save branches).
+    enum class EditorLayout
+    {
+        Linear,
+        Area,
+        CountLike
+    };
+    EditorLayout editor_layout(ConditionType type);
 
     // COND-PLACE-01 / COND-M07: what happens to the placement tool.
     enum class PlacementAction
