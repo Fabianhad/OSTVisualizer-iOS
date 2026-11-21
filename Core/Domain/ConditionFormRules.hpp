@@ -37,11 +37,12 @@ namespace ost_domain
     inline constexpr const char *kFormValidationErrorTitle = "Validation Error";
 
     // The highest condition number (update_condition_dto.py MAX_CONDITION_NUMBER): the limit of an Access Long and of Condition::ref_no
-    // (an int). The dialog refuses a number above it and the store refuses a renumber whose shift would carry another condition past it.
+    // (an int). The dialog refuses a number above it, and the store refuses a renumber whose shift would carry another condition past it
+    // and a duplicate whose new number would pass it.
     inline constexpr int kMaxConditionNumber = 2147483647;
     static_assert(kMaxConditionNumber == INT_MAX, "a condition number is an int: the highest one is INT_MAX");
 
-    // The two refusals of the Cond. No. field (edit_condition_dialog.py :1465-1490), both under "Invalid Value".
+    // The two refusals of the Cond. No. field (edit_condition_dialog.py :1481-1506), both under "Invalid Value".
     inline constexpr const char *kConditionNumberPositiveMessage = "Condition number must be a positive whole number.";
     inline constexpr const char *kConditionNumberRangeMessage = "Condition number must be between 1 and 2147483647.";
 
@@ -97,9 +98,29 @@ namespace ost_domain
     std::optional<FormIssue> parse_condition_number(const std::string &text, int &ref_no);
 
     // The refusal of a renumber whose shift would carry another condition past kMaxConditionNumber
-    // (ConditionNumberOverflowError, condition_operations.py :636-641): the conditions numbered `new_ref_no` and up would move up by one
+    // (ConditionNumberOverflowError, condition_operations.py :650-655): the conditions numbered `new_ref_no` and up would move up by one
     // and one of them already holds the highest number. ost_store::update_condition returns it as its error text.
     std::string condition_number_overflow_message(int new_ref_no);
+
+    // The refusal of NEW conditions whose numbers would pass kMaxConditionNumber (Windows 49a2d59:
+    // condition_operations.py _allocate_condition_identities :56-62, ConditionNumberOverflowError):
+    // "Cannot add N condition(s): the new condition numbers would reach X, past 2147483647, the highest condition number." with
+    // "condition" for N == 1 and "conditions" for every other N. X = highest + N, the last of the new numbers; it is only ever shown when
+    // it is above kMaxConditionNumber, so it is an unsigned 64 bit value (a stored number of up to LLONG_MAX plus N does not overflow it).
+    std::string condition_numbers_overflow_message(long long count, unsigned long long last_ref_no);
+
+    // The decision (Windows :48-62): `count` (1 .. kMaxConditionNumber) new conditions of a bid whose highest condition number is
+    // `highest` get highest + 1 ... highest + count. nullopt when they all fit (<= kMaxConditionNumber), else the message above (all or
+    // nothing: one check for the whole set, before anything is written). The highest number of a bid without numbers (no row, only
+    // NULL numbers, or no number column) is passed as 0: Windows starts at 1 for None and 0 + 1 is the same. A stored number above
+    // kMaxConditionNumber (SQLite can hold what an Access Long cannot) refuses as well. Never overflows: it compares
+    // highest > kMaxConditionNumber - count. The only iOS allocator is ost_store::duplicate_condition (count 1).
+    std::optional<std::string> refuse_new_condition_numbers(long long highest, long long count);
+
+    // The alert of a failed Duplicate: title "Duplicate Error" (the iOS wording, DBP-11; Windows titles the same text "Duplicate Conditions"
+    // and shows nothing for a failure without text) and as message `detail`, the text above when the store gave one, else the generic
+    // "Failed to duplicate the condition.".
+    FormIssue condition_duplicate_failed_issue(const std::string &detail = std::string());
 
     // A dimension field (_parse_dimension_field): text.strip(); blank is 0.0; else display_to_inches(text, metric) must be finite,
     // or "Invalid Value" / '"<text>" is not a valid dimension for <label>.'.

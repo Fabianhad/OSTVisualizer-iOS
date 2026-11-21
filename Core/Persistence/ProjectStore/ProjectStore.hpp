@@ -245,9 +245,18 @@ namespace ost_store
                                  int from_ref_no,
                                  const std::string &exclude_uid);
 
+    // Windows duplicate_conditions for ONE condition: the copy gets the next free UID, a fresh GUID and RefNo = highest number of the
+    // bid + 1 (1 for a bid without numbers), all in one transaction; returns the new uid, "" on any failure.
+    // A copy whose number would pass the highest condition number, 2147483647, is refused BEFORE anything is written (no row, no UID;
+    // Windows _allocate_condition_identities, ConditionNumberOverflowError, condition_operations.py :56-62 in Windows 49a2d59):
+    // `error`, when given, is then ost_domain::refuse_new_condition_numbers(highest, 1), highest being MAX(RefNo) of the
+    // bid (NULL numbers ignored, 0 for a bid without numbers, read as 64 bit inside the transaction after the ownership check). Every
+    // other failure leaves `error` empty (the caller shows the generic text), and so does a success. This is the only place that
+    // allocates condition numbers (iOS has no New Condition, no paste, no copy to another bid and no renumber).
     std::string duplicate_condition(const std::string &db_path,
                                     const std::string &bid_uid,
-                                    const std::string &condition_uid);
+                                    const std::string &condition_uid,
+                                    std::string *error = nullptr);
 
     bool delete_condition(const std::string &db_path,
                           const std::string &bid_uid,

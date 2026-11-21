@@ -101,8 +101,12 @@ extern NSNotificationName const OSTRenderConfigChangedNotification;
                        changes:(const ost_domain::ConditionChanges &)changes
                          error:(NSString **)errorText;
 
+// Windows duplicate_conditions for one condition: the new condition's uid, or nil. *errorText (errorText may be NULL) is the Windows text
+// when the copy would get a number past the highest condition number, 2147483647 (COND-ALLOC-01: nothing is written then), and nil for
+// every other failure (the caller shows the generic text) and on success.
 + (NSString *)duplicateCondition:(NSString *)conditionUID
-                           inBid:(NSString *)bidUID;
+                           inBid:(NSString *)bidUID
+                           error:(NSString **)errorText;
 
 + (BOOL)deleteCondition:(NSString *)conditionUID
                   inBid:(NSString *)bidUID;

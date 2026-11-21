@@ -409,8 +409,11 @@ namespace ost_store
 
     std::string duplicate_condition(const std::string &db_path,
                                     const std::string &bid_uid,
-                                    const std::string &condition_uid)
+                                    const std::string &condition_uid,
+                                    std::string *error)
     {
+        if (error)
+            error->clear();
         long long bid_int = 0;
         long long condition_int = 0;
         if (!parse_uid_int(bid_uid, bid_int) || !is_ascii_decimal(condition_uid) ||
@@ -420,23 +423,6 @@ namespace ost_store
         ost_db::OstDatabase db;
         if (!db.open(db_path))
             return "";
-
-        // Every read below is finished (scoped) before the transaction starts.
-        // RefNo = MAX(RefNo of the bid) + 1 (1 for a bid without numbers); a schema without the column has no number.
-        int new_ref = 1;
-        if (db.column_exists("BidConditions", "RefNo"))
-        {
-            ost_db::Statement ref_stmt = db.prepare(
-                "SELECT COALESCE(MAX(RefNo), 0) + 1 FROM BidConditions WHERE BidUID = ?");
-            if (!ref_stmt.valid())
-                return "";
-            ref_stmt.bind_int64(1, bid_int);
-            const ost_db::StepResult ref_result = ref_stmt.step_result();
-            if (ref_result == ost_db::StepResult::Error)
-                return "";
-            if (ref_result == ost_db::StepResult::Row)
-                new_ref = ref_stmt.column_int(0);
-        }
 
         if (!db.begin_transaction())
             return "";
@@ -478,6 +464,35 @@ namespace ost_store
         if (!require_bid_scoped_uid(db, "BidConditions", condition_int, bid_int))
             return fail();
 
+        // Windows _allocate_condition_identities (Windows 49a2d59, condition_operations.py :48-62): after the ownership
+        // check the highest number of the bid is read (here inside the transaction: BEGIN IMMEDIATE already holds the write lock) and the
+        // copy is refused BEFORE anything is written when its number would pass 2147483647 (a refusal rolls back an empty transaction).
+        // RefNo = MAX(RefNo of the bid) + 1; MAX ignores NULL, a bid without numbers starts at 1, a schema without the column has no number
+        // and no check. The number is read as 64 bit: a stored 2147483648 must not wrap.
+        long long new_ref = 1;
+        if (db.column_exists("BidConditions", "RefNo"))
+        {
+            long long highest = 0;
+            {
+                ost_db::Statement ref_stmt = db.prepare("SELECT MAX([RefNo]) FROM [BidConditions] WHERE [BidUID] = ?");
+                if (!ref_stmt.valid())
+                    return fail();
+                ref_stmt.bind_int64(1, bid_int);
+                const ost_db::StepResult ref_result = ref_stmt.step_result();
+                if (ref_result == ost_db::StepResult::Error)
+                    return fail();
+                if (ref_result == ost_db::StepResult::Row && ref_stmt.column_type(0) != ost_db::Statement::TypeNull)
+                    highest = ref_stmt.column_int64(0);
+            }
+            if (const std::optional<std::string> refusal = ost_domain::refuse_new_condition_numbers(highest, 1))
+            {
+                if (error)
+                    *error = *refusal;
+                return fail();
+            }
+            new_ref = highest + 1; // cannot overflow: highest <= kMaxConditionNumber - 1 here
+        }
+
         const std::string guid = new_ost_guid();
         std::string insert_columns;
         std::string select_columns;
@@ -517,7 +532,7 @@ namespace ost_store
                 else if (kind == 'G')
                     copy.bind_text(index, guid);
                 else
-                    copy.bind_int(index, new_ref);
+                    copy.bind_int64(index, new_ref);
                 ++index;
             }
             copy.bind_int64(index++, condition_int);

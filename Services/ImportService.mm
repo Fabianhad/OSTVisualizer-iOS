@@ -459,9 +459,14 @@ NSNotificationName const OSTRenderConfigChangedNotification =
 }
 
 + (NSString *)duplicateCondition:(NSString *)conditionUID
-                           inBid:(NSString *)bidUID {
+                           inBid:(NSString *)bidUID
+                           error:(NSString **)errorText {
+  std::string reason;
   std::string newUID = ost_store::duplicate_condition(
-      [self _dbPath], [bidUID UTF8String], [conditionUID UTF8String]);
+      [self _dbPath], [bidUID UTF8String], [conditionUID UTF8String], &reason);
+  // only the overflow of a new number has a text; every other failure is the generic "Failed to duplicate the condition."
+  if (errorText)
+    *errorText = (newUID.empty() && !reason.empty()) ? OSTString(reason) : nil;
   if (newUID.empty())
     return nil;
   return [NSString stringWithUTF8String:newUID.c_str()];

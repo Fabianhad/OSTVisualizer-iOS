@@ -179,6 +179,28 @@ namespace ost_ctest
             return out;
         }
 
+        // EVERY user table of the database (sqlite_master, sorted by name), rowid order, exact type-aware text: a before/after comparison
+        // of the WHOLE database, so that no table can change unnoticed (a refusal that wrote a row, a UID or a number anywhere shows up).
+        // "<sqlite_master failed>" when the list cannot be read.
+        std::string snapshot_all() const
+        {
+            std::vector<std::string> tables;
+            {
+                ost_db::OstDatabase db;
+                if (!db.open(_path))
+                    return "<cannot open>";
+                ost_db::Statement stmt = db.prepare(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+                if (!stmt.valid())
+                    return "<sqlite_master failed>";
+                while (stmt.step())
+                    tables.push_back(stmt.column_text(0));
+                if (stmt.failed())
+                    return "<sqlite_master failed>";
+            }
+            return snapshot(tables);
+        }
+
         // CREATE TRIGGER that makes every <event> ("INSERT" / "UPDATE" / "DELETE") on <table> fail with RAISE(ABORT).
         std::string block(const std::string &table, const std::string &event)
         {

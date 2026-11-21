@@ -195,6 +195,31 @@ namespace ost_domain
                ", the highest condition number.";
     }
 
+    std::string condition_numbers_overflow_message(long long count, unsigned long long last_ref_no)
+    {
+        // f"Cannot add {count} condition{'' if count == 1 else 's'}: the new condition numbers would reach {last_ref_no}, past
+        // {MAX_CONDITION_NUMBER}, the highest condition number." (condition_operations.py :57-62)
+        return "Cannot add " + std::to_string(count) + (count == 1 ? " condition" : " conditions") +
+               ": the new condition numbers would reach " + std::to_string(last_ref_no) + ", past " +
+               std::to_string(kMaxConditionNumber) + ", the highest condition number.";
+    }
+
+    std::optional<std::string> refuse_new_condition_numbers(long long highest, long long count)
+    {
+        // last_ref_no = highest + count > MAX_CONDITION_NUMBER (:55-57), compared without forming the sum so that nothing overflows
+        if (highest <= static_cast<long long>(kMaxConditionNumber) - count)
+            return std::nullopt;
+        // Here highest > kMaxConditionNumber - count >= 0 for every count up to kMaxConditionNumber, so the unsigned sum is exact
+        return condition_numbers_overflow_message(
+            count, static_cast<unsigned long long>(highest) + static_cast<unsigned long long>(count));
+    }
+
+    FormIssue condition_duplicate_failed_issue(const std::string &detail)
+    {
+        // the store's text for the overflow, the generic text for every other failure (nothing was written either way)
+        return FormIssue{"Duplicate Error", detail.empty() ? std::string("Failed to duplicate the condition.") : detail};
+    }
+
     FormIssue condition_save_failed_issue(const std::string &detail)
     {
         // `result.error or ...`: an empty error is the generic text

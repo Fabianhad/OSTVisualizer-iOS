@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <string>
 
 using namespace ost_domain;
@@ -582,6 +583,110 @@ TEST(DlgFinite01_SaveFailed, TheOverflowMessageIsTheWindowsTextForTheNumberTyped
     CHECK_STR_EQ(condition_number_overflow_message(2147483647),
                  "Condition number 2147483647 cannot be used: the conditions numbered 2147483647 and up would move up by one, and "
                  "one of them is already 2147483647, the highest condition number.");
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// COND-ALLOC-01 (job 6): the numbers of NEW conditions may not pass 2147483647. Windows 49a2d59,
+// condition_operations.py _allocate_condition_identities :56-62. The expected strings are the output of that function run in memory with
+// a stub cursor (the f-string of the refusal is condition_operations.py :57-62); this file pins the decision and the wording in Core, the store test
+// (test_condition_duplicate.cpp, CondAlloc01_DuplicateLimit) pins that nothing is written.
+// ---------------------------------------------------------------------------------------------------------------------
+
+namespace
+{
+    constexpr const char *kAddOneText =
+        "Cannot add 1 condition: the new condition numbers would reach 2147483648, past 2147483647, the highest condition number.";
+    constexpr const char *kAddTwoText =
+        "Cannot add 2 conditions: the new condition numbers would reach 2147483648, past 2147483647, the highest condition number.";
+
+    // the refusal text of refuse_new_condition_numbers, or "<fits>" when every new number fits
+    std::string new_numbers_refusal(long long highest, long long count)
+    {
+        const std::optional<std::string> refusal = refuse_new_condition_numbers(highest, count);
+        return refusal ? *refusal : std::string("<fits>");
+    }
+}
+
+TEST(CondAlloc01_NewNumbers, TheMessageIsTheWindowsTextWithSingularAndPlural)
+{
+    // "condition" for exactly one, "conditions" for every other count; X is printed as given
+    CHECK_STR_EQ(condition_numbers_overflow_message(1, 2147483648ULL), kAddOneText);
+    CHECK_STR_EQ(condition_numbers_overflow_message(2, 2147483648ULL), kAddTwoText);
+    CHECK_STR_EQ(condition_numbers_overflow_message(2, 2147483649ULL),
+                 "Cannot add 2 conditions: the new condition numbers would reach 2147483649, past 2147483647, the highest condition "
+                 "number.");
+    CHECK_STR_EQ(condition_numbers_overflow_message(5, 2147483652ULL),
+                 "Cannot add 5 conditions: the new condition numbers would reach 2147483652, past 2147483647, the highest condition "
+                 "number.");
+    CHECK_STR_EQ(condition_numbers_overflow_message(1, 3000000001ULL),
+                 "Cannot add 1 condition: the new condition numbers would reach 3000000001, past 2147483647, the highest condition "
+                 "number.");
+    CHECK_STR_EQ(condition_numbers_overflow_message(1, 9223372036854775808ULL),
+                 "Cannot add 1 condition: the new condition numbers would reach 9223372036854775808, past 2147483647, the highest "
+                 "condition number.");
+    // Windows' f-string: `'' if count == 1 else 's'`, so even a count of zero is plural (never asked by a caller; pins the `== 1`)
+    CHECK_STR_EQ(condition_numbers_overflow_message(0, 2147483648ULL),
+                 "Cannot add 0 conditions: the new condition numbers would reach 2147483648, past 2147483647, the highest condition "
+                 "number.");
+}
+
+// The owner's boundaries (one duplicate at 2147483646 stores 2147483647; at 2147483647 it gives X = 2147483648; two duplicates at
+// 2147483646 fail) and the other rows computed with the same Windows function.
+TEST(CondAlloc01_NewNumbers, TheOwnersThreeBoundariesAndTheEdgesOfTheOracle)
+{
+    // 2147483646, 2147483647, 2147483648 (one new condition)
+    CHECK_STR_EQ(new_numbers_refusal(2147483646LL, 1), "<fits>"); // the last free number is stored: 2147483647
+    CHECK_STR_EQ(new_numbers_refusal(2147483647LL, 1), kAddOneText); // X = 2147483648
+    CHECK_STR_EQ(new_numbers_refusal(2147483648LL, 1), // a stored number already past the limit
+                 "Cannot add 1 condition: the new condition numbers would reach 2147483649, past 2147483647, the highest condition "
+                 "number.");
+
+    // several new conditions: all or nothing, X = highest + count, plural
+    CHECK_STR_EQ(new_numbers_refusal(2147483646LL, 2), kAddTwoText);
+    CHECK_STR_EQ(new_numbers_refusal(2147483645LL, 2), "<fits>"); // 2147483646 and 2147483647
+    CHECK_STR_EQ(new_numbers_refusal(2147483647LL, 2),
+                 "Cannot add 2 conditions: the new condition numbers would reach 2147483649, past 2147483647, the highest condition "
+                 "number.");
+    CHECK_STR_EQ(new_numbers_refusal(2147483647LL, 5),
+                 "Cannot add 5 conditions: the new condition numbers would reach 2147483652, past 2147483647, the highest condition "
+                 "number.");
+
+    // a bid without numbers (passed as 0), a negative highest number: nothing to refuse
+    CHECK_STR_EQ(new_numbers_refusal(0, 1), "<fits>");
+    CHECK_STR_EQ(new_numbers_refusal(0, 3), "<fits>");
+    CHECK_STR_EQ(new_numbers_refusal(-5, 2), "<fits>");
+    CHECK_STR_EQ(new_numbers_refusal(-2147483648LL, 1), "<fits>");
+
+    // a stored number that an Access Long cannot hold but SQLite can
+    CHECK_STR_EQ(new_numbers_refusal(3000000000LL, 1),
+                 "Cannot add 1 condition: the new condition numbers would reach 3000000001, past 2147483647, the highest condition "
+                 "number.");
+}
+
+TEST(CondAlloc01_NewNumbers, ANumberNearTheInt64EdgeNeverOverflowsTheArithmetic)
+{
+    // Python's ints do not overflow and print 9223372036854775808; a signed long long sum would wrap to a negative number
+    CHECK_STR_EQ(new_numbers_refusal(std::numeric_limits<long long>::max(), 1),
+                 "Cannot add 1 condition: the new condition numbers would reach 9223372036854775808, past 2147483647, the highest "
+                 "condition number.");
+    CHECK_STR_EQ(new_numbers_refusal(std::numeric_limits<long long>::min(), 1), "<fits>");
+}
+
+// Duplicate shows its existing alert ("Duplicate Error", the iOS wording of DBP-11) with the store's text when there is one and the
+// generic text for every other failure.
+TEST(CondAlloc01_DuplicateFailed, ADetailReplacesTheGenericTextUnderDuplicateError)
+{
+    const FormIssue detailed = condition_duplicate_failed_issue(kAddOneText);
+    CHECK_STR_EQ(detailed.title, "Duplicate Error");
+    CHECK_STR_EQ(detailed.message, kAddOneText);
+
+    const FormIssue defaulted = condition_duplicate_failed_issue();
+    CHECK_STR_EQ(defaulted.title, "Duplicate Error");
+    CHECK_STR_EQ(defaulted.message, "Failed to duplicate the condition.");
+
+    const FormIssue empty = condition_duplicate_failed_issue(std::string());
+    CHECK_STR_EQ(empty.title, "Duplicate Error");
+    CHECK_STR_EQ(empty.message, "Failed to duplicate the condition.");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

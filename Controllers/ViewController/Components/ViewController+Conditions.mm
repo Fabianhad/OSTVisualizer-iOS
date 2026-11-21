@@ -1,6 +1,7 @@
 #import "../ViewController_Internal.h"
 #include "../../../Core/Domain/BrowserRules.hpp"
 #include "../../../Core/Domain/ConditionChoices.hpp"
+#include "../../../Core/Domain/ConditionFormRules.hpp"
 
 @interface ViewController (Conditions) <ConditionsViewControllerDelegate,
                                         EditConditionViewControllerDelegate>
@@ -196,11 +197,18 @@
 
 - (void)conditionsViewController:(ConditionsViewController *)vc
     didRequestDuplicateConditionUID:(NSString *)conditionUID {
+  NSString *refusal = nil;
   NSString *newUID = [ImportService duplicateCondition:conditionUID
-                                                 inBid:self.bidUID];
+                                                 inBid:self.bidUID
+                                                 error:&refusal];
   if (!newUID) {
-    [self _presentConditionAlertWithTitle:@"Duplicate Error"
-                                  message:@"Failed to duplicate the condition."];
+    // The existing "Duplicate Error" alert: the Windows text when the copy would get a number past the highest condition number,
+    // 2147483647 (COND-ALLOC-01), the generic text for every other failure (Core decides: condition_duplicate_failed_issue). Nothing was
+    // written either way, and the method returns before the project or the list are touched.
+    const ost_domain::FormIssue issue = ost_domain::condition_duplicate_failed_issue(
+        std::string(refusal.length > 0 ? refusal.UTF8String : ""));
+    [self _presentConditionAlertWithTitle:[NSString stringWithUTF8String:issue.title.c_str()]
+                                  message:[NSString stringWithUTF8String:issue.message.c_str()]];
     return;
   }
 
