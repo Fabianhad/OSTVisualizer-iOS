@@ -35,6 +35,11 @@ static const int kModeLabelTag2D = 50001;
 @property(nonatomic) BOOL is2DMode;
 @property(nonatomic) ost_domain::EditMode editMode;
 @property(nonatomic, copy) NSString *bidUID;
+// An area placement is in progress (the page menu is disabled meanwhile, plan 4.8 and 5.5). The callback
+// planView:areaPlacementInProgress: in ViewController.mm sets it (S3, one line; nothing sets it yet) and
+// ViewController+PageMenu.mm reads it when the menu is shown. It lives here, not in a marker block below: the category
+// ViewController (Internal) cannot hold a property, and the ivar-plus-accessor pattern of ViewController.mm would need more edits there.
+@property(nonatomic) BOOL areaPlacementInProgress;
 
 @end
 
@@ -74,6 +79,9 @@ static const int kModeLabelTag2D = 50001;
 - (void)_syncSelection;
 
 // M1 (plan 6.1): each UI stream adds the declarations of its own category in its own block below (adjacent appends only).
+// This category has NO storage: a block holds METHOD declarations only, never a property (a property declared here would have no ivar
+// and no accessor). State goes into the class extension at the top of this file (areaPlacementInProgress is the one M1 flag).
+// A stream declares EVERY method of its categories that another file calls or names in @selector(...) / addTarget:action:.
 
 // ---- M1 bid lock (S0) ----
 
@@ -86,7 +94,9 @@ static const int kModeLabelTag2D = 50001;
 
 // ---- M1 layers (S2) ----
 
-// ---- M1 pages (S3, S4) ----
+// ---- M1 pages A (S3) ----
+
+// ---- M1 pages B (S4) ----
 
 @end
 
