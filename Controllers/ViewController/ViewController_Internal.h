@@ -75,6 +75,13 @@ static const int kModeLabelTag2D = 50001;
 
 // M1 (plan 6.1): each UI stream adds the declarations of its own category in its own block below (adjacent appends only).
 
+// ---- M1 bid lock (S0) ----
+
+// The bid lock guard (plan 4.1, N-M1-02). S1 to S4 call it at the top of every blocked action: when it answers YES the action stops
+// (nothing is written, "This bid is locked." has been shown). The only lock helper; no stream adds one of its own.
+// Implemented in Components/ViewController+BidLock.mm.
+- (BOOL)_refuseIfBidLocked;
+
 // ---- M1 conditions (S1) ----
 
 // ---- M1 layers (S2) ----
