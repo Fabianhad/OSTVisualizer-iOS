@@ -1,0 +1,5 @@
+# Keep the pack bit-exact across checkouts: PACK_SHA256.txt hashes the packages, README.md and make_pack.py.
+*.osp binary
+*.md text eol=lf
+*.py text eol=lf
+PACK_SHA256.txt text eol=lf
