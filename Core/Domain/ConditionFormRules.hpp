@@ -114,7 +114,7 @@ namespace ost_domain
     // nothing: one check for the whole set, before anything is written). The highest number of a bid without numbers (no row, only
     // NULL numbers, or no number column) is passed as 0: Windows starts at 1 for None and 0 + 1 is the same. A stored number above
     // kMaxConditionNumber (SQLite can hold what an Access Long cannot) refuses as well. Never overflows: it compares
-    // highest > kMaxConditionNumber - count. The only iOS allocator is ost_store::duplicate_condition (count 1).
+    // highest > kMaxConditionNumber - count. Condition numbers are allocated by insert_condition and duplicate_condition.
     std::optional<std::string> refuse_new_condition_numbers(long long highest, long long count);
 
     // The alert of a failed Duplicate: title "Duplicate Error" (the iOS wording, DBP-11; Windows titles the same text "Duplicate Conditions"

@@ -129,6 +129,29 @@ namespace ost_ptest
             return out;
         }
 
+        // EVERY user table of the database (sqlite_master, sorted by name; sqlite_* internals left out) through dump(), rowid order, exact
+        // type-aware text: a before/after comparison of the WHOLE database, so that no table can change unnoticed ("nothing else changed",
+        // "a refused write leaves the database untouched"). Port of Conditions/ConditionsTestSupport.hpp snapshot_all (plan 4.12).
+        // "<cannot open>" / "<sqlite_master failed>" when the table list cannot be read.
+        std::string snapshot_all() const
+        {
+            std::vector<std::string> tables;
+            {
+                ost_db::OstDatabase db;
+                if (!db.open(_path))
+                    return "<cannot open>";
+                ost_db::Statement stmt = db.prepare(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
+                if (!stmt.valid())
+                    return "<sqlite_master failed>";
+                while (stmt.step())
+                    tables.push_back(stmt.column_text(0));
+                if (stmt.failed())
+                    return "<sqlite_master failed>";
+            }
+            return snapshot(tables);
+        }
+
         // CREATE TRIGGER that makes every <event> ("INSERT" / "UPDATE" / "DELETE") on <table> fail with RAISE(ABORT).
         // Returns the trigger name so a test can DROP it again (control run).
         std::string block(const std::string &table, const std::string &event)

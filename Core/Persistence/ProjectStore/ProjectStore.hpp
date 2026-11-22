@@ -263,3 +263,12 @@ namespace ost_store
                           const std::string &condition_uid);
 
 }
+
+// One header per M1 feature (plan 4.4 and 6.1), included here once so that parallel streams never edit the same lines. The headers are
+// empty stubs that the stream named in plan 6.1 fills.
+#include "ProjectStore_ConditionCreate.hpp"
+#include "ProjectStore_ConditionFolders.hpp"
+#include "ProjectStore_Layers.hpp"
+#include "ProjectStore_PageRename.hpp"
+#include "ProjectStore_PageDelete.hpp"
+#include "ProjectStore_PageScale.hpp"

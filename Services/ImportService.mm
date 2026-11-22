@@ -1,28 +1,11 @@
 #import "ImportService.h"
+#import "ImportService_Internal.h"
 #include "../Core/Import/OspFileSystem.hpp"
 #include "../Core/Import/OspPackage.hpp"
 #include "../Core/Import/OstXmlParser.hpp"
 #include "../Core/Import/RawBidIntegrity.hpp"
 #include "../Core/Persistence/ProjectStore/ProjectStore.hpp"
 #include <string>
-
-// An NSString for UTF-8 text from Core. Everything the import accepts is valid UTF-8 (IMP-M01), but a database filled by an older build may
-// hold raw windows-1252 bytes: those are read as windows-1252 (or Latin-1) instead of becoming nil, which would raise in an NSDictionary
-// literal and make the whole project list unreadable.
-static NSString *OSTString(const std::string &text) {
-  NSString *string = [NSString stringWithUTF8String:text.c_str()];
-  if (!string) {
-    string = [[NSString alloc] initWithBytes:text.data()
-                                      length:text.size()
-                                    encoding:NSWindowsCP1252StringEncoding];
-  }
-  if (!string) {
-    string = [[NSString alloc] initWithBytes:text.data()
-                                      length:text.size()
-                                    encoding:NSISOLatin1StringEncoding];
-  }
-  return string ?: @"";
-}
 
 NSNotificationName const OSTProjectImportedNotification = @"OSTProjectImported";
 NSNotificationName const OSTProjectDeletedNotification = @"OSTProjectDeleted";

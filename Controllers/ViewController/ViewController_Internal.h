@@ -73,6 +73,14 @@ static const int kModeLabelTag2D = 50001;
 - (void)_leavePlacement;
 - (void)_syncSelection;
 
+// M1 (plan 6.1): each UI stream adds the declarations of its own category in its own block below (adjacent appends only).
+
+// ---- M1 conditions (S1) ----
+
+// ---- M1 layers (S2) ----
+
+// ---- M1 pages (S3, S4) ----
+
 @end
 
 #endif
