@@ -1,0 +1,340 @@
+// TreeOracleData.hpp - GENERATED expected values for ost_domain::build_condition_tree.
+//
+// Oracle: the Windows ConditionsSidebar (ost_visualizer/presentation/components/conditions_sidebar.py) was driven
+// headless (PySide6 6.10.1, QT_QPA_PLATFORM=offscreen) with the inputs of each case (conditions and folders in
+// ascending numeric uid order = database read order, cdn_type_name 'Unknown' when the type has no CdnTypes row) and the
+// tree below the root item was dumped. Line format: <depth>|<kind>|<uid>|<name>, kind F = folder, G = condition-type
+// group (uid = CdnTypeUID, '' = unassigned), C = condition (name = condition name); depth 0 = directly under the root.
+// The tie rules (equal folder/group names, equal ref numbers, a folder before a group of the same name) are the
+// stable-sort behavior of the Qt tree; the case 'ties_keep_load_order' and the random cases exercise them.
+#pragma once
+
+#include <string>
+#include <vector>
+
+namespace ost_ctest
+{
+    struct TreeFolderSpec
+    {
+        const char *uid;
+        const char *name;
+        const char *parent;
+    };
+    struct TreeConditionSpec
+    {
+        const char *uid;
+        const char *name;
+        int ref_no;
+        const char *folder;
+        const char *type;
+    };
+    struct TreeTypeSpec
+    {
+        const char *uid;
+        const char *name;
+    };
+    struct TreeCase
+    {
+        const char *label;
+        std::vector<TreeFolderSpec> folders;
+        std::vector<TreeConditionSpec> conditions;
+        std::vector<TreeTypeSpec> types; // CdnTypes rows
+        std::vector<const char *> expected;
+    };
+
+    inline const std::vector<TreeCase> &tree_oracle_cases()
+    {
+        static const std::vector<TreeCase> cases = {
+            {"plan_case",
+             {{"F1", "Zeta", ""}, {"F2", "Alpha", "F1"}, {"F3", "Empty", ""}},
+             {{"c1", "c1", 5, "", ""}, {"c2", "c2", 1, "F2", ""}, {"c3", "c3", 2, "ghost", ""}, {"c4", "c4", 3, "", "T9"}},
+             {},
+             {
+                 "0|G||(unassigned)",
+                 "1|C|c3|c3",
+                 "1|C|c1|c1",
+                 "0|F|F3|Empty",
+                 "0|G|T9|Unknown",
+                 "1|C|c4|c4",
+                 "0|F|F1|Zeta",
+                 "1|F|F2|Alpha",
+                 "2|G||(unassigned)",
+                 "3|C|c2|c2",
+             }},
+            {"folderless_not_in_first_folder",
+             {{"1", "Alpha", ""}, {"2", "Beta", ""}},
+             {{"10", "Wall A", 1, "", ""}},
+             {},
+             {
+                 "0|G||(unassigned)",
+                 "1|C|10|Wall A",
+                 "0|F|1|Alpha",
+                 "0|F|2|Beta",
+             }},
+            {"ties_keep_load_order",
+             {{"1", "Same", ""}, {"2", "Same", ""}, {"3", "(unassigned)", ""}, {"4", "Wall", ""}},
+             {{"10", "a", 2, "", "T2"}, {"11", "b", 2, "", "T3"}, {"12", "c", 2, "", "T2"}, {"13", "d", 1, "", ""}, {"14", "e", 7, "1", "T1"}, {"15", "f", 7, "2", "T1"}, {"16", "g", 3, "", "T4"}, {"17", "h", 1, "4", "T2"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|3|(unassigned)",
+                 "0|G||(unassigned)",
+                 "1|C|13|d",
+                 "0|G|T4|Drywall",
+                 "1|C|16|g",
+                 "0|F|1|Same",
+                 "1|G|T1|Concrete",
+                 "2|C|14|e",
+                 "0|F|2|Same",
+                 "1|G|T1|Concrete",
+                 "2|C|15|f",
+                 "0|F|4|Wall",
+                 "1|G|T2|Wall",
+                 "2|C|17|h",
+                 "0|G|T2|Wall",
+                 "1|C|10|a",
+                 "1|C|12|c",
+                 "0|G|T3|wall",
+                 "1|C|11|b",
+             }},
+            {"codepoint_order",
+             {{"1", "zeta", ""}, {"2", "Zeta", ""}, {"3", "\u00c9psilon", ""}, {"4", "10", ""}, {"5", "9", ""}, {"6", "alpha", "1"}},
+             {{"10", "x", 1, "6", "T1"}, {"11", "y", 2, "", "T3"}, {"12", "z", 3, "", "T2"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|4|10",
+                 "0|F|5|9",
+                 "0|G|T2|Wall",
+                 "1|C|12|z",
+                 "0|F|2|Zeta",
+                 "0|G|T3|wall",
+                 "1|C|11|y",
+                 "0|F|1|zeta",
+                 "1|F|6|alpha",
+                 "2|G|T1|Concrete",
+                 "3|C|10|x",
+                 "0|F|3|\u00c9psilon",
+             }},
+            {"dangling_parent_and_deep_chain",
+             {{"1", "A", ""}, {"2", "B", "1"}, {"3", "C", "2"}, {"4", "D", "3"}, {"5", "Orphan", "99"}, {"6", "Self-less", ""}},
+             {{"10", "a", 4, "4", "T1"}, {"11", "b", 1, "4", ""}, {"12", "c", 9, "5", "T2"}, {"13", "d", 0, "", "T2"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|1|A",
+                 "1|F|2|B",
+                 "2|F|3|C",
+                 "3|F|4|D",
+                 "4|G||(unassigned)",
+                 "5|C|11|b",
+                 "4|G|T1|Concrete",
+                 "5|C|10|a",
+                 "0|F|5|Orphan",
+                 "1|G|T2|Wall",
+                 "2|C|12|c",
+                 "0|F|6|Self-less",
+                 "0|G|T2|Wall",
+                 "1|C|13|d",
+             }},
+            {"ref_order_with_zero_and_negative",
+             {{"1", "F", ""}},
+             {{"1", "n", -3, "1", "T1"}, {"2", "z", 0, "1", "T1"}, {"3", "p", 12, "1", "T1"}, {"4", "q", 2, "1", "T1"}, {"5", "r", 100, "1", "T1"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|1|F",
+                 "1|G|T1|Concrete",
+                 "2|C|1|n",
+                 "2|C|2|z",
+                 "2|C|4|q",
+                 "2|C|3|p",
+                 "2|C|5|r",
+             }},
+            {"random_0",
+             {{"1", "(none)", ""}},
+             {{"101", "a", 4, "1", "T3"}, {"102", "Wall", 4, "", "T9"}, {"103", "Wall", 3, "1", "T3"}, {"104", "a", 1, "1", "T9"}, {"105", "a", 3, "1", "T2"}, {"106", "Wall", 0, "", ""}, {"107", "wall", 5, "1", "T2"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|1|(none)",
+                 "1|G|T9|Unknown",
+                 "2|C|104|a",
+                 "1|G|T2|Wall",
+                 "2|C|105|a",
+                 "2|C|107|wall",
+                 "1|G|T3|wall",
+                 "2|C|103|Wall",
+                 "2|C|101|a",
+                 "0|G||(unassigned)",
+                 "1|C|106|Wall",
+                 "0|G|T9|Unknown",
+                 "1|C|102|Wall",
+             }},
+            {"random_1",
+             {{"1", "Slabs", ""}},
+             {{"101", "b", 4, "1", ""}, {"102", "b", 3, "1", "T2"}, {"103", "a", 1, "1", "T9"}, {"104", "wall", 1, "1", "T4"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|1|Slabs",
+                 "1|G||(unassigned)",
+                 "2|C|101|b",
+                 "1|G|T4|Drywall",
+                 "2|C|104|wall",
+                 "1|G|T9|Unknown",
+                 "2|C|103|a",
+                 "1|G|T2|Wall",
+                 "2|C|102|b",
+             }},
+            {"random_2",
+             {{"1", "walls", ""}, {"2", "(none)", ""}, {"3", "Zone 2", ""}},
+             {{"101", "b", 0, "3", "T2"}, {"102", "b", 0, "", "T2"}, {"103", "b", 2, "", "T3"}, {"104", "Wall", 0, "2", "T1"}, {"105", "c", 3, "3", "T3"}, {"106", "Wall", 2, "", ""}, {"107", "Wall", 0, "", ""}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|2|(none)",
+                 "1|G|T1|Concrete",
+                 "2|C|104|Wall",
+                 "0|G||(unassigned)",
+                 "1|C|107|Wall",
+                 "1|C|106|Wall",
+                 "0|G|T2|Wall",
+                 "1|C|102|b",
+                 "0|F|3|Zone 2",
+                 "1|G|T2|Wall",
+                 "2|C|101|b",
+                 "1|G|T3|wall",
+                 "2|C|105|c",
+                 "0|G|T3|wall",
+                 "1|C|103|b",
+                 "0|F|1|walls",
+             }},
+            {"random_3",
+             {{"1", "Zone 2", ""}, {"2", "roof", ""}, {"3", "Walls", ""}, {"4", "Zone 2", ""}, {"5", "(none)", "4"}},
+             {{"101", "a", 2, "5", "T4"}, {"102", "c", 4, "1", "T4"}, {"103", "a", 5, "1", "T9"}, {"104", "c", 1, "4", "T4"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|3|Walls",
+                 "0|F|1|Zone 2",
+                 "1|G|T4|Drywall",
+                 "2|C|102|c",
+                 "1|G|T9|Unknown",
+                 "2|C|103|a",
+                 "0|F|4|Zone 2",
+                 "1|F|5|(none)",
+                 "2|G|T4|Drywall",
+                 "3|C|101|a",
+                 "1|G|T4|Drywall",
+                 "2|C|104|c",
+                 "0|F|2|roof",
+             }},
+            {"random_4",
+             {},
+             {{"101", "b", 5, "", "T2"}, {"102", "a", 5, "", "T3"}, {"103", "Wall", 5, "", "T1"}, {"104", "a", 2, "", "T2"}, {"105", "a", 4, "ghost", "T1"}, {"106", "Wall", 5, "", ""}, {"107", "c", 0, "", "T4"}, {"108", "c", 0, "", ""}, {"109", "wall", 5, "ghost", "T3"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|G||(unassigned)",
+                 "1|C|108|c",
+                 "1|C|106|Wall",
+                 "0|G|T1|Concrete",
+                 "1|C|105|a",
+                 "1|C|103|Wall",
+                 "0|G|T4|Drywall",
+                 "1|C|107|c",
+                 "0|G|T2|Wall",
+                 "1|C|104|a",
+                 "1|C|101|b",
+                 "0|G|T3|wall",
+                 "1|C|102|a",
+                 "1|C|109|wall",
+             }},
+            {"random_5",
+             {},
+             {{"101", "c", 5, "", "T2"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|G|T2|Wall",
+                 "1|C|101|c",
+             }},
+            {"random_6",
+             {{"1", "Zone 2", ""}},
+             {{"101", "wall", 3, "1", "T1"}, {"102", "c", 2, "", "T4"}, {"103", "wall", 2, "1", ""}, {"104", "c", 0, "1", "T1"}, {"105", "Wall", 0, "1", "T4"}, {"106", "c", 4, "", ""}, {"107", "wall", 3, "", "T1"}, {"108", "Wall", 2, "1", "T3"}, {"109", "c", 1, "", "T9"}, {"110", "wall", 0, "ghost", "T2"}, {"111", "c", 4, "", ""}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|G||(unassigned)",
+                 "1|C|106|c",
+                 "1|C|111|c",
+                 "0|G|T1|Concrete",
+                 "1|C|107|wall",
+                 "0|G|T4|Drywall",
+                 "1|C|102|c",
+                 "0|G|T9|Unknown",
+                 "1|C|109|c",
+                 "0|G|T2|Wall",
+                 "1|C|110|wall",
+                 "0|F|1|Zone 2",
+                 "1|G||(unassigned)",
+                 "2|C|103|wall",
+                 "1|G|T1|Concrete",
+                 "2|C|104|c",
+                 "2|C|101|wall",
+                 "1|G|T4|Drywall",
+                 "2|C|105|Wall",
+                 "1|G|T3|wall",
+                 "2|C|108|Wall",
+             }},
+            {"random_7",
+             {{"1", "Zone 1", ""}, {"2", "Beams", ""}, {"3", "Zone 10", ""}},
+             {{"101", "a", 3, "ghost", "T4"}, {"102", "Wall", 0, "3", "T2"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|F|2|Beams",
+                 "0|G|T4|Drywall",
+                 "1|C|101|a",
+                 "0|F|1|Zone 1",
+                 "0|F|3|Zone 10",
+                 "1|G|T2|Wall",
+                 "2|C|102|Wall",
+             }},
+            {"random_8",
+             {},
+             {{"101", "b", 5, "", "T3"}, {"102", "Wall", 2, "", ""}, {"103", "c", 2, "", "T3"}, {"104", "wall", 0, "", "T4"}, {"105", "a", 0, "", "T2"}, {"106", "b", 2, "", "T1"}, {"107", "wall", 3, "", "T1"}, {"108", "Wall", 0, "", "T3"}, {"109", "wall", 5, "", "T3"}, {"110", "wall", 0, "", ""}, {"111", "wall", 2, "", "T1"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|G||(unassigned)",
+                 "1|C|110|wall",
+                 "1|C|102|Wall",
+                 "0|G|T1|Concrete",
+                 "1|C|106|b",
+                 "1|C|111|wall",
+                 "1|C|107|wall",
+                 "0|G|T4|Drywall",
+                 "1|C|104|wall",
+                 "0|G|T2|Wall",
+                 "1|C|105|a",
+                 "0|G|T3|wall",
+                 "1|C|108|Wall",
+                 "1|C|103|c",
+                 "1|C|101|b",
+                 "1|C|109|wall",
+             }},
+            {"random_9",
+             {{"1", "Roof", ""}, {"2", "Zone 2", "77"}, {"3", "Beams", ""}},
+             {{"101", "c", 4, "2", ""}, {"102", "Wall", 3, "ghost", ""}, {"103", "b", 2, "1", ""}, {"104", "b", 2, "", ""}, {"105", "wall", 4, "", "T1"}, {"106", "c", 4, "", ""}, {"107", "a", 5, "", ""}, {"108", "a", 5, "", "T3"}},
+             {{"T1", "Concrete"}, {"T2", "Wall"}, {"T3", "wall"}, {"T4", "Drywall"}},
+             {
+                 "0|G||(unassigned)",
+                 "1|C|104|b",
+                 "1|C|102|Wall",
+                 "1|C|106|c",
+                 "1|C|107|a",
+                 "0|F|3|Beams",
+                 "0|G|T1|Concrete",
+                 "1|C|105|wall",
+                 "0|F|1|Roof",
+                 "1|G||(unassigned)",
+                 "2|C|103|b",
+                 "0|F|2|Zone 2",
+                 "1|G||(unassigned)",
+                 "2|C|101|c",
+                 "0|G|T3|wall",
+                 "1|C|108|a",
+             }},
+        };
+        return cases;
+    }
+}

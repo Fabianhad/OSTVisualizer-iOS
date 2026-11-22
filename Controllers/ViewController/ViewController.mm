@@ -1,4 +1,10 @@
+#include "../../Core/Data/PageNavigation.hpp"
+#include "../../Core/Domain/BrowserRules.hpp"
+#include "../../Core/Domain/NegativeChange.hpp"
+#include "../../Core/Domain/QuantityPages.hpp"
+#include "../../Core/Domain/TakeoffSelection.hpp"
 #include "../../Core/Geometry/coord_transform.hpp"
+#include "../../Core/Geometry/drag_rules.hpp"
 #import "../../Rendering/BgfxView.h"
 #import "Components/CameraController.h"
 #import "Components/DragController.h"
@@ -6,6 +12,8 @@
 #import "ViewController_Internal.h"
 #import <QuartzCore/QuartzCore.h>
 #include <algorithm>
+#include <cmath>
+#include <set>
 #include <unordered_map>
 
 static const int kToolbar3DOnlyTag = 30000;
@@ -34,7 +42,15 @@ static const int kToolbar2DOnlyTag = 40000;
   BOOL _hasShown2DView;
   ost_domain::EditMode _cameraEditMode;
   __weak ConditionsViewController *_conditionsVC;
-  std::unordered_map<std::string, std::vector<double>> _multiDragStartPositions;
+  // The placement that hiding its layer left, put back when the layer is shown again (COND-PLACE-01), and the number of changes of
+  // the edit mode, Windows PlanView.tool_revision: a suspension only comes back while no other tool was chosen in between
+  std::optional<ost_domain::SuspendedPlacement> _suspendedPlacement;
+  unsigned long long _toolRevision;
+  // A group drag: the position each moved takeoff started from (the selected
+  // takeoffs and the descendants of the selected areas). Empty between gestures.
+  ost_drag::PositionMap _dragStartPositions;
+  // Why the bid could not be loaded; shown once the screen is up (DBP-M02)
+  NSString *_loadErrorToPresent;
 }
 
 #pragma mark - Ivar Accessors (for categories)
@@ -59,6 +75,12 @@ static const int kToolbar2DOnlyTag = 40000;
 }
 - (void)setConditionsVC:(ConditionsViewController *)vc {
   _conditionsVC = vc;
+}
+- (std::optional<ost_domain::SuspendedPlacement> &)suspendedPlacement {
+  return _suspendedPlacement;
+}
+- (unsigned long long)toolRevision {
+  return _toolRevision;
 }
 
 #pragma mark - Init
@@ -375,10 +397,38 @@ static const int kToolbar2DOnlyTag = 40000;
   [self _highlightModeLabels];
 
   if (_is2DMode) {
+    // The 3D view picks takeoffs of any selected page: one that is not on the page shown now is dropped, so that Delete can
+    // never act on a takeoff the user does not see (RPV-16, TakeoffSelection.hpp keep_selection_on_page).
+    const std::string pickedInThe3DView = _selectedTakeoffUID;
+    [self _applySelectionState:ost_domain::keep_selection_on_page(
+                                   _projectService.project.takeoffs,
+                                   [self _selectionState],
+                                   _projectService.selected2DPageUID)];
+    if (_selectedTakeoffUID != pickedInThe3DView)
+      [_planView clearTapSelection];
     BOOL resetZoom = !_hasShown2DView;
     _hasShown2DView = YES;
     [self _loadCurrentPageIntoPlanViewResetZoom:resetZoom];
+    [self _syncSelection];
   }
+  // The totals follow the view that is open now (QTY-11, QTY-15)
+  [self _updateConditionQuantities];
+}
+
+// Windows PlanView.load_page drops the selection when the page changes
+// (RPV-16): nothing stays selected, so Delete can no longer act on a takeoff of
+// the previous page. A placement in progress survives the switch (Windows
+// preserve_place), so the condition being placed stays selected then.
+- (void)_clearSelectionForPageSwitch {
+  [self _applySelectionState:ost_domain::clear_selection_for_page_switch(
+                                 [self _selectionState])];
+  [_planView clearTapSelection];
+  _renderer.selectedConditionUID = _selectedConditionUID;
+  _renderer.selectedTakeoffUID = nil;
+  _planView.selectedConditionUID = _selectedConditionUID;
+  if (_conditionsVC)
+    [_conditionsVC selectConditionWithUID:_selectedConditionUID animated:YES];
+  [self _updateUndoRedoButtons];
 }
 
 - (void)_loadCurrentPageIntoPlanView {
@@ -392,14 +442,8 @@ static const int kToolbar2DOnlyTag = 40000;
   const std::string &pageUID = _projectService.selected2DPageUID;
 
   if (pageUID.empty()) {
-    std::string empty;
-    [_planView loadPageWithWidth:0
-                          height:0
-                        rotation:0
-                    scaleFactor1:1.0
-                    scaleFactor2:1.0
-                       imagePath:empty
-                       resetZoom:YES];
+    // no page selected: a blank default page
+    [_planView loadPage:ost_domain::Page{} resetZoom:YES];
     return;
   }
 
@@ -407,14 +451,8 @@ static const int kToolbar2DOnlyTag = 40000;
   if (it == _projectService.project.pages.end())
     return;
 
-  const auto &page = it->second;
-  [_planView loadPageWithWidth:page.width
-                        height:page.height
-                      rotation:page.rotation
-                  scaleFactor1:page.scale_factor1
-                  scaleFactor2:page.scale_factor2
-                     imagePath:page.image_path
-                     resetZoom:resetZoom];
+  // the page as stored: PDF page (Index1), size, rotation, flips and scale (LP-16)
+  [_planView loadPage:it->second resetZoom:resetZoom];
 
   [self _refreshOverlays];
 }
@@ -526,25 +564,8 @@ static const int kToolbar2DOnlyTag = 40000;
                     actionWithTitle:title
                               style:UIAlertActionStyleDefault
                             handler:^(UIAlertAction *a) {
-                              bool newNeg = !currentNeg;
-                              [ImportService
-                                  setTakeoffNegative:newNeg
-                                          forTakeoff:[NSString
-                                                         stringWithUTF8String:
-                                                             uid.c_str()]
-                                               inBid:self->_bidUID];
-
-                              for (auto &t : self->_projectService
-                                                 .mutableProject.takeoffs) {
-                                if (t.uid == uid) {
-                                  t.is_negative = newNeg;
-                                  break;
-                                }
-                              }
-
-                              [self _refreshOverlays];
-                              [self _generateMeshesForSelectedPages];
-                              [self _updateConditionQuantities];
+                              [self _setNegative:!currentNeg
+                                  forPressedTakeoff:uid];
                             }]];
 
   [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel"
@@ -560,6 +581,51 @@ static const int kToolbar2DOnlyTag = 40000;
   [self presentViewController:sheet animated:YES completion:nil];
 }
 
+// Windows on_set_negative with the plan-view selection of iOS, which is the one
+// pressed takeoff: the negative flag of that takeoff alone, in ONE history
+// entry, so one undo restores it and one redo applies it again (UND-09). A
+// condition that is merely selected in the sidebar widens nothing; the decision
+// is ost_domain::negative_changes_for_press (host-tested).
+- (void)_setNegative:(BOOL)negative
+    forPressedTakeoff:(const std::string &)pressedUID {
+  const std::vector<NegativeChange> changes =
+      ost_domain::negative_changes_for_press(_projectService.project.takeoffs,
+                                             pressedUID, negative == YES);
+  if (changes.empty())
+    return;
+  const std::vector<std::pair<std::string, bool>> updates =
+      ost_domain::negative_values(changes, false);
+
+  // Stored first: a refused write changes nothing, adds no history and is
+  // reported (DBP-11, DBP-17, UND-02).
+  if (![self _applyNegatives:updates]) {
+    [self _presentSaveFailure];
+    return;
+  }
+  [_undoRedoController pushNegativeChanges:changes];
+  [self _refreshOverlays];
+  [self _generateMeshesForSelectedPages];
+  [self _updateConditionQuantities];
+  [self _updateUndoRedoButtons];
+}
+
+// Writes and applies the negative flags of one step: all of them or none.
+- (BOOL)_applyNegatives:
+    (const std::vector<std::pair<std::string, bool>> &)updates {
+  if (_bidUID.length > 0 &&
+      ![ImportService setTakeoffsNegative:updates inBid:_bidUID])
+    return NO;
+  for (const auto &update : updates) {
+    for (auto &t : _projectService.mutableProject.takeoffs) {
+      if (t.uid == update.first) {
+        t.is_negative = update.second;
+        break;
+      }
+    }
+  }
+  return YES;
+}
+
 - (void)_selectAllTakeoffsForCondition {
   _selectedTakeoffUID.clear();
   _activeHandleIndex = -1;
@@ -569,6 +635,8 @@ static const int kToolbar2DOnlyTag = 40000;
 #pragma mark - Edit Mode
 
 - (void)_setEditMode:(ost_domain::EditMode)mode {
+  if (mode != _editMode)
+    _toolRevision++;
   _editMode = mode;
   [_fab setCurrentMode:mode animated:YES];
 
@@ -638,6 +706,16 @@ static const int kToolbar2DOnlyTag = 40000;
       });
 }
 
+// Windows handle_place_press (placement_mode.py:1648) refuses at the first press: for a condition that is gone or not visible no
+// preview, no point of a polygon and no in-progress state is made. PlanView asks this at the start of every placement gesture
+// (a tap, the start of a drag). The Image layer toggle leaves the tool armed on a condition that is then hidden (COND-PLACE-01).
+// The decision is Core ost_data::placement_tap_accepted.
+- (BOOL)planView:(PlanView *)planView
+    canPlaceWithCondition:(const std::string &)conditionUID {
+  return ost_data::placement_tap_accepted(_projectService.project,
+                                          conditionUID);
+}
+
 - (void)planView:(PlanView *)planView areaPlacementInProgress:(BOOL)inProgress {
   _fab.userInteractionEnabled = !inProgress;
   _fab.alpha = inProgress ? 0.3 : 1.0;
@@ -665,6 +743,22 @@ static const int kToolbar2DOnlyTag = 40000;
   if (!_is2DMode) {
     _cameraEditMode = mode;
     _cameraController.panMode = (mode == ost_domain::EditMode::Select);
+    return;
+  }
+  // Windows enter_place_mode_for_condition (placement_mode.py:1869) and PlacementCoordinator._is_condition_placeable: a condition
+  // that is gone or on a hidden layer is not entered. The button keeps offering the condition of the last takeoff or list
+  // selection, and the Image layer toggle leaves the tool armed on a condition that is then hidden (COND-PLACE-01), so the way
+  // back into the Place mode would arm a hidden condition. The decision is Core ost_data::placement_tap_accepted (the "exists and
+  // is visible" of placement_for_selected_condition, which the Conditions list applies). A refusal is Windows' force_exit, like
+  // the Conditions list: the offered condition is dropped (_leavePlacement clears it and switches the Place button off, and goes
+  // back to View when the tool was in Place), so the tap cycle goes Select -> View and the ring shows Place disabled instead of
+  // proposing the refused Place again; selecting the condition from the list offers it again. The button then shows the mode the
+  // app is really in.
+  if (mode == ost_domain::EditMode::PlaceTakeoff &&
+      !ost_data::placement_tap_accepted(_projectService.project,
+                                        _placeConditionUID)) {
+    [self _leavePlacement];
+    [fab setCurrentMode:_editMode animated:YES];
     return;
   }
   [self _setEditMode:mode];
@@ -702,7 +796,33 @@ static const int kToolbar2DOnlyTag = 40000;
     [_conditionsVC selectConditionWithUID:_selectedConditionUID animated:YES];
   }
 
+  [self _updateDeleteButton];
   [self _refreshOverlays];
+}
+
+// The selection of the 2D view as one value for the Core rules (TakeoffSelection.hpp) and back. The condition that is highlighted
+// and the condition the placement tool places are kept apart there, as the Windows sidebar projection keeps them.
+- (ost_domain::SelectionState)_selectionState {
+  ost_domain::SelectionState state;
+  state.mode = _editMode;
+  state.takeoff_uid = _selectedTakeoffUID;
+  state.condition_uid = _selectedConditionUID
+                            ? std::string(_selectedConditionUID.UTF8String)
+                            : std::string();
+  state.place_condition_uid = _placeConditionUID;
+  state.active_handle = _activeHandleIndex;
+  return state;
+}
+
+- (void)_applySelectionState:(const ost_domain::SelectionState &)state {
+  _selectedTakeoffUID = state.takeoff_uid;
+  _selectedConditionUID =
+      state.condition_uid.empty()
+          ? nil
+          : [NSString stringWithUTF8String:state.condition_uid.c_str()];
+  _placeConditionUID = state.place_condition_uid;
+  _activeHandleIndex = state.active_handle;
+  _fab.placeModeAvailable = !_placeConditionUID.empty();
 }
 
 - (void)_updateConditionQuantities {
@@ -711,18 +831,14 @@ static const int kToolbar2DOnlyTag = 40000;
   if (_projectService.project.empty())
     return;
 
-  // Collect takeoffs from all visible pages (2D + 3D selections combined)
-  const std::string &page2D = _projectService.selected2DPageUID;
-  const auto &pages3D = _projectService.selected3DPageUIDs;
-
-  std::vector<ost_domain::Takeoff> pageTakeoffs;
-  for (const auto &tk : _projectService.project.takeoffs) {
-    if (tk.page_uid == page2D || pages3D.count(tk.page_uid))
-      pageTakeoffs.push_back(tk);
-  }
-
-  auto quantities = ost_domain::compute_page_quantities(
-      _projectService.project.conditions, pageTakeoffs);
+  // The totals of the open view only: the selected 3D pages in the 3D view,
+  // the active 2D page in the 2D view, nothing without a page (Windows
+  // update_conditions_quantities, QTY-11).
+  auto quantities = ost_domain::compute_view_quantities(
+      _projectService.project.conditions, _projectService.project.takeoffs,
+      !_is2DMode, _projectService.selected2DPageUID,
+      ost_data::selected_pages_in_tree_order(
+          _projectService.project, _projectService.selected3DPageUIDs));
   [_conditionsVC updateQuantities:quantities];
 }
 
@@ -731,48 +847,105 @@ static const int kToolbar2DOnlyTag = 40000;
   _redoButton.enabled = _undoRedoController.canRedo;
   _undoButton.alpha = _undoButton.enabled ? 1.0 : 0.3;
   _redoButton.alpha = _redoButton.enabled ? 1.0 : 0.3;
-  BOOL hasSelection = !_selectedTakeoffUID.empty();
+  [self _updateDeleteButton];
+}
+
+// Delete is on while a takeoff that exists is selected. A highlighted condition is not a selection of takeoffs (Windows
+// plan_view.has_selection), so it never enables Delete.
+- (void)_updateDeleteButton {
+  BOOL hasSelection = ost_domain::delete_enabled(
+      _projectService.project.takeoffs, [self _selectionState]);
   _deleteButton.enabled = hasSelection;
   _deleteButton.alpha = hasSelection ? 1.0 : 0.3;
 }
 
-- (void)_applyPosition:(const std::vector<double> &)position
+// Stored first, then applied: a refused or failed write leaves the project
+// exactly as it was and answers NO (DBP-11, DBP-17, UND-02).
+- (BOOL)_applyPosition:(const std::vector<double> &)position
              toTakeoff:(const std::string &)uid {
+  if (_bidUID.length > 0 &&
+      ![ImportService
+          saveTakeoffPosition:position
+                   forTakeoff:[NSString stringWithUTF8String:uid.c_str()]
+                        inBid:_bidUID])
+    return NO;
   for (auto &tk : _projectService.mutableProject.takeoffs) {
     if (tk.uid != uid)
       continue;
     tk.position = position;
     break;
   }
-  if (_bidUID.length > 0) {
-    [ImportService
-        saveTakeoffPosition:position
-                 forTakeoff:[NSString stringWithUTF8String:uid.c_str()]
-                      inBid:_bidUID];
-  }
   [self _refreshOverlays];
   [self _generateMeshesForSelectedPages];
+  return YES;
 }
 
-- (void)_removeTakeoffFromProject:(const std::string &)uid {
+// The takeoffs of one delete, together (UND-02: one transaction): they leave
+// the database first and the project only when that worked.
+- (BOOL)_removeTakeoffsFromProject:(const std::vector<std::string> &)uids {
+  if (_bidUID.length > 0 && ![ImportService deleteTakeoffs:uids])
+    return NO;
+  const std::set<std::string> doomed(uids.begin(), uids.end());
   auto &takeoffs = _projectService.mutableProject.takeoffs;
   takeoffs.erase(std::remove_if(takeoffs.begin(), takeoffs.end(),
-                                [&uid](const ost_domain::Takeoff &t) {
-                                  return t.uid == uid;
+                                [&doomed](const ost_domain::Takeoff &t) {
+                                  return doomed.count(t.uid) != 0;
                                 }),
                  takeoffs.end());
-  if (_bidUID.length > 0) {
-    [ImportService deleteTakeoff:[NSString stringWithUTF8String:uid.c_str()]];
-  }
+  return YES;
 }
 
-- (void)_addTakeoffToProject:(ost_domain::Takeoff &)takeoff {
+// The takeoffs of one undo / redo step, together, with their own uids: they
+// enter the database first and the project only when that worked. The list the
+// project holds stays light: the extras of a restored row stay on the history
+// entry, which needs them again after a redo (UND-06).
+- (BOOL)_addTakeoffsToProject:(std::vector<ost_domain::Takeoff> &)takeoffs {
+  if (_bidUID.length > 0 &&
+      ![ImportService insertTakeoffs:takeoffs inBid:_bidUID])
+    return NO;
+  for (const auto &takeoff : takeoffs) {
+    ost_domain::Takeoff stored = takeoff;
+    stored.extras = ost_domain::TakeoffExtras();
+    _projectService.mutableProject.takeoffs.push_back(std::move(stored));
+  }
+  return YES;
+}
+
+// A takeoff that was just placed: NO, and it is not added to the project, when
+// the database refuses it (unknown condition / page, ...): it would stay in
+// memory with an empty uid (DBP-11, DBP-17).
+- (BOOL)_addTakeoffToProject:(ost_domain::Takeoff &)takeoff {
   if (_bidUID.length > 0) {
     NSString *uid = [ImportService insertTakeoff:takeoff inBid:_bidUID];
-    if (uid)
-      takeoff.uid = [uid UTF8String];
+    if (!uid)
+      return NO;
+    takeoff.uid = [uid UTF8String];
   }
-  _projectService.mutableProject.takeoffs.push_back(takeoff);
+  ost_domain::Takeoff stored = takeoff;
+  stored.extras = ost_domain::TakeoffExtras();
+  _projectService.mutableProject.takeoffs.push_back(std::move(stored));
+  return YES;
+}
+
+// A forward action (place, delete, negative flag) whose write was refused: the
+// change was not made. Windows only logs this; the phone has to say it.
+- (void)_presentSaveFailure {
+  UIViewController *presenter = self;
+  while (presenter.presentedViewController)
+    presenter = presenter.presentedViewController;
+  UIAlertController *alert = [UIAlertController
+      alertControllerWithTitle:@"Not Saved"
+                       message:@"The change could not be saved and was not made."
+                preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                            style:UIAlertActionStyleDefault
+                                          handler:nil]];
+  [presenter presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)_clearUndoHistory {
+  [_undoRedoController clear];
+  [self _updateUndoRedoButtons];
 }
 
 - (void)_handleUndo {
@@ -784,37 +957,63 @@ static const int kToolbar2DOnlyTag = 40000;
 }
 
 - (void)_handleDeleteTakeoff {
-  if (_selectedTakeoffUID.empty())
+  // Delete removes the selected takeoff and its descendants (UND-08) and nothing else: it takes no mode and no condition
+  // (Windows delete_selected / on_elements_deleted), and it never deletes a condition. The selection after a successful delete is
+  // set by undoRedoClearSelection (nothing selected, no condition highlighted, a running placement keeps its tool).
+  if (!ost_domain::delete_enabled(_projectService.project.takeoffs,
+                                  [self _selectionState]))
     return;
-  _placeConditionUID.clear();
-  _fab.placeModeAvailable = NO;
-  [_undoRedoController deleteSelection:_selectedTakeoffUID
-                          fromTakeoffs:_projectService.project.takeoffs];
+  // A failed delete keeps the selection (Windows selects the takeoffs again)
+  if (![_undoRedoController deleteSelection:_selectedTakeoffUID
+                               fromTakeoffs:_projectService.project.takeoffs]) {
+    [self _presentSaveFailure];
+    return;
+  }
 }
 
 #pragma mark - UndoRedoDelegate
 
-- (void)undoRedoApplyPosition:(const std::vector<double> &)position
+- (BOOL)undoRedoApplyPosition:(const std::vector<double> &)position
                     toTakeoff:(const std::string &)uid {
-  [self _applyPosition:position toTakeoff:uid];
+  return [self _applyPosition:position toTakeoff:uid];
 }
 
-- (void)undoRedoRemoveTakeoff:(const std::string &)uid {
-  [self _removeTakeoffFromProject:uid];
+- (BOOL)undoRedoApplyNegatives:
+    (const std::vector<std::pair<std::string, bool>> &)negatives {
+  return [self _applyNegatives:negatives];
 }
 
-- (void)undoRedoAddTakeoff:(ost_domain::Takeoff &)takeoff {
-  [self _addTakeoffToProject:takeoff];
+- (BOOL)undoRedoRemoveTakeoffs:(const std::vector<std::string> &)uids {
+  return [self _removeTakeoffsFromProject:uids];
 }
 
+- (BOOL)undoRedoAddTakeoffs:(std::vector<ost_domain::Takeoff> &)takeoffs {
+  return [self _addTakeoffsToProject:takeoffs];
+}
+
+- (void)undoRedoSnapshotTakeoff:(ost_domain::Takeoff &)takeoff {
+  // the whole stored row, taken before the delete (UND-06)
+  if (_bidUID.length > 0)
+    [ImportService loadExtrasForTakeoff:takeoff inBid:_bidUID];
+}
+
+// Windows selects the restored / moved takeoffs only while their page is the one
+// on screen (plan_view_action_handler _history_selection_owner): a takeoff of
+// another page stays unselected, so that Delete can never act on a takeoff the
+// user does not see (RPV-16, UND-10).
 - (void)undoRedoSelectTakeoff:(const std::string &)uid {
-  _selectedTakeoffUID = uid;
-  _activeHandleIndex = -1;
+  [self _applySelectionState:ost_domain::select_after_history(
+                                 _projectService.project.takeoffs,
+                                 [self _selectionState], uid,
+                                 _projectService.selected2DPageUID)];
+  [self _syncSelection];
 }
 
+// Windows delete_selected / _redo_delete: nothing is selected afterwards and no condition stays highlighted, so the overlay draws
+// no group selection on the other takeoffs of the condition.
 - (void)undoRedoClearSelection {
-  _selectedTakeoffUID.clear();
-  _activeHandleIndex = -1;
+  [self _applySelectionState:ost_domain::clear_selection([self _selectionState])];
+  [self _syncSelection];
 }
 
 - (void)undoRedoDidModify {
@@ -828,22 +1027,9 @@ static const int kToolbar2DOnlyTag = 40000;
 
 - (void)planView:(PlanView *)planView
     didTapTakeoff:(const std::string &)takeoffUID {
-  _selectedTakeoffUID = takeoffUID;
-  _activeHandleIndex = -1;
-
-  _placeConditionUID.clear();
-  for (const auto &tk : _projectService.project.takeoffs) {
-    if (tk.uid == takeoffUID) {
-      _placeConditionUID = tk.condition_uid;
-      break;
-    }
-  }
-  _fab.placeModeAvailable = !_placeConditionUID.empty();
-
-  _selectedConditionUID =
-      _placeConditionUID.empty()
-          ? nil
-          : [NSString stringWithUTF8String:_placeConditionUID.c_str()];
+  [self _applySelectionState:ost_domain::select_takeoff(
+                                 _projectService.project.takeoffs,
+                                 [self _selectionState], takeoffUID)];
 
   [self _syncSelection];
   [self _updateUndoRedoButtons];
@@ -859,11 +1045,8 @@ static const int kToolbar2DOnlyTag = 40000;
 - (void)planView:(PlanView *)planView
     didTapEmptySpaceAtCanvasPoint:(CGPoint)point {
   if (!_selectedTakeoffUID.empty() || _selectedConditionUID) {
-    _selectedTakeoffUID.clear();
-    _placeConditionUID.clear();
-    _selectedConditionUID = nil;
-    _activeHandleIndex = -1;
-    _fab.placeModeAvailable = NO;
+    [self _applySelectionState:ost_domain::clear_selection(
+                                   [self _selectionState])];
 
     [self _syncSelection];
     [self _updateUndoRedoButtons];
@@ -897,75 +1080,106 @@ static const int kToolbar2DOnlyTag = 40000;
   if (pageIt == _projectService.project.pages.end())
     return;
   const auto &page = pageIt->second;
+  const double snap = _projectService.project.bid.snap_increments_ost();
 
   bool isMulti = _selectedTakeoffUID.empty() && _selectedConditionUID != nil;
 
   if (isMulti) {
     std::string condUID = std::string(_selectedConditionUID.UTF8String);
-    auto ostDelta =
-        ost_coord::canvas_delta_to_ost(delta.x, delta.y, page.scale_factor1,
-                                       page.scale_factor2, page.rotation);
+    auto ostDelta = ost_coord::canvas_delta_to_ost(
+        delta.x, delta.y, page.scale_factor1, page.scale_factor2, page.rotation,
+        page.flip_x, page.flip_y);
+    if (!std::isfinite(ostDelta[0]) || !std::isfinite(ostDelta[1]))
+      return;
 
+    const auto &project = _projectService.project;
+    ost_hierarchy::HierarchyModel model(project.takeoffs, project.conditions);
+    if (_dragStartPositions.empty()) {
+      // First step of the gesture: the takeoffs of the selected condition on
+      // this page, and the descendants of the selected areas that move along.
+      std::set<std::string> selected;
+      for (const auto &tk : project.takeoffs) {
+        if (tk.condition_uid == condUID && tk.page_uid == pageUID)
+          selected.insert(tk.uid);
+      }
+      std::set<std::string> dragged = selected;
+      for (const auto &link : ost_drag::area_child_parent_map(model, selected))
+        dragged.insert(link.first);
+      for (const auto &tk : project.takeoffs) {
+        if (dragged.count(tk.uid) != 0 && !tk.position.empty())
+          _dragStartPositions[tk.uid] = tk.position;
+      }
+    }
+
+    // The Windows group drag: snapped delta, children follow their selected
+    // area, the whole move is refused when a hole or attachment would end up
+    // outside its parent (then every position of the group stays as it was).
+    ost_drag::PositionMap moved = ost_drag::compute_group_translation_positions(
+        model, _dragStartPositions, ostDelta[0], ostDelta[1], snap);
     for (auto &tk : _projectService.mutableProject.takeoffs) {
-      if (tk.condition_uid != condUID || tk.page_uid != pageUID)
-        continue;
-      if (_multiDragStartPositions.find(tk.uid) ==
-          _multiDragStartPositions.end()) {
-        _multiDragStartPositions[tk.uid] = tk.position;
-      }
-      const auto &startPos = _multiDragStartPositions[tk.uid];
-      for (size_t i = 0; i + 1 < tk.position.size(); i += 2) {
-        tk.position[i] = startPos[i] + ostDelta[0];
-        tk.position[i + 1] = startPos[i + 1] + ostDelta[1];
-      }
+      auto it = moved.find(tk.uid);
+      if (it != moved.end())
+        tk.position = it->second;
     }
     [self _refreshOverlays];
     [self _generateMeshesForSelectedPages];
   } else {
+    ost_domain::Takeoff *dragged = nullptr;
     for (auto &tk : _projectService.mutableProject.takeoffs) {
-      if (tk.uid != takeoffUID)
-        continue;
-      [_dragController
-             handleDrag:takeoffUID
-               position:tk.position
-            handleIndex:_activeHandleIndex
-            canvasDelta:delta
-           scaleFactor1:page.scale_factor1
-           scaleFactor2:page.scale_factor2
-           pageRotation:page.rotation
-          snapIncrement:_projectService.project.bid.snap_increments_ost()
-          angleSnapping:_planView.angleSnappingEnabled];
-      break;
+      if (tk.uid == takeoffUID) {
+        dragged = &tk;
+        break;
+      }
+    }
+    if (!dragged)
+      return;
+    auto cdnIt = _projectService.project.conditions.find(dragged->condition_uid);
+    if (cdnIt == _projectService.project.conditions.end())
+      return;
+    // Windows _drag_handle_corner_count: only an area has corners
+    int cornerCount =
+        cdnIt->second.is_area() ? (int)(dragged->position.size() / 2) : 0;
+    if ([_dragController handleDrag:takeoffUID
+                           position:dragged->position
+                        handleIndex:_activeHandleIndex
+                        cornerCount:cornerCount
+                        canvasDelta:delta
+                       scaleFactor1:page.scale_factor1
+                       scaleFactor2:page.scale_factor2
+                       pageRotation:page.rotation
+                              flipX:page.flip_x
+                              flipY:page.flip_y
+                      snapIncrement:snap
+                      angleSnapping:_planView.angleSnappingEnabled]) {
+      [self _refreshOverlays];
+      [self _generateMeshesForSelectedPages];
     }
   }
 }
 
 - (void)planView:(PlanView *)planView
     didEndDragTakeoff:(const std::string &)takeoffUID {
-  bool isMulti = !_multiDragStartPositions.empty();
+  bool isMulti = !_dragStartPositions.empty();
 
   if (isMulti) {
-    for (const auto &pair : _multiDragStartPositions) {
-      for (const auto &tk : _projectService.project.takeoffs) {
-        if (tk.uid != pair.first)
-          continue;
-        if (pair.second != tk.position) {
-          [_undoRedoController pushMoveForTakeoff:pair.first
-                                      oldPosition:pair.second
-                                      newPosition:tk.position];
-          if (_bidUID.length > 0) {
-            [ImportService
-                saveTakeoffPosition:tk.position
-                         forTakeoff:[NSString
-                                        stringWithUTF8String:pair.first.c_str()]
-                              inBid:_bidUID];
-          }
-        }
-        break;
+    // One history entry and one transaction for every takeoff the group drag
+    // moved; a takeoff that did not move (within 1e-9) is put back exactly.
+    std::vector<ost_drag::PositionChange> changes;
+    for (auto &tk : _projectService.mutableProject.takeoffs) {
+      auto start = _dragStartPositions.find(tk.uid);
+      if (start == _dragStartPositions.end())
+        continue;
+      if (ost_drag::positions_meaningfully_different(start->second,
+                                                     tk.position)) {
+        changes.push_back({tk.uid, start->second, tk.position});
+      } else {
+        tk.position = start->second;
       }
     }
-    _multiDragStartPositions.clear();
-    [self _updateUndoRedoButtons];
+    _dragStartPositions.clear();
+    [self _commitPositionChanges:changes];
+    [self _refreshOverlays];
+    [self _generateMeshesForSelectedPages];
     [self _updateConditionQuantities];
   } else {
     for (const auto &tk : _projectService.project.takeoffs) {
@@ -977,34 +1191,131 @@ static const int kToolbar2DOnlyTag = 40000;
   }
 }
 
+// Writes and records the positions one gesture changed: one transaction and
+// one history entry for all of them (Windows on_positions_flushed). When the
+// write fails nothing was stored, so the in-memory positions are put back and
+// no history entry is made.
+- (void)_commitPositionChanges:
+    (const std::vector<ost_drag::PositionChange> &)changes {
+  if (changes.empty())
+    return;
+  if (_bidUID.length > 0) {
+    std::vector<std::pair<std::string, std::vector<double>>> rows;
+    rows.reserve(changes.size());
+    for (const auto &change : changes)
+      rows.push_back({change.uid, change.new_position});
+    if (![ImportService saveTakeoffPositions:rows inBid:_bidUID]) {
+      ost_drag::PositionMap before;
+      for (const auto &change : changes)
+        before[change.uid] = change.old_position;
+      for (auto &tk : _projectService.mutableProject.takeoffs) {
+        auto it = before.find(tk.uid);
+        if (it != before.end())
+          tk.position = it->second;
+      }
+      return;
+    }
+  }
+  if (changes.size() == 1) {
+    [_undoRedoController pushMoveForTakeoff:changes[0].uid
+                                oldPosition:changes[0].old_position
+                                newPosition:changes[0].new_position];
+  } else {
+    [_undoRedoController pushMoveForTakeoffs:changes];
+  }
+  [self _updateUndoRedoButtons];
+}
+
 #pragma mark - DragDelegate
 
-- (void)dragDidUpdatePosition {
-  [self _refreshOverlays];
-  [self _generateMeshesForSelectedPages];
+- (BOOL)dragShouldAcceptPosition:(const std::vector<double> &)candidate
+                      forTakeoff:(const std::string &)uid
+                     handleIndex:(int)handleIndex
+               lastValidPosition:(const std::vector<double> &)lastValidPosition {
+  const auto &project = _projectService.project;
+  ost_hierarchy::HierarchyModel model(project.takeoffs, project.conditions);
+  const ost_domain::Takeoff *takeoff = model.find_takeoff(uid);
+  if (!takeoff)
+    return NO;
+  const ost_domain::Condition *condition =
+      model.find_condition(takeoff->condition_uid);
+  if (!condition)
+    return NO;
+  return ost_drag::drag_candidate_valid(model, *takeoff, *condition, candidate,
+                                        handleIndex, lastValidPosition)
+             ? YES
+             : NO;
 }
 
 - (void)dragDidEndForTakeoff:(const std::string &)uid
                  oldPosition:(const std::vector<double> &)oldPos
                  newPosition:(const std::vector<double> &)newPos {
-  if (oldPos != newPos) {
-    [_undoRedoController pushMoveForTakeoff:uid
-                                oldPosition:oldPos
-                                newPosition:newPos];
-    [self _updateUndoRedoButtons];
-    if (_bidUID.length > 0) {
-      [ImportService
-          saveTakeoffPosition:newPos
-                   forTakeoff:[NSString stringWithUTF8String:uid.c_str()]
-                        inBid:_bidUID];
+  auto &takeoffs = _projectService.mutableProject.takeoffs;
+  if (ost_drag::positions_meaningfully_different(oldPos, newPos)) {
+    // The dragged takeoff, then (area dragged by its body) the descendants that
+    // follow it by the displacement of its first point; they are still where
+    // the drag found them.
+    std::vector<ost_drag::PositionChange> changes = {{uid, oldPos, newPos}};
+    {
+      const auto &project = _projectService.project;
+      ost_hierarchy::HierarchyModel model(project.takeoffs, project.conditions);
+      for (auto &follower : ost_drag::descendants_following_body_drag(
+               model, uid, _activeHandleIndex, oldPos, newPos))
+        changes.push_back(std::move(follower));
+    }
+    for (size_t i = 1; i < changes.size(); ++i) {
+      for (auto &tk : takeoffs) {
+        if (tk.uid == changes[i].uid) {
+          tk.position = changes[i].new_position;
+          break;
+        }
+      }
+    }
+    [self _commitPositionChanges:changes];
+  } else {
+    // within the 1e-9 tolerance nothing changed: no write, no history entry
+    for (auto &tk : takeoffs) {
+      if (tk.uid == uid) {
+        tk.position = oldPos;
+        break;
+      }
     }
   }
+  [self _refreshOverlays];
+  [self _generateMeshesForSelectedPages];
   [self _updateConditionQuantities];
+}
+
+#pragma mark - UndoRedoDelegate (grouped move)
+
+// One undo / redo step of a grouped move: stored in one transaction first; when
+// that fails nothing changes and the history does not advance (UND-02).
+- (BOOL)undoRedoApplyPositions:
+    (const std::vector<std::pair<std::string, std::vector<double>>> &)positions {
+  if (_bidUID.length > 0 &&
+      ![ImportService saveTakeoffPositions:positions inBid:_bidUID])
+    return NO;
+  for (const auto &entry : positions) {
+    for (auto &tk : _projectService.mutableProject.takeoffs) {
+      if (tk.uid == entry.first) {
+        tk.position = entry.second;
+        break;
+      }
+    }
+  }
+  return YES;
 }
 
 - (void)planView:(PlanView *)planView
     didPlaceTakeoffWithCondition:(const std::string &)conditionUID
                         position:(const std::vector<double> &)position {
+  // Windows handle_place_press (placement_mode.py:1648): a tap for a condition that is gone or not visible places nothing, no
+  // takeoff, no history entry, no selection change. The Image layer toggle leaves the tool armed on a condition that is then
+  // hidden (COND-PLACE-01). PlanView already asked planView:canPlaceWithCondition: at the start of the gesture, so no preview
+  // was drawn; this is the last line of defence at the one place every placement (tap, drag, polygon) comes through. The
+  // decision is Core ost_data::placement_tap_accepted.
+  if (!ost_data::placement_tap_accepted(_projectService.project, conditionUID))
+    return;
   if (_bidUID.length == 0)
     return;
   const std::string &pageUID = _projectService.selected2DPageUID;
@@ -1016,7 +1327,11 @@ static const int kToolbar2DOnlyTag = 40000;
   tk.page_uid = pageUID;
   tk.position = position;
 
-  [self _addTakeoffToProject:tk];
+  // A refused insert places nothing and adds no history (UND-02)
+  if (![self _addTakeoffToProject:tk]) {
+    [self _presentSaveFailure];
+    return;
+  }
   [_undoRedoController pushPlaceForTakeoff:tk];
 
   _selectedTakeoffUID = tk.uid;
@@ -1031,10 +1346,43 @@ static const int kToolbar2DOnlyTag = 40000;
 #pragma mark - Project Loading
 
 - (void)_loadProjectFromDatabase:(NSString *)bidUID {
-  ost_data::ProjectData proj = [ImportService loadProjectWithUID:bidUID];
+  // A bid that cannot be read completely or whose data is inconsistent is not
+  // entered: the reason is shown instead of an empty project (DBP-M02,
+  // DBP-31, BRW-16, POS-M01).
+  ost_data::ProjectData proj;
+  NSString *error = nil;
+  if (![ImportService loadProjectWithUID:bidUID project:proj error:&error]) {
+    _loadErrorToPresent = error.length > 0 ? error : @"The bid could not be read.";
+    return;
+  }
   if (!proj.empty()) {
     [self _loadProject:proj];
   }
+}
+
+// Windows file_operation_handler: "Error Loading File" / "Failed to load <bid>:
+// <reason>"; the bid is left when the dialog is dismissed.
+- (void)_presentLoadErrorIfNeeded {
+  if (!_loadErrorToPresent || self.presentedViewController)
+    return;
+  NSString *reason = _loadErrorToPresent;
+  _loadErrorToPresent = nil;
+  const ost_domain::DialogText text = ost_domain::load_failure_text(
+      ost_domain::display_name_for_bid(std::string(_bidUID.UTF8String), ""),
+      std::string(reason.UTF8String));
+  UIAlertController *alert = [UIAlertController
+      alertControllerWithTitle:[NSString stringWithUTF8String:text.title.c_str()]
+                       message:[NSString stringWithUTF8String:text.message.c_str()]
+                preferredStyle:UIAlertControllerStyleAlert];
+  __weak ViewController *weakSelf = self;
+  [alert addAction:[UIAlertAction
+                       actionWithTitle:@"OK"
+                                 style:UIAlertActionStyleDefault
+                               handler:^(UIAlertAction *a) {
+                                 [weakSelf.navigationController
+                                     popViewControllerAnimated:YES];
+                               }]];
+  [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)_loadProject:(const ost_data::ProjectData &)project {
@@ -1102,6 +1450,7 @@ static const int kToolbar2DOnlyTag = 40000;
 
 - (void)viewDidAppear:(BOOL)animated {
   [super viewDidAppear:animated];
+  [self _presentLoadErrorIfNeeded];
   [_renderer startBgfx];
   _displayLink = [CADisplayLink displayLinkWithTarget:self
                                              selector:@selector(_renderLoop:)];

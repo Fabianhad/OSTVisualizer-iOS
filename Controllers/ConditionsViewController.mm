@@ -1,31 +1,11 @@
 #import "ConditionsViewController.h"
+#include "../Core/Domain/Condition.hpp"
+#include "../Core/Domain/ConditionTree.hpp"
+#include "../Core/Domain/QuantityDisplay.hpp"
 #include <algorithm>
-#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-static std::string stripElevation(const std::string &name) {
-  auto posT = name.rfind(" @T");
-  auto posB = name.rfind(" @B");
-  auto pos = std::string::npos;
-  if (posT != std::string::npos && posB != std::string::npos)
-    pos = std::max(posT, posB);
-  else if (posT != std::string::npos)
-    pos = posT;
-  else if (posB != std::string::npos)
-    pos = posB;
-  if (pos == std::string::npos) {
-    auto posAt = name.rfind(" @ ");
-    if (posAt == std::string::npos)
-      posAt = name.rfind(" @");
-    if (posAt != std::string::npos)
-      pos = posAt;
-  }
-  if (pos == std::string::npos)
-    return name;
-  return name.substr(0, pos);
-}
 
 struct ConditionRow {
   std::string uid;
@@ -35,26 +15,15 @@ struct ConditionRow {
   int uom1;
   int uom2;
   int uom3;
+  // The layer of the condition is shown. A condition on a hidden layer is greyed, cannot be placed and has no Edit button (COND-PLACE-01).
+  bool placeable;
 };
 
+// A section of the list: a condition-type group (titled with the folders around it) or a folder with nothing in it.
 struct ConditionSection {
-  std::string folder_name;
-  std::string cdn_type_name;
+  std::string title;
   std::vector<ConditionRow> rows;
 };
-
-static NSString *formatQty(double val, int uomCode) {
-  if (val == 0.0)
-    return nil;
-  std::string label = ost_domain::get_uom_label(uomCode);
-  NSNumberFormatter *fmt = [[NSNumberFormatter alloc] init];
-  fmt.numberStyle = NSNumberFormatterDecimalStyle;
-  fmt.maximumFractionDigits = 0;
-  NSString *numStr = [fmt stringFromNumber:@(val)];
-  if (label.empty())
-    return numStr;
-  return [NSString stringWithFormat:@"%@ %s", numStr, label.c_str()];
-}
 
 @interface ConditionsViewController () <UITableViewDataSource,
                                         UITableViewDelegate>
@@ -126,99 +95,68 @@ static NSString *formatQty(double val, int uomCode) {
 - (void)loadConditionsFromProject:(const ost_data::ProjectData &)project {
   _sections.clear();
 
-  const auto &conditions = project.conditions;
-  const auto &cdn_types = project.cdn_types;
-  const auto &cond_folders = project.condition_folders;
+  // The rows of the Windows tree (COND-FOLDER-01, COND-LIST-01): folders nest through ParentUID, a folderless condition sits at the
+  // root, empty folders stay visible, folders and type groups sort by name, the conditions of a group by reference number.
+  const std::vector<ost_domain::ConditionTreeNode> nodes =
+      ost_domain::build_condition_tree(project.conditions,
+                                       project.condition_folders,
+                                       project.cdn_types);
 
-  std::string fallback_folder_uid;
-  std::vector<std::string> folder_order;
-  for (const auto &pair : cond_folders) {
-    folder_order.push_back(pair.first);
-  }
-  std::sort(folder_order.begin(), folder_order.end(),
-            [&cond_folders](const std::string &a, const std::string &b) {
-              return cond_folders.at(a).name < cond_folders.at(b).name;
-            });
-  if (!folder_order.empty()) {
-    fallback_folder_uid = folder_order.front();
-  }
-
-  std::map<std::string, std::vector<const ost_domain::Condition *>>
-      conds_by_folder;
-  for (const auto &pair : conditions) {
-    const auto &cond = pair.second;
-    std::string fuid = cond.condition_folder_uid;
-    if (!fuid.empty() && cond_folders.count(fuid)) {
-      conds_by_folder[fuid].push_back(&cond);
-    } else {
-      conds_by_folder[fallback_folder_uid].push_back(&cond);
+  // The nodes are a pre-order list, this screen is a flat table: every type group is a section whose title names the folders around
+  // it (a folder with content is visible through that path), a folder with nothing in it is a section of its own with no rows.
+  std::vector<std::string> folder_path;
+  auto path_title = [&folder_path]() {
+    std::string title;
+    for (const std::string &name : folder_path) {
+      if (!title.empty())
+        title += " > ";
+      title += name;
     }
-  }
+    return title;
+  };
 
-  bool multiple_folders = cond_folders.size() > 1;
-
-  auto build_sections_for_folder =
-      [&](const std::string &folder_uid, const std::string &folder_name,
-          const std::vector<const ost_domain::Condition *> &conds) {
-        std::map<std::string, std::vector<const ost_domain::Condition *>>
-            by_cdn;
-        for (const auto *cond : conds) {
-          std::string key =
-              cond->cdn_type_uid.empty() ? std::string("") : cond->cdn_type_uid;
-          by_cdn[key].push_back(cond);
-        }
-
-        std::vector<std::pair<std::string, std::string>> cdn_keys;
-        for (const auto &pair : by_cdn) {
-          std::string name;
-          if (pair.first.empty()) {
-            name = "(unassigned)";
-          } else {
-            auto it = cdn_types.find(pair.first);
-            name = (it != cdn_types.end()) ? it->second.name : "(unassigned)";
-          }
-          cdn_keys.push_back({pair.first, name});
-        }
-        std::sort(
-            cdn_keys.begin(), cdn_keys.end(),
-            [](const auto &a, const auto &b) { return a.second < b.second; });
-
-        for (const auto &ck : cdn_keys) {
-          ConditionSection section;
-          section.folder_name = multiple_folders ? folder_name : "";
-          section.cdn_type_name = ck.second;
-
-          const auto &group_conds = by_cdn[ck.first];
-          for (const auto *cond : group_conds) {
-            ConditionRow row;
-            row.uid = cond->uid;
-            row.name = cond->name;
-            row.ref_no = cond->ref_no;
-            row.color_fill = cond->color_fill;
-            row.uom1 = cond->uom1;
-            row.uom2 = cond->uom2;
-            row.uom3 = cond->uom3;
-            section.rows.push_back(std::move(row));
-          }
-          _sections.push_back(std::move(section));
-        }
-      };
-
-  if (!folder_order.empty()) {
-    for (const auto &fuid : folder_order) {
-      std::string fname = cond_folders.at(fuid).name;
-      auto it = conds_by_folder.find(fuid);
-      if (it != conds_by_folder.end()) {
-        build_sections_for_folder(fuid, fname, it->second);
+  for (size_t i = 0; i < nodes.size(); i++) {
+    const ost_domain::ConditionTreeNode &node = nodes[i];
+    switch (node.kind) {
+    case ost_domain::ConditionTreeNode::Kind::Folder: {
+      folder_path.resize(std::min(folder_path.size(), (size_t)node.depth));
+      folder_path.push_back(node.name);
+      const bool is_empty =
+          (i + 1 >= nodes.size() || nodes[i + 1].depth <= node.depth);
+      if (is_empty) {
+        ConditionSection section;
+        section.title = path_title();
+        _sections.push_back(std::move(section));
       }
+      break;
     }
-  } else {
-
-    std::vector<const ost_domain::Condition *> all;
-    for (const auto &pair : conditions) {
-      all.push_back(&pair.second);
+    case ost_domain::ConditionTreeNode::Kind::TypeGroup: {
+      folder_path.resize(std::min(folder_path.size(), (size_t)node.depth));
+      ConditionSection section;
+      section.title = folder_path.empty()
+                          ? node.name
+                          : path_title() + " — " + node.name;
+      _sections.push_back(std::move(section));
+      break;
     }
-    build_sections_for_folder("", "", all);
+    case ost_domain::ConditionTreeNode::Kind::Condition: {
+      auto found = project.conditions.find(node.uid);
+      if (found == project.conditions.end() || _sections.empty())
+        break;
+      const ost_domain::Condition &cond = found->second;
+      ConditionRow row;
+      row.uid = cond.uid;
+      row.name = cond.name;
+      row.ref_no = cond.ref_no;
+      row.color_fill = cond.color_fill;
+      row.uom1 = cond.uom1;
+      row.uom2 = cond.uom2;
+      row.uom3 = cond.uom3;
+      row.placeable = project.is_condition_visible(cond);
+      _sections.back().rows.push_back(std::move(row));
+      break;
+    }
+    }
   }
 
   [_tableView reloadData];
@@ -287,13 +225,7 @@ static NSString *formatQty(double val, int uomCode) {
     titleForHeaderInSection:(NSInteger)section {
   if ((size_t)section >= _sections.size())
     return nil;
-  const auto &sec = _sections[section];
-  if (sec.folder_name.empty()) {
-    return [NSString stringWithUTF8String:sec.cdn_type_name.c_str()];
-  }
-  NSString *folder = [NSString stringWithUTF8String:sec.folder_name.c_str()];
-  NSString *cdn = [NSString stringWithUTF8String:sec.cdn_type_name.c_str()];
-  return [NSString stringWithFormat:@"%@ — %@", folder, cdn];
+  return [NSString stringWithUTF8String:_sections[section].title.c_str()];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView
@@ -311,37 +243,39 @@ static NSString *formatQty(double val, int uomCode) {
     return cell;
   const auto &row = sec.rows[indexPath.row];
 
+  // "No.  Name": the full name of the condition, the elevation suffix included (QTY-23)
   NSString *refStr = [NSString stringWithFormat:@"%d", row.ref_no];
-  std::string displayName = stripElevation(row.name);
-  NSString *nameStr = [NSString stringWithUTF8String:displayName.c_str()];
+  NSString *nameStr = [NSString stringWithUTF8String:row.name.c_str()];
   cell.textLabel.text = [NSString stringWithFormat:@"%@  %@", refStr, nameStr];
   cell.textLabel.font = [UIFont systemFontOfSize:15];
 
+  // The three quantity texts of Windows update_quantities: "12.35 m", "1,234 LF", "0 EA" for a quantity of 0, and the numbers of a
+  // condition without a computed quantity are (0, 0, 0). A slot whose unit has no label and no quantity has no text (QTY-12, QTY-22).
   auto qit = _quantities.find(row.uid);
-  if (qit != _quantities.end()) {
-    const auto &q = qit->second;
-    NSMutableArray *parts = [NSMutableArray array];
-    NSString *s;
-    if ((s = formatQty(q.q1, row.uom1)))
-      [parts addObject:s];
-    if ((s = formatQty(q.q2, row.uom2)))
-      [parts addObject:s];
-    if ((s = formatQty(q.q3, row.uom3)))
-      [parts addObject:s];
-    cell.detailTextLabel.text =
-        parts.count ? [parts componentsJoinedByString:@"  ·  "] : nil;
-  } else {
-    cell.detailTextLabel.text = nil;
+  const std::array<std::string, 3> texts =
+      ost_domain::format_condition_quantity_texts(
+          qit != _quantities.end() ? &qit->second : nullptr, row.uom1,
+          row.uom2, row.uom3);
+  NSMutableArray *parts = [NSMutableArray array];
+  for (const std::string &text : texts) {
+    if (!text.empty())
+      [parts addObject:[NSString stringWithUTF8String:text.c_str()]];
   }
+  cell.detailTextLabel.text =
+      parts.count ? [parts componentsJoinedByString:@"  ·  "] : nil;
   cell.detailTextLabel.font = [UIFont systemFontOfSize:12];
-  cell.detailTextLabel.textColor = [UIColor secondaryLabelColor];
 
-  int cf = row.color_fill;
-  CGFloat r = (cf & 0xFF) / 255.0;
-  CGFloat g = ((cf >> 8) & 0xFF) / 255.0;
-  CGFloat b = ((cf >> 16) & 0xFF) / 255.0;
-  UIColor *color = (cf < 0) ? [UIColor grayColor]
-                            : [UIColor colorWithRed:r green:g blue:b alpha:1.0];
+  // A condition on a hidden layer is greyed out (COND-PLACE-01)
+  cell.textLabel.textColor =
+      row.placeable ? [UIColor labelColor] : [UIColor tertiaryLabelColor];
+  cell.detailTextLabel.textColor = row.placeable
+                                       ? [UIColor secondaryLabelColor]
+                                       : [UIColor tertiaryLabelColor];
+
+  // ColorFill is read like Windows int_to_hex: the low 24 bits, a negative value is not grey (COL-01)
+  float r, g, b;
+  ost_domain::Condition::rgb_from_color_fill(row.color_fill, r, g, b);
+  UIColor *color = [UIColor colorWithRed:r green:g blue:b alpha:1.0];
 
   UIGraphicsBeginImageContextWithOptions(CGSizeMake(12, 12), NO, 0);
   [color setFill];
@@ -354,9 +288,14 @@ static NSString *formatQty(double val, int uomCode) {
       (_selectedUID &&
        [_selectedUID
            isEqualToString:[NSString stringWithUTF8String:row.uid.c_str()]]);
-  cell.accessoryType = isSelected
-                           ? UITableViewCellAccessoryDetailDisclosureButton
-                           : UITableViewCellAccessoryDetailButton;
+  // the Edit button is not offered for a condition on a hidden layer (Windows disables Edit for it)
+  if (!row.placeable) {
+    cell.accessoryType = UITableViewCellAccessoryNone;
+  } else {
+    cell.accessoryType = isSelected
+                             ? UITableViewCellAccessoryDetailDisclosureButton
+                             : UITableViewCellAccessoryDetailButton;
+  }
 
   return cell;
 }
@@ -395,6 +334,8 @@ static NSString *formatQty(double val, int uomCode) {
     return;
 
   const auto &row = sec.rows[indexPath.row];
+  if (!row.placeable)
+    return;
   NSString *uid = [NSString stringWithUTF8String:row.uid.c_str()];
 
   if (_delegate &&

@@ -1,0 +1,145 @@
+# XcodeGen spec for OST Visualizer (iOS).
+#
+# The Xcode project is GENERATED from this file (xcodegen generate) and is not committed. The CI
+# workflow .github/workflows/build.yml does exactly that, then builds with xcodebuild and fake-signs
+# the app with ldid. See BUILD.md.
+#
+# This spec reproduces the Nyxian build described by Config/Project.plist (LDECompilerFlags and
+# LDELinkerFlags) with standard Xcode build settings. Nyxian itself keeps using Config/Project.plist
+# and Config/Entitlements.plist, which this file does not touch. Where an Xcode default would
+# differ from what Nyxian does, the setting is pinned below with the reason.
+name: OSTVisualizer
+
+options:
+  minimumXcodeGenVersion: "2.40.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  groupSortPosition: top
+  deploymentTarget:
+    iOS: "16.0"          # LDEMinimumVersion (Config/Project.plist); libmanifold.a and the bgfx libraries are minos 16.0 too
+
+targets:
+  OSTVisualizer:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+
+    # Only compilable files and headers are listed (explicit includes), so no other file type can
+    # land in "Copy Bundle Resources": the app ships no resources (Resources/ is empty) and the
+    # *.sc shader sources in Rendering/Shaders/src are NOT compiled (the generated headers in
+    # Rendering/Shaders/generated are #included instead). Libs/ (headers + prebuilt .a files),
+    # Tests/ (host unit tests, built by CMake), Config/ and the PORTING_*.md files are not sources.
+    sources:
+      - path: Main.m
+      - path: AppDelegate.h
+      - path: AppDelegate.m
+      - path: SceneDelegate.h
+      - path: SceneDelegate.mm
+      - path: Controllers
+        includes: ["*.h", "*.hpp", "*.m", "*.mm", "*.c", "*.cpp", "**/*.h", "**/*.hpp", "**/*.m", "**/*.mm", "**/*.c", "**/*.cpp"]
+      - path: Core
+        includes: ["*.h", "*.hpp", "*.m", "*.mm", "*.c", "*.cpp", "**/*.h", "**/*.hpp", "**/*.m", "**/*.mm", "**/*.c", "**/*.cpp"]
+      - path: PlanView
+        includes: ["*.h", "*.hpp", "*.m", "*.mm", "*.c", "*.cpp", "**/*.h", "**/*.hpp", "**/*.m", "**/*.mm", "**/*.c", "**/*.cpp"]
+      - path: Rendering
+        includes: ["*.h", "*.hpp", "*.m", "*.mm", "*.c", "*.cpp", "**/*.h", "**/*.hpp", "**/*.m", "**/*.mm", "**/*.c", "**/*.cpp"]
+        excludes: ["Shaders/src/**"]
+      - path: Services
+        includes: ["*.h", "*.hpp", "*.m", "*.mm", "*.c", "*.cpp", "**/*.h", "**/*.hpp", "**/*.m", "**/*.mm", "**/*.c", "**/*.cpp"]
+
+    # Frameworks and system libraries from LDELinkerFlags (-framework ..., -lz, -lc++).
+    # -lc (libSystem) and -lclang_rt.ios are linked by Xcode automatically.
+    dependencies:
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: Foundation.framework
+      - sdk: UIKit.framework
+      - sdk: CoreGraphics.framework
+      - sdk: QuartzCore.framework
+      - sdk: UniformTypeIdentifiers.framework
+      - sdk: libz.tbd
+      - sdk: libc++.tbd
+
+    settings:
+      base:
+        # ---- identity (LDEBundleIdentifier, LDEDisplayName, LDEExecutable, LDEBundleShortVersion/Version) ----
+        # PRODUCT_NAME gives OST Visualizer.app with the executable "OST Visualizer". Keep the bundle id and
+        # the product name stable between builds: iRAM+ identifies the installed app by them.
+        PRODUCT_NAME: "OST Visualizer"
+        PRODUCT_BUNDLE_IDENTIFIER: com.fabian.ostvisualizer
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1.0"
+        INFOPLIST_FILE: Config/Info.plist
+        GENERATE_INFOPLIST_FILE: "NO"
+
+        # ---- platform ----
+        # arm64 device only: libmanifold.a and the bgfx libraries are iOS arm64 archives with no simulator
+        # slice. TARGETED_DEVICE_FAMILY 1,2 (iPhone and iPad) because the sources configure popovers for
+        # iPad (UIUserInterfaceIdiomPad in ViewController.mm, popoverPresentationController in the
+        # Conditions, Database and Export controllers).
+        SDKROOT: iphoneos
+        SUPPORTED_PLATFORMS: iphoneos
+        # Minimum iOS 16.0 (XcodeGen also derives this from deploymentTarget above; pinned here so no other
+        # preset can change it). The sources use no pre-16 availability checks or fallbacks.
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        ARCHS: arm64
+        ONLY_ACTIVE_ARCH: "NO"
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+        # ---- compiler (LDECompilerFlags) ----
+        # -fobjc-arc
+        CLANG_ENABLE_OBJC_ARC: "YES"
+        # C++17 is the minimum and the highest level the sources need: structured bindings
+        # (coord_transform.cpp, boolean_ops.cpp, PlanView+Placement.mm) and std::optional
+        # (boolean_ops.hpp). No C++20 feature is used. The only header that demands C++20 is
+        # bx/platform.h (static_assert), and no app translation unit includes a bx header (Renderer.mm
+        # includes only <bgfx/bgfx.h>); if one ever does, raise this to gnu++20.
+        CLANG_CXX_LANGUAGE_STANDARD: gnu++17
+        CLANG_CXX_LIBRARY: libc++
+        GCC_C_LANGUAGE_STANDARD: gnu17
+        # Nyxian passes no -fmodules, and the sources use #import/#include only (no @import).
+        CLANG_ENABLE_MODULES: "NO"
+        # -Os (optimise for size) for C, C++ and Objective-C, in every configuration (also set per configuration
+        # below, because the XcodeGen Debug preset would otherwise set 0 = -O0 there). Config/Project.plist passes
+        # -Os too. There are no Swift sources, so SWIFT_OPTIMIZATION_LEVEL is not set.
+        GCC_OPTIMIZATION_LEVEL: s
+        # -DBGFX_CONFIG_RENDERER_METAL=1 -DBX_CONFIG_DEBUG=0. Nyxian defines nothing else: no DEBUG, no
+        # NDEBUG (earcut.hpp asserts stay active, as before).
+        GCC_PREPROCESSOR_DEFINITIONS: "BGFX_CONFIG_RENDERER_METAL=1 BX_CONFIG_DEBUG=0"
+        # The Release preset would add -DNS_BLOCK_ASSERTIONS=1; Nyxian does not (no NSAssert is used today).
+        ENABLE_NS_ASSERTIONS: "YES"
+        # The XcodeGen preset (YES) would add -DOBJC_OLD_DISPATCH_PROTOTYPES=0, a define Nyxian does not pass.
+        ENABLE_STRICT_OBJC_MSGSEND: "NO"
+        # -I flags, same order as Nyxian.
+        HEADER_SEARCH_PATHS: >-
+          "$(SRCROOT)/Libs/Manifold/include"
+          "$(SRCROOT)/Libs/bgfx/bgfx/include"
+          "$(SRCROOT)/Libs/bgfx/bx/include"
+          "$(SRCROOT)/Libs/bgfx/bx/include/compat/ios"
+          "$(SRCROOT)/Libs/bgfx/bimg/include"
+        # Nyxian passes no -W flags, so these three diagnostics are plain warnings there. The XcodeGen
+        # presets would turn them into errors, which could break a build that Nyxian accepts.
+        GCC_WARN_ABOUT_RETURN_TYPE: "YES"
+        CLANG_WARN_OBJC_ROOT_CLASS: "YES"
+        CLANG_WARN_DIRECT_OBJC_ISA_USAGE: "YES"
+
+        # ---- linker (LDELinkerFlags) ----
+        # -ObjC, -L<dir> and the static libraries in the same order as Nyxian. libmanifold.a is tracked in
+        # git. The four bgfx libraries are NOT tracked: CI builds them from pinned sources and puts them in
+        # Libs/bgfx/bgfx/.build/ios-arm64/bin (the same layout Nyxian uses on the device).
+        LIBRARY_SEARCH_PATHS: >-
+          "$(SRCROOT)/Libs/Manifold/lib"
+          "$(SRCROOT)/Libs/bgfx/bgfx/.build/ios-arm64/bin"
+        OTHER_LDFLAGS: "-ObjC -lmanifold -lbgfxRelease -lbxRelease -lbimgRelease -lbimg_decodeRelease"
+        # Nyxian links without -dead_strip.
+        DEAD_CODE_STRIPPING: "NO"
+
+        # ---- build output ----
+        DEBUG_INFORMATION_FORMAT: dwarf
+
+      configs:
+        # Both configurations optimise for size (-Os). CI builds Release; Debug is listed so that nothing yields -O0.
+        Debug:
+          GCC_OPTIMIZATION_LEVEL: s
+        Release:
+          GCC_OPTIMIZATION_LEVEL: s

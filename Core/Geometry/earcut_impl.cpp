@@ -1,3 +1,4 @@
+#include "strict_fp.hpp"
 #include "earcut_impl.hpp"
 #include "earcut.hpp"
 

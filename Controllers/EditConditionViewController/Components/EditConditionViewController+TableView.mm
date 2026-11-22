@@ -1,5 +1,16 @@
 #import "../EditConditionViewController_Internal.h"
 #import "EditConditionHelpers.h"
+#include "../../../Core/Domain/ConditionChoices.hpp"
+#include "../../../Core/Domain/ConditionFormRules.hpp"
+#include "../../../Core/Domain/DimensionFormat.hpp"
+#include <cmath>
+
+// The feet-inch, millimetre and elevation fields only parse the ASCII ' and " (and plain hyphens): with Smart Punctuation on, iOS
+// types curly quotes and en dashes that every parser refuses (UI-M01).
+static void OSTDisableSmartPunctuation(UITextField *field) {
+  field.smartQuotesType = UITextSmartQuotesTypeNo;
+  field.smartDashesType = UITextSmartDashesTypeNo;
+}
 
 @interface EditConditionViewController (TableView)
 @end
@@ -51,9 +62,9 @@
 }
 
 - (NSInteger)_appearanceRowCount {
-  bool isCount =
-      (_condition.condition_type == ost_domain::ConditionType::Count ||
-       _condition.condition_type == ost_domain::ConditionType::Attachment);
+  // only Count / Attachment have a Shape row; a type outside the four is Area-like and has none (COND-M08)
+  const bool isCount = (ost_domain::editor_layout(_condition.condition_type) ==
+                        ost_domain::EditorLayout::CountLike);
   NSInteger count = 2; // Color + Pattern
   if (isLinePattern(_condition.pattern))
     count++; // Spacing
@@ -88,8 +99,11 @@
   case TopRow::Style: {
     UITableViewCell *cell = [self _detailCell:tableView id:@"StyleCell"];
     cell.textLabel.text = @"Style";
-    cell.detailTextLabel.text =
-        styleLabels()[static_cast<int>(_condition.condition_type)];
+    // "Linear" / "Area" / "Count" / "Attachment", or "Unknown (N)" for a stored type outside the four (COND-M08)
+    cell.detailTextLabel.text = [NSString
+        stringWithUTF8String:ost_domain::condition_style_label(
+                                 _condition.condition_type)
+                                 .c_str()];
     if (_styleDisabled) {
       cell.accessoryType = UITableViewCellAccessoryNone;
       cell.textLabel.textColor = [UIColor tertiaryLabelColor];
@@ -147,16 +161,21 @@
     [cell.contentView addSubview:seg];
 
     UITextField *field = [[UITextField alloc] init];
-    field.text = [NSString stringWithUTF8String:_elevParts.value.c_str()];
+    // the text as typed: a reload (a picker, a style change) must not drop an elevation that is not saved yet (COND-ELEV-01)
+    NSString *cachedElevation = _fieldTextCache[@(kTagElevVal)];
+    field.text = cachedElevation
+                     ?: [NSString
+                            stringWithUTF8String:_elevParts.value.c_str()];
     field.font = [UIFont systemFontOfSize:16];
     field.textAlignment = NSTextAlignmentRight;
     field.textColor = [UIColor secondaryLabelColor];
-    field.placeholder = @"e.g. 10' 6\"";
+    field.placeholder = [NSString stringWithUTF8String:ost_domain::elevation_placeholder(_metric).c_str()];
     field.tag = kTagElevVal;
     field.delegate = self;
     field.returnKeyType = UIReturnKeyDone;
     field.autocorrectionType = UITextAutocorrectionTypeNo;
     field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    OSTDisableSmartPunctuation(field);
     field.translatesAutoresizingMaskIntoConstraints = NO;
     _elevValueField = field;
     [cell.contentView addSubview:field];
@@ -185,16 +204,13 @@
   case TopRow::Layer: {
     UITableViewCell *cell = [self _detailCell:tableView id:@"LayerCell"];
     cell.textLabel.text = @"Layer";
+    // an empty layer is shown and saved as no layer (COND-LAYER-01)
     if (!_condition.layer_uid.empty()) {
       auto it = _layers.find(_condition.layer_uid);
       cell.detailTextLabel.text =
           (it != _layers.end())
               ? [NSString stringWithUTF8String:it->second.name.c_str()]
               : @"(none)";
-    } else if (!_sortedLayerUIDs.empty()) {
-      cell.detailTextLabel.text =
-          [NSString stringWithUTF8String:_layers.at(_sortedLayerUIDs.front())
-                                             .name.c_str()];
     } else {
       cell.detailTextLabel.text = @"(none)";
     }
@@ -224,18 +240,21 @@
     return [[UITableViewCell alloc] init];
   const auto &dr = _dimRows[row];
 
+  // The texts are the Windows ones: str(int(display_size)), str(value) for Rise / Run (the whole value, not six digits), the feet-inch
+  // text (millimetres in a metric bid) for the dimensions (DLG-PREC-01, COND-METRIC-01)
   NSString *valStr;
   switch (dr.format) {
   case DimFormat::Percent:
-    valStr = [NSString stringWithFormat:@"%.0f", dr.value];
+    valStr = [NSString
+        stringWithUTF8String:ost_domain::display_size_text(dr.value).c_str()];
     break;
   case DimFormat::Plain:
-    valStr =
-        (dr.value == 0.0) ? @"" : [NSString stringWithFormat:@"%g", dr.value];
+    valStr = [NSString
+        stringWithUTF8String:ost_domain::plain_number_text(dr.value).c_str()];
     break;
   case DimFormat::FeetInches:
   default:
-    valStr = inchesToDisplay(dr.value);
+    valStr = inchesToDisplay(dr.value, _metric);
     break;
   }
 
@@ -248,6 +267,7 @@
     field.keyboardType = UIKeyboardTypeDefault;
     field.autocorrectionType = UITextAutocorrectionTypeNo;
     field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    OSTDisableSmartPunctuation(field);
   } else {
     field.keyboardType = UIKeyboardTypeDecimalPad;
   }
@@ -262,16 +282,15 @@
     UITableViewCell *cell = [self _detailCell:tableView id:@"ColorCell"];
     cell.textLabel.text = @"Color";
     cell.detailTextLabel.text = @"";
-    int cf = _condition.color_fill;
-    CGFloat cr = (cf & 0xFF) / 255.0;
-    CGFloat cg = ((cf >> 8) & 0xFF) / 255.0;
-    CGFloat cb = ((cf >> 16) & 0xFF) / 255.0;
+    // ColorFill is read like Windows int_to_hex: the low 24 bits, a negative value is not grey (COL-01)
+    float cr, cg, cb;
+    ost_domain::Condition::rgb_from_color_fill(_condition.color_fill, cr, cg,
+                                               cb);
     UIView *swatch = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 28, 28)];
-    swatch.backgroundColor = (cf < 0) ? [UIColor grayColor]
-                                      : [UIColor colorWithRed:cr
-                                                        green:cg
-                                                         blue:cb
-                                                        alpha:1.0];
+    swatch.backgroundColor = [UIColor colorWithRed:cr
+                                             green:cg
+                                              blue:cb
+                                             alpha:1.0];
     swatch.layer.cornerRadius = 4;
     swatch.layer.borderWidth = 0.5;
     swatch.layer.borderColor = [UIColor separatorColor].CGColor;
@@ -291,10 +310,17 @@
   NSInteger nextRow = 2;
   if (isLinePattern(_condition.pattern)) {
     if (row == nextRow) {
-      return [self _textFieldCell:tableView
-                            label:@"Spacing"
-                            value:inchesToDisplay(_condition.spacing)
-                              tag:kTagSpacing];
+      UITableViewCell *cell =
+          [self _textFieldCell:tableView
+                         label:@"Spacing"
+                         value:inchesToDisplay(_condition.spacing, _metric)
+                           tag:kTagSpacing];
+      UITextField *field = (UITextField *)[cell viewWithTag:kTagSpacing];
+      field.keyboardType = UIKeyboardTypeDefault;
+      field.autocorrectionType = UITextAutocorrectionTypeNo;
+      field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+      OSTDisableSmartPunctuation(field);
+      return cell;
     }
     nextRow++;
   }
@@ -341,10 +367,12 @@
         break;
       }
     }
+    // the labels are UTF-8 (IN², m², ...): converted as text, never printed through %s (QTY-16)
     std::string uomLabel = ost_domain::get_uom_label(uom);
     if (!uomLabel.empty()) {
-      cell.detailTextLabel.text =
-          [NSString stringWithFormat:@"%@ (%s)", calcLabel, uomLabel.c_str()];
+      cell.detailTextLabel.text = [NSString
+          stringWithFormat:@"%@ (%@)", calcLabel,
+                           [NSString stringWithUTF8String:uomLabel.c_str()]];
     } else {
       cell.detailTextLabel.text = calcLabel;
     }
@@ -408,6 +436,9 @@
     UISwitch *sw = [[UISwitch alloc] init];
     sw.on = ar.boolVal;
     sw.tag = row;
+    // Trim disables Curved Segment (COND-TRIM-01)
+    if ([ar.label isEqualToString:@"Curved Segment"])
+      sw.enabled = ost_domain::curved_segment_enabled(_condition);
     [sw addTarget:self
                   action:@selector(_advToggleChanged:)
         forControlEvents:UIControlEventValueChanged];
@@ -415,14 +446,16 @@
     return cell;
   }
 
-  UITableViewCell *cell = [self _textFieldCell:tableView
-                                         label:ar.label
-                                         value:inchesToDisplay(ar.dimVal)
-                                           tag:ar.tag];
+  UITableViewCell *cell =
+      [self _textFieldCell:tableView
+                     label:ar.label
+                     value:inchesToDisplay(ar.dimVal, _metric)
+                       tag:ar.tag];
   UITextField *field = (UITextField *)[cell viewWithTag:ar.tag];
   field.keyboardType = UIKeyboardTypeDefault;
   field.autocorrectionType = UITextAutocorrectionTypeNo;
   field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+  OSTDisableSmartPunctuation(field);
   return cell;
 }
 
@@ -431,7 +464,6 @@
   if ((size_t)row >= _advRows.size())
     return;
   _advRows[row].boolVal = sw.isOn;
-  _dirty = YES;
 
   NSString *label = _advRows[row].label;
   if ([label isEqualToString:@"Connect"])
@@ -442,11 +474,21 @@
     _condition.round_quantity = sw.isOn;
   else if ([label isEqualToString:@"Drop/Run"])
     _condition.drop_run = sw.isOn;
-  else if ([label isEqualToString:@"Trim"])
-    _condition.trim = sw.isOn;
-  else if ([label isEqualToString:@"Curved Segment"])
-    _condition.is_curved_segment = sw.isOn;
-  else if ([label isEqualToString:@"Grid"])
+  else if ([label isEqualToString:@"Trim"] ||
+           [label isEqualToString:@"Curved Segment"]) {
+    // Trim and Curved Segment exclude each other (COND-TRIM-01): the switches are rebuilt from the condition so the other one
+    // shows off (and Curved Segment disabled while Trim is on)
+    [self.view endEditing:YES];
+    if ([label isEqualToString:@"Trim"])
+      ost_domain::set_trim(_condition, sw.isOn);
+    else
+      ost_domain::set_curved_segment(_condition, sw.isOn);
+    [self _rebuildAdvRows];
+    [self _updateDirty];
+    [_tableView reloadSections:[NSIndexSet indexSetWithIndex:kSectionAdvanced]
+              withRowAnimation:UITableViewRowAnimationNone];
+    return;
+  } else if ([label isEqualToString:@"Grid"])
     _condition.grid = sw.isOn;
   else if ([label isEqualToString:@"Display Pattern"])
     _condition.display_grid_while_drawing = sw.isOn;
@@ -454,6 +496,7 @@
     _condition.display_dimension = sw.isOn;
   else if ([label isEqualToString:@"Snap to Linear"])
     _condition.snap_to_linear = sw.isOn ? 0 : -1;
+  [self _updateDirty];
 }
 
 @end

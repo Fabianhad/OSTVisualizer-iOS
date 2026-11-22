@@ -1,4 +1,5 @@
 // TODO: remove guard when Manifold library is linked
+#include "strict_fp.hpp" // same contraction setting as earcut_impl.cpp: both instantiate mapbox::detail::Earcut<uint32_t> (ODR)
 #include "boolean_ops.hpp"
 #include "earcut.hpp"
 #include <manifold/manifold.h>

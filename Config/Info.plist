@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Info.plist used by the XcodeGen/Xcode build (project.yml). Nyxian does NOT read this file:
+  it builds its own Info.plist from the LDE* keys in Config/Project.plist.
+
+  - Identity keys come from build settings in project.yml (bundle id, executable, name, versions).
+    UIDeviceFamily (iPhone and iPad, from TARGETED_DEVICE_FAMILY) and the platform keys are added by
+    Xcode at build time. MinimumOSVersion is written here explicitly (16.0, equal to the deployment
+    target in project.yml and LDEMinimumVersion in Config/Project.plist); the CI build fails if the
+    built app reports a different value.
+  - UTImportedTypeDeclarations, CFBundleDocumentTypes and UIApplicationSceneManifest are copied
+    unchanged from LDEBundleInfo in Config/Project.plist (keep the two in sync).
+  - UILaunchScreen (empty), LSRequiresIPhoneOS and MinimumOSVersion are the only additions. The empty UILaunchScreen
+    dictionary stops iOS from running the app letterboxed (legacy screen size) because there is no
+    launch storyboard; it adds no launch image and changes no app logic.
+  - Deliberately absent: orientation keys, UIFileSharingEnabled, LSSupportsOpeningDocumentsInPlace
+    and every privacy usage string, because the Nyxian Info.plist fragment (LDEBundleInfo) declares
+    none of them.
+
+  - To confirm: Nyxian's public source (NXProject.m) adds a few keys of its own on top of the
+    fragment, for the older project formats: UIRequiresFullScreen = false and
+    UISupportedInterfaceOrientations~ipad = all four orientations. Both should equal iOS's
+    defaults for an iPad app when the keys are absent (not verified on a device), so they are not
+    repeated here. If the app behaves differently on iPad than the Nyxian build, add them here.
+    The installed Nyxian version was not inspected.
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>OST Visualizer</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>MinimumOSVersion</key>
+	<string>16.0</string>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.fabian.ostvisualizer.ost</string>
+			<key>UTTypeDescription</key>
+			<string>OnScreen Takeoff File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.xml</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ost</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.fabian.ostvisualizer.osp</string>
+			<key>UTTypeDescription</key>
+			<string>OnScreen Takeoff Package</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>osp</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>OnScreen Takeoff File</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.fabian.ostvisualizer.ost</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>OnScreen Takeoff Package</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.fabian.ostvisualizer.osp</string>
+			</array>
+		</dict>
+	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+</dict>
+</plist>

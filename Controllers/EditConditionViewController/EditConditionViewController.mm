@@ -1,33 +1,62 @@
 #import "Components/EditConditionHelpers.h"
 #import "EditConditionViewController_Internal.h"
+#include "../../Core/Domain/ConditionChoices.hpp"
+#include "../../Core/Domain/ConditionFormRules.hpp"
+#include "../../Core/Domain/ConditionStyleChange.hpp"
+#include "../../Core/Domain/DimensionFormat.hpp"
+#include "../../Core/Import/TextRules.hpp"
 #include <algorithm>
 #include <cmath>
 
-static NSString *OSTTrimmedText(NSString *text) {
-  return [(text ?: @"")
-      stringByTrimmingCharactersInSet:[NSCharacterSet
-                                          whitespaceAndNewlineCharacterSet]];
+static NSString *OSTString(const std::string &text) {
+  return [NSString stringWithUTF8String:text.c_str()] ?: @"";
 }
 
-static NSString *OSTPlainDisplay(double value) {
-  return (value == 0.0) ? @"" : [NSString stringWithFormat:@"%g", value];
+static std::string OSTStdString(NSString *text) {
+  const char *utf8 = text.UTF8String;
+  return utf8 ? std::string(utf8) : std::string();
 }
 
-static bool OSTParseStrictDouble(NSString *text, double *outValue) {
-  NSString *trimmed = OSTTrimmedText(text);
-  if (trimmed.length == 0) {
-    *outValue = 0.0;
-    return true;
+// The dimension fields (feet-inch text, or millimetres in a metric bid), the ones that normalise their text when they lose focus
+// (Windows _DimensionLineEdit). The elevation is a plain field and keeps what was typed (COND-ELEV-01).
+static BOOL OSTIsDimensionTag(NSInteger tag) {
+  return tag == kTagHeight || tag == kTagWidth || tag == kTagThickness ||
+         tag == kTagDepth || tag == kTagTolerance || tag == kTagRoundTo ||
+         tag == kTagAddLength || tag == kTagTileX || tag == kTagTileY ||
+         tag == kTagGap || tag == kTagSpacing;
+}
+
+// The text field a style change resets (ost_domain::StyleField)
+static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
+  switch (field) {
+  case ost_domain::StyleField::Height:
+    return kTagHeight;
+  case ost_domain::StyleField::Width:
+    return kTagWidth;
+  case ost_domain::StyleField::Depth:
+    return kTagDepth;
+  case ost_domain::StyleField::Thickness:
+    return kTagThickness;
+  case ost_domain::StyleField::DisplaySize:
+    return kTagDispSize;
+  case ost_domain::StyleField::Rise:
+    return kTagRise;
+  case ost_domain::StyleField::Run:
+    return kTagRun;
+  case ost_domain::StyleField::Tolerance:
+    return kTagTolerance;
+  case ost_domain::StyleField::RoundTo:
+    return kTagRoundTo;
+  case ost_domain::StyleField::AddLength:
+    return kTagAddLength;
+  case ost_domain::StyleField::TileX:
+    return kTagTileX;
+  case ost_domain::StyleField::TileY:
+    return kTagTileY;
+  case ost_domain::StyleField::Gap:
+    return kTagGap;
   }
-
-  NSScanner *scanner = [NSScanner scannerWithString:trimmed];
-  double value = 0.0;
-  if (![scanner scanDouble:&value])
-    return false;
-  if (!scanner.isAtEnd)
-    return false;
-  *outValue = value;
-  return true;
+  return kTagHeight;
 }
 
 @implementation EditConditionViewController
@@ -54,12 +83,16 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
                layers:
                    (const std::unordered_map<std::string, ost_domain::Layer> &)
                        layers
+         mergedLayers:(const std::vector<ost_domain::BidLayer> &)mergedLayers
              cdnTypes:
                  (const std::unordered_map<std::string, ost_domain::CdnType> &)
-                     cdnTypes {
+                     cdnTypes
+               metric:(BOOL)metric {
   self = [super initWithNibName:nil bundle:nil];
   if (self) {
+    _metric = metric;
     _condition = condition;
+    [self _normalizeLoadedCondition];
     _elevParts = parseElevation(condition.name);
     _fieldTextCache = [[NSMutableDictionary alloc] init];
     _notesTextCache = @"";
@@ -79,43 +112,28 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
       }
     }
 
-    std::string defaultLayerUID;
-    for (const auto &pair : _layers) {
-      if (pair.second.name == "Default") {
-        defaultLayerUID = pair.first;
-        break;
-      }
-    }
-    if (!defaultLayerUID.empty()) {
-      _sortedLayerUIDs.push_back(defaultLayerUID);
-    }
-    for (const auto &pair : _layers) {
-      const std::string &name = pair.second.name;
-      if (pair.first == defaultLayerUID || name == "Image" ||
-          name == "Annotation" || name == "Comments") {
-        continue;
-      }
-      _sortedLayerUIDs.push_back(pair.first);
-    }
-    if (_sortedLayerUIDs.size() > (defaultLayerUID.empty() ? 0u : 1u)) {
-      auto begin = _sortedLayerUIDs.begin() + (defaultLayerUID.empty() ? 0 : 1);
-      std::sort(begin, _sortedLayerUIDs.end(),
-                [&](const std::string &a, const std::string &b) {
-                  return _layers.at(a).name < _layers.at(b).name;
-                });
-    }
-    for (const auto &pair : _cdnTypes)
-      _sortedCdnTypeUIDs.push_back(pair.first);
-    std::sort(_sortedCdnTypeUIDs.begin(), _sortedCdnTypeUIDs.end(),
-              [&](const std::string &a, const std::string &b) {
-                return _cdnTypes.at(a).name < _cdnTypes.at(b).name;
-              });
+    // The layer list of Windows (COND-LAYER-01) and the type list in its
+    // case-insensitive order (COND-CDNPICK-01)
+    _sortedLayerUIDs = ost_domain::condition_layer_choices(mergedLayers, _layers);
+    _sortedCdnTypeUIDs = ost_domain::sorted_cdn_type_uids(_cdnTypes);
 
     [self _syncFieldCacheFromCondition];
     [self _rebuildDimRows];
     [self _rebuildAdvRows];
+    [self _markFormSaved];
   }
   return self;
+}
+
+// What the form shows of a condition that is loaded into it (Windows _load_condition, edit_condition_dialog.py :839-847 of the
+// Windows 49a2d59): the stored style stays as it is (COND-M08). A type outside Linear / Area / Count /
+// Attachment adds the disabled "Unknown (N)" entry to the style choice (_unknownStyleType, replaced or removed at the next load) and
+// is built Area-like, and a Save without a style choice keeps it. Trim and Curved Segment never show both (COND-TRIM-01). A Save
+// writes these values only when something else makes the form dirty.
+- (void)_normalizeLoadedCondition {
+  _condition = ost_domain::condition_form_for_edit(_condition);
+  _unknownStyleType =
+      ost_domain::unknown_style_type(_condition.condition_type);
 }
 
 #pragma mark - Lifecycle
@@ -172,12 +190,12 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
 
 - (void)_rebuildDimRows {
   _dimRows.clear();
-  bool isCount =
-      (_condition.condition_type == ost_domain::ConditionType::Count ||
-       _condition.condition_type == ost_domain::ConditionType::Attachment);
-  bool isLinear =
-      (_condition.condition_type == ost_domain::ConditionType::Linear);
-  bool isArea = (_condition.condition_type == ost_domain::ConditionType::Area);
+  // a type outside Linear / Area / Count / Attachment is Area-like (COND-M08, edit_condition_dialog.py :547)
+  const ost_domain::EditorLayout layout =
+      ost_domain::editor_layout(_condition.condition_type);
+  const bool isCount = (layout == ost_domain::EditorLayout::CountLike);
+  const bool isLinear = (layout == ost_domain::EditorLayout::Linear);
+  const bool isArea = (layout == ost_domain::EditorLayout::Area);
 
   if (isCount) {
     _dimRows.push_back(
@@ -201,18 +219,21 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
   } else if (isArea) {
     _dimRows.push_back({@"Thickness", kTagThickness, _condition.thickness,
                         DimFormat::FeetInches});
-    _dimRows.push_back({@"Rise", kTagRise, _condition.rise, DimFormat::Plain});
-    _dimRows.push_back({@"Run", kTagRun, _condition.run, DimFormat::Plain});
+    // Windows shows abs(rise) / abs(run) for the Area style (DLG-RISE-01)
+    _dimRows.push_back(
+        {@"Rise", kTagRise, std::fabs(_condition.rise), DimFormat::Plain});
+    _dimRows.push_back(
+        {@"Run", kTagRun, std::fabs(_condition.run), DimFormat::Plain});
   }
 }
 
 - (void)_rebuildAdvRows {
   _advRows.clear();
-  bool isCount =
-      (_condition.condition_type == ost_domain::ConditionType::Count ||
-       _condition.condition_type == ost_domain::ConditionType::Attachment);
-  bool isLinear =
-      (_condition.condition_type == ost_domain::ConditionType::Linear);
+  // everything that is not Linear or Count / Attachment is the Area rows, a type outside the four included (COND-M08)
+  const ost_domain::EditorLayout layout =
+      ost_domain::editor_layout(_condition.condition_type);
+  const bool isCount = (layout == ost_domain::EditorLayout::CountLike);
+  const bool isLinear = (layout == ost_domain::EditorLayout::Linear);
 
   if (isCount) {
     _advRows.push_back(
@@ -294,21 +315,101 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
 
 - (void)_elevTypeChanged:(UISegmentedControl *)seg {
   _elevParts.type = (int)seg.selectedSegmentIndex;
-  _dirty = YES;
+  [self _updateDirty];
 }
 
 - (void)_save {
   [self.view endEditing:YES];
-  if (![self _validateAndCollectTextFields]) {
+  if (![self _applyChanges])
     return;
-  }
-  [self _shiftConflictingRefNosIfNeeded];
-  _conditionsMap[_condition.uid] = _condition;
-
-  if (_delegate) {
-    [_delegate editConditionViewController:self didSaveCondition:_condition];
-  }
   [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+#pragma mark - Dirty state and saving
+
+// Windows _current_form_state: everything the form shows. The switches and pickers live in _condition; the typed texts (not yet
+// parsed) live in the caches.
+- (NSArray *)_formState {
+  const ost_domain::Condition &c = _condition;
+  return @[
+    @(static_cast<int>(c.condition_type)), OSTString(c.cdn_type_uid),
+    OSTString(c.layer_uid), @(c.color_fill), @(static_cast<int>(c.pattern)),
+    @(static_cast<int>(c.shape)), @(c.calc_type1), @(c.uom1), @(c.calc_type2),
+    @(c.uom2), @(c.calc_type3), @(c.uom3), @(c.round_quantity), @(c.drop_run),
+    @(c.trim), @(c.is_curved_segment), @(c.grid),
+    @(c.display_grid_while_drawing), @(c.display_dimension), @(c.display_name),
+    @(c.connect), @(c.snap_to_linear), @(_elevParts.type),
+    [_fieldTextCache copy], _notesTextCache ?: @""
+  ];
+}
+
+- (void)_markFormSaved {
+  _savedFormState = [self _formState];
+  _dirty = NO;
+}
+
+// Windows _mark_dirty: the form is dirty when its state differs from the state it was loaded or last saved with, so changing a field
+// back (or a focus change that changes nothing) leaves it clean.
+- (void)_updateDirty {
+  _dirty = ![[self _formState] isEqualToArray:_savedFormState];
+}
+
+// Windows _apply_changes: YES when the form was saved or had nothing to save; NO when a value was refused or the save failed (the
+// alert is shown and nothing changes). Only the fields that differ from the stored condition are handed on (COND-UPD-02).
+- (BOOL)_applyChanges {
+  if (!_dirty)
+    return YES;
+  if (![self _validateAndCollectTextFields])
+    return NO;
+
+  auto storedIt = _conditionsMap.find(_condition.uid);
+  const ost_domain::Condition stored =
+      (storedIt != _conditionsMap.end()) ? storedIt->second : _condition;
+  // Core builds the whole save: the condition to store is changes.values, the fields are those that differ from the stored condition
+  // plus, on a style change, Spacing / Thickness / Backout even when equal (COND-STYLE-02).
+  const ost_domain::ConditionChanges changes =
+      ost_domain::condition_changes_for_save(stored, _condition, _metric);
+  const ost_domain::Condition toSave = changes.values;
+  if (changes.empty()) {
+    // an empty change set is a success without a write
+    [self _markFormSaved];
+    return YES;
+  }
+
+  NSString *failureMessage = nil;
+  if (_delegate && ![_delegate editConditionViewController:self
+                                          didSaveCondition:toSave
+                                                   changes:changes
+                                            failureMessage:&failureMessage]) {
+    [self _showSaveFailedAlertWithMessage:failureMessage];
+    return NO;
+  }
+
+  // The write went through: the neighbours of a renumbered condition shift like the database did, then the condition is stored
+  ost_domain::shift_conflicting_ref_nos(_conditionsMap, toSave.uid,
+                                        toSave.ref_no);
+  _conditionsMap[toSave.uid] = toSave;
+  _condition = toSave;
+  [self _syncFieldCacheFromCondition];
+  [self _rebuildDimRows];
+  [self _rebuildAdvRows];
+  [self _markFormSaved];
+  return YES;
+}
+
+// "Save Failed" with the reason the store gave (the Windows text of a renumber that would push another condition past the highest
+// condition number, DLG-FINITE-01), or the generic text when it gave none (COND-UPD-03); Core picks (condition_save_failed_issue).
+- (void)_showSaveFailedAlertWithMessage:(NSString *)message {
+  const ost_domain::FormIssue issue =
+      ost_domain::condition_save_failed_issue(OSTStdString(message));
+  UIAlertController *alert = [UIAlertController
+      alertControllerWithTitle:OSTString(issue.title)
+                       message:OSTString(issue.message)
+                preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                            style:UIAlertActionStyleDefault
+                                          handler:nil]];
+  [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (NSString *)_cachedTextForTag:(NSInteger)tag {
@@ -316,139 +417,83 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
   return cached ?: @"";
 }
 
+// The text a dimension / plain field shows for the value of _condition: Core inches_to_display, str(value) (Python repr, so the text
+// is the stored value, not six digits: DLG-PREC-01), str(int(display_size)); the Area style shows abs(rise) / abs(run) (DLG-RISE-01).
+- (NSString *)_textForTag:(NSInteger)tag {
+  // abs(rise) / abs(run) for every Area-like layout, a type outside the four included (COND-M08)
+  const bool area = (ost_domain::editor_layout(_condition.condition_type) ==
+                     ost_domain::EditorLayout::Area);
+  switch (tag) {
+  case kTagHeight:
+    return inchesToDisplay(_condition.height, _metric);
+  case kTagWidth:
+    return inchesToDisplay(_condition.width, _metric);
+  case kTagThickness:
+    return inchesToDisplay(_condition.thickness, _metric);
+  case kTagDepth:
+    return inchesToDisplay(_condition.depth, _metric);
+  case kTagDispSize:
+    return OSTString(ost_domain::display_size_text(_condition.display_size));
+  case kTagRise:
+    return OSTString(ost_domain::plain_number_text(
+        area ? std::fabs(_condition.rise) : _condition.rise));
+  case kTagRun:
+    return OSTString(ost_domain::plain_number_text(
+        area ? std::fabs(_condition.run) : _condition.run));
+  case kTagTolerance:
+    return inchesToDisplay(_condition.connect_tolerance, _metric);
+  case kTagRoundTo:
+    return inchesToDisplay(_condition.round_up, _metric);
+  case kTagAddLength:
+    return inchesToDisplay(_condition.drop_value, _metric);
+  case kTagTileX:
+    return inchesToDisplay(_condition.grid_size1, _metric);
+  case kTagTileY:
+    return inchesToDisplay(_condition.grid_size2, _metric);
+  case kTagGap:
+    return inchesToDisplay(_condition.gap, _metric);
+  case kTagSpacing:
+    return inchesToDisplay(_condition.spacing, _metric);
+  default:
+    return @"";
+  }
+}
+
 - (void)_syncFieldCacheFromCondition {
-  _fieldTextCache[@(kTagName)] =
-      [NSString stringWithUTF8String:_elevParts.baseName.c_str()];
+  _fieldTextCache[@(kTagName)] = OSTString(_elevParts.baseName);
   _fieldTextCache[@(kTagRefNo)] =
       [NSString stringWithFormat:@"%d", _condition.ref_no];
-  _fieldTextCache[@(kTagElevVal)] =
-      [NSString stringWithUTF8String:_elevParts.value.c_str()];
+  _fieldTextCache[@(kTagElevVal)] = OSTString(_elevParts.value);
 
-  _fieldTextCache[@(kTagHeight)] = inchesToDisplay(_condition.height);
-  _fieldTextCache[@(kTagWidth)] = inchesToDisplay(_condition.width);
-  _fieldTextCache[@(kTagThickness)] = inchesToDisplay(_condition.thickness);
-  _fieldTextCache[@(kTagDepth)] = inchesToDisplay(_condition.depth);
-  _fieldTextCache[@(kTagDispSize)] = OSTPlainDisplay(_condition.display_size);
-  _fieldTextCache[@(kTagRise)] = OSTPlainDisplay(_condition.rise);
-  _fieldTextCache[@(kTagRun)] = OSTPlainDisplay(_condition.run);
-  _fieldTextCache[@(kTagTolerance)] =
-      inchesToDisplay(_condition.connect_tolerance);
-  _fieldTextCache[@(kTagRoundTo)] = inchesToDisplay(_condition.round_up);
-  _fieldTextCache[@(kTagAddLength)] = inchesToDisplay(_condition.drop_value);
-  _fieldTextCache[@(kTagTileX)] = inchesToDisplay(_condition.grid_size1);
-  _fieldTextCache[@(kTagTileY)] = inchesToDisplay(_condition.grid_size2);
-  _fieldTextCache[@(kTagGap)] = inchesToDisplay(_condition.gap);
-  _fieldTextCache[@(kTagSpacing)] = inchesToDisplay(_condition.spacing);
+  static const NSInteger kValueTags[] = {
+      kTagHeight,    kTagWidth,     kTagThickness, kTagDepth,    kTagDispSize,
+      kTagRise,      kTagRun,       kTagTolerance, kTagRoundTo,  kTagAddLength,
+      kTagTileX,     kTagTileY,     kTagGap,       kTagSpacing};
+  for (NSInteger tag : kValueTags)
+    _fieldTextCache[@(tag)] = [self _textForTag:tag];
 
-  _notesTextCache = [NSString stringWithUTF8String:_condition.notes.c_str()];
+  _notesTextCache = OSTString(_condition.notes);
 }
 
-- (void)_applyStyleDefaults:(ost_domain::ConditionType)conditionType {
-  _condition.condition_type = conditionType;
-
-  _condition.pattern = ost_domain::Pattern::Transparent;
-  _condition.spacing = 4.0;
-  _condition.notes.clear();
-  _condition.calc_type2 = 0;
-  _condition.calc_type3 = 0;
-  _condition.uom2 = -1;
-  _condition.uom3 = -1;
-
-  switch (conditionType) {
-  case ost_domain::ConditionType::Linear:
-    _condition.thickness = 4.0;
-    _condition.backout = false;
-    _condition.height = 0.0;
-    _condition.rise = 0.0;
-    _condition.run = 0.0;
-    _condition.calc_type1 = 1;
-    _condition.uom1 = 2;
-    _condition.round_quantity = false;
-    _condition.round_up = 0.0;
-    _condition.drop_run = false;
-    _condition.drop_value = 0.0;
-    _condition.connect = true;
-    _condition.connect_tolerance = 6.0;
-    _condition.trim = false;
-    _condition.is_curved_segment = false;
-    break;
-  case ost_domain::ConditionType::Area:
-    _condition.thickness = 4.0;
-    _condition.backout = false;
-    _condition.rise = 0.0;
-    _condition.run = 0.0;
-    _condition.calc_type1 = 11;
-    _condition.uom1 = 5;
-    _condition.round_quantity = false;
-    _condition.round_up = 0.0;
-    _condition.grid = false;
-    _condition.grid_size1 = 0.0;
-    _condition.grid_size2 = 0.0;
-    _condition.gap = 0.0;
-    _condition.display_grid_while_drawing = true;
-    _condition.display_dimension = false;
-    _condition.display_name = false;
-    _condition.snap_to_linear = -1;
-    break;
-  case ost_domain::ConditionType::Count:
-    _condition.thickness = 4.0;
-    _condition.backout = true;
-    _condition.height = 0.0;
-    _condition.width = 12.0;
-    _condition.depth = 0.0;
-    _condition.display_size = 100.0;
-    _condition.shape = ost_domain::ShapeId::Square;
-    _condition.calc_type1 = 23;
-    _condition.uom1 = 0;
-    _condition.connect = true;
-    _condition.connect_tolerance = 6.0;
-    _condition.display_name = false;
-    break;
-  case ost_domain::ConditionType::Attachment:
-    _condition.thickness = 0.0;
-    _condition.backout = true;
-    _condition.height = 0.0;
-    _condition.width = 12.0;
-    _condition.depth = 0.0;
-    _condition.display_size = 100.0;
-    _condition.shape = ost_domain::ShapeId::Square;
-    _condition.calc_type1 = 23;
-    _condition.uom1 = 0;
-    _condition.connect = true;
-    _condition.connect_tolerance = 6.0;
-    _condition.display_name = false;
-    break;
+// The Style picker (Windows _on_style_changed): the controls of the new style get their defaults, name, Cond. No., elevation, layer,
+// type, notes, colour, pattern and the spacing stay as they are, the options both styles have are carried over, and the texts
+// that were typed into fields the change does not reset stay as typed (COND-STYLE-01).
+- (void)_applyStyleChangeTo:(ost_domain::ConditionType)conditionType {
+  if (conditionType == _condition.condition_type)
+    return; // the Windows combo reports a change only when the style differs
+  // a text that is still being typed is part of the form: commit it before the texts of the new style are reset
+  [self.view endEditing:YES];
+  const ost_domain::StyleChange change =
+      ost_domain::apply_style_change(_condition, conditionType, _metric);
+  _condition = change.condition;
+  for (ost_domain::StyleField field : change.reset_fields) {
+    NSInteger tag = OSTTagForStyleField(field);
+    _fieldTextCache[@(tag)] = [self _textForTag:tag];
   }
-
-  [self _syncFieldCacheFromCondition];
-}
-
-- (void)_shiftConflictingRefNosIfNeeded {
-  auto currentIt = _conditionsMap.find(_condition.uid);
-  int oldRefNo =
-      (currentIt != _conditionsMap.end()) ? currentIt->second.ref_no : 0;
-  if (_condition.ref_no == oldRefNo) {
-    return;
-  }
-
-  bool hasConflict = false;
-  for (const auto &pair : _conditionsMap) {
-    if (pair.first != _condition.uid &&
-        pair.second.ref_no == _condition.ref_no) {
-      hasConflict = true;
-      break;
-    }
-  }
-  if (!hasConflict) {
-    return;
-  }
-
-  for (auto &pair : _conditionsMap) {
-    if (pair.first != _condition.uid &&
-        pair.second.ref_no >= _condition.ref_no) {
-      pair.second.ref_no += 1;
-    }
-  }
+  [self _rebuildDimRows];
+  [self _rebuildAdvRows];
+  [self _updateDirty];
+  [_tableView reloadData];
 }
 
 - (void)_showValidationAlertWithTitle:(NSString *)title
@@ -496,207 +541,142 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
   [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (BOOL)_parseDimensionText:(NSString *)text
-                      label:(NSString *)label
-                   focusTag:(NSInteger)focusTag
-                   outValue:(double *)outValue {
-  NSString *trimmed = OSTTrimmedText(text);
-  if (trimmed.length == 0) {
-    *outValue = 0.0;
-    return YES;
-  }
-
-  bool valid = true;
-  double value = displayToInches(trimmed, &valid);
-  if (!valid) {
-    NSString *message = [NSString
-        stringWithFormat:@"\"%@\" is not a valid %@.", trimmed, label];
-    [self _showValidationAlertWithTitle:@"Invalid Value"
-                                message:message
-                               focusTag:focusTag];
-    return NO;
-  }
-  *outValue = value;
-  return YES;
+// Shows the alert of a refused value (the wording of Windows _validate_and_build_dto, Core ConditionFormRules.hpp) and gives the
+// focus back to the field.
+- (BOOL)_refuseWithIssue:(const ost_domain::FormIssue &)issue
+                focusTag:(NSInteger)focusTag {
+  [self _showValidationAlertWithTitle:OSTString(issue.title)
+                              message:OSTString(issue.message)
+                             focusTag:focusTag];
+  return NO;
 }
 
-- (BOOL)_parsePlainText:(NSString *)text
-                  label:(NSString *)label
-               focusTag:(NSInteger)focusTag
-               outValue:(double *)outValue {
-  NSString *trimmed = OSTTrimmedText(text);
-  if (trimmed.length == 0) {
-    *outValue = 0.0;
-    return YES;
-  }
-
+// A dimension field: blank is 0, else the feet-inch text (millimetres in a metric bid) must be a finite number (UI-MSG-01).
+- (BOOL)_parseDimensionTag:(NSInteger)tag
+                     label:(NSString *)label
+                  outValue:(double *)outValue {
   double value = 0.0;
-  if (!OSTParseStrictDouble(trimmed, &value)) {
-    NSString *message = [NSString
-        stringWithFormat:@"\"%@\" is not a valid %@.", trimmed, label];
-    [self _showValidationAlertWithTitle:@"Invalid Value"
-                                message:message
-                               focusTag:focusTag];
-    return NO;
-  }
+  const auto issue = ost_domain::parse_dimension_value(
+      OSTStdString([self _cachedTextForTag:tag]), OSTStdString(label), _metric,
+      value);
+  if (issue)
+    return [self _refuseWithIssue:*issue focusTag:tag];
   *outValue = value;
   return YES;
 }
 
+// Rise / Run: an EMPTY field is 0, else float() text that is finite; the raw field text goes to Core (never trimmed: float(" ") is
+// "Rise must be a number." like Windows, DLG-FINITE-01); the Area style keeps abs() (DLG-RISE-01).
+- (BOOL)_parseSlopeTag:(NSInteger)tag
+                 label:(NSString *)label
+              absolute:(BOOL)absolute
+              outValue:(double *)outValue {
+  double value = 0.0;
+  const auto issue = ost_domain::parse_slope_value(
+      OSTStdString([self _cachedTextForTag:tag]), OSTStdString(label),
+      absolute, value);
+  if (issue)
+    return [self _refuseWithIssue:*issue focusTag:tag];
+  *outValue = value;
+  return YES;
+}
+
+// Windows _validate_and_build_dto: every text of the form is parsed into `form`; the first refused value shows its alert and stops.
+// `_condition` is replaced only when everything parsed, so a refusal leaves the form model as it was.
 - (BOOL)_validateAndCollectTextFields {
-  NSString *baseName = OSTTrimmedText([self _cachedTextForTag:kTagName]);
-  if (baseName.length == 0) {
-    [self _showValidationAlertWithTitle:@"Validation Error"
-                                message:@"Condition name cannot be empty."
-                               focusTag:kTagName];
-    return NO;
+  ost_domain::Condition form = _condition;
+
+  std::string baseName;
+  if (const auto issue = ost_domain::parse_condition_name(
+          OSTStdString([self _cachedTextForTag:kTagName]), baseName)) {
+    return [self _refuseWithIssue:*issue focusTag:kTagName];
   }
 
-  NSString *elevValue = OSTTrimmedText([self _cachedTextForTag:kTagElevVal]);
-  _elevParts.baseName = std::string(baseName.UTF8String);
-  _elevParts.type =
+  // The elevation text is kept as typed: it becomes the suffix of the name (COND-ELEV-01). It is validated with the loader's own
+  // parser (parse_elevation_z calls elevation_text_inches, Windows b9902e6): a text the loader cannot read (a bare number, mm, units
+  // of both systems, "5'" alone, a zero denominator) is refused with the forms that are accepted, like Windows. The dialog also
+  // refuses a text without a closing inch mark in which a letter or digit follows the foot mark ("5'6", "10'6", "5'abc"; "5'x" and
+  // "5'6\"" pass), which the loader would read as the feet alone (elevation_text_needs_closing_inch_mark, called by parse_elevation_z;
+  // Windows 49a2d59, edit_condition_dialog.py :72, :1444); the alert is the same. The saved condition
+  // does not take is_top or z from the form: condition_to_save derives both from the saved NAME like a reload does (decided
+  // 2026-11-19); for a text that passed, the number checked here is the one that derivation gives, so memory equals a reload.
+  const std::string elevValue = ost_import::text_rules::py_strip(
+      OSTStdString([self _cachedTextForTag:kTagElevVal]));
+  const int elevType =
       _elevTypeSeg ? (int)_elevTypeSeg.selectedSegmentIndex : _elevParts.type;
-  _elevParts.value = std::string(elevValue.UTF8String);
+  _elevParts.baseName = baseName;
+  _elevParts.type = elevType;
+  _elevParts.value = elevValue;
 
-  _condition.is_top = (_elevParts.type == 0);
-  if (elevValue.length > 0) {
-    bool valid = true;
-    _condition.z_value = displayToInches(elevValue, &valid);
-    if (!valid) {
-      NSString *message = [NSString
-          stringWithFormat:@"\"%@\" is not a valid elevation.", elevValue];
-      [self _showValidationAlertWithTitle:@"Invalid Value"
-                                  message:message
-                                 focusTag:kTagElevVal];
+  double checkedElevation = 0.0;
+  if (const auto issue = ost_domain::parse_elevation_z(elevValue, _metric,
+                                                       checkedElevation)) {
+    return [self _refuseWithIssue:*issue focusTag:kTagElevVal];
+  }
+  form.name = reassembleElevation(baseName, elevType, elevValue);
+
+  // Cond. No. is validated, never coerced (COND-REF-01). The layer stays as it is: an empty layer is no layer (COND-LAYER-01).
+  if (const auto issue = ost_domain::parse_condition_number(
+          OSTStdString([self _cachedTextForTag:kTagRefNo]), form.ref_no)) {
+    return [self _refuseWithIssue:*issue focusTag:kTagRefNo];
+  }
+
+  // The fields to parse are those of the layout the editor built (a type outside the four is Area-like, COND-M08), so no field that
+  // was never built is read.
+  const ost_domain::EditorLayout layout =
+      ost_domain::editor_layout(form.condition_type);
+  const bool isCount = (layout == ost_domain::EditorLayout::CountLike);
+  const bool isLinear = (layout == ost_domain::EditorLayout::Linear);
+
+  if (isCount) {
+    if (![self _parseDimensionTag:kTagHeight label:@"Height" outValue:&form.height] ||
+        ![self _parseDimensionTag:kTagWidth label:@"Width" outValue:&form.width] ||
+        ![self _parseDimensionTag:kTagDepth label:@"Depth" outValue:&form.depth]) {
+      return NO;
+    }
+    if (const auto issue = ost_domain::parse_display_size(
+            OSTStdString([self _cachedTextForTag:kTagDispSize]),
+            form.display_size)) {
+      return [self _refuseWithIssue:*issue focusTag:kTagDispSize];
+    }
+  } else if (isLinear) {
+    if (![self _parseDimensionTag:kTagHeight label:@"Height" outValue:&form.height] ||
+        ![self _parseDimensionTag:kTagThickness label:@"Thickness" outValue:&form.thickness] ||
+        ![self _parseSlopeTag:kTagRise label:@"Rise" absolute:NO outValue:&form.rise] ||
+        ![self _parseSlopeTag:kTagRun label:@"Run" absolute:NO outValue:&form.run]) {
       return NO;
     }
   } else {
-    _condition.z_value = 0.0;
+    if (![self _parseDimensionTag:kTagThickness label:@"Thickness" outValue:&form.thickness] ||
+        ![self _parseSlopeTag:kTagRise label:@"Rise" absolute:YES outValue:&form.rise] ||
+        ![self _parseSlopeTag:kTagRun label:@"Run" absolute:YES outValue:&form.run]) {
+      return NO;
+    }
   }
 
-  _condition.name = reassembleElevation(_elevParts.baseName, _elevParts.type,
-                                        _elevParts.value);
-
-  NSString *refText = [self _cachedTextForTag:kTagRefNo];
-  _condition.ref_no = refText.length > 0 ? refText.intValue : 0;
-  if (_condition.ref_no < 1)
-    _condition.ref_no = 1;
-  if (_condition.layer_uid.empty() && !_sortedLayerUIDs.empty()) {
-    _condition.layer_uid = _sortedLayerUIDs.front();
-  }
-
-  if (![self _parseDimensionText:[self _cachedTextForTag:kTagSpacing]
-                           label:@"Spacing"
-                        focusTag:kTagSpacing
-                        outValue:&_condition.spacing]) {
+  if (![self _parseDimensionTag:kTagSpacing label:@"Spacing" outValue:&form.spacing])
     return NO;
-  }
-
-  bool isCount =
-      (_condition.condition_type == ost_domain::ConditionType::Count ||
-       _condition.condition_type == ost_domain::ConditionType::Attachment);
-  bool isLinear =
-      (_condition.condition_type == ost_domain::ConditionType::Linear);
-  bool isArea = (_condition.condition_type == ost_domain::ConditionType::Area);
 
   if (isCount) {
-    if (![self _parseDimensionText:[self _cachedTextForTag:kTagHeight]
-                             label:@"Height"
-                          focusTag:kTagHeight
-                          outValue:&_condition.height] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagWidth]
-                             label:@"Width"
-                          focusTag:kTagWidth
-                          outValue:&_condition.width] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagDepth]
-                             label:@"Depth"
-                          focusTag:kTagDepth
-                          outValue:&_condition.depth] ||
-        ![self _parsePlainText:[self _cachedTextForTag:kTagDispSize]
-                         label:@"Display Size"
-                      focusTag:kTagDispSize
-                      outValue:&_condition.display_size] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagTolerance]
-                             label:@"Tolerance"
-                          focusTag:kTagTolerance
-                          outValue:&_condition.connect_tolerance]) {
+    if (![self _parseDimensionTag:kTagTolerance label:@"Tolerance" outValue:&form.connect_tolerance])
       return NO;
-    }
-
-    if (_condition.display_size < 10.0 || _condition.display_size > 500.0) {
-      [self _showValidationAlertWithTitle:@"Validation Error"
-                                  message:@"Display Size must be between 10% "
-                                          @"and 500%."
-                                 focusTag:kTagDispSize];
-      return NO;
-    }
   } else if (isLinear) {
-    if (![self _parseDimensionText:[self _cachedTextForTag:kTagHeight]
-                             label:@"Height"
-                          focusTag:kTagHeight
-                          outValue:&_condition.height] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagThickness]
-                             label:@"Thickness"
-                          focusTag:kTagThickness
-                          outValue:&_condition.thickness] ||
-        ![self _parsePlainText:[self _cachedTextForTag:kTagRise]
-                         label:@"Rise"
-                      focusTag:kTagRise
-                      outValue:&_condition.rise] ||
-        ![self _parsePlainText:[self _cachedTextForTag:kTagRun]
-                         label:@"Run"
-                      focusTag:kTagRun
-                      outValue:&_condition.run] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagRoundTo]
-                             label:@"Round to"
-                          focusTag:kTagRoundTo
-                          outValue:&_condition.round_up] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagAddLength]
-                             label:@"Add Length"
-                          focusTag:kTagAddLength
-                          outValue:&_condition.drop_value] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagTolerance]
-                             label:@"Tolerance"
-                          focusTag:kTagTolerance
-                          outValue:&_condition.connect_tolerance]) {
+    if (![self _parseDimensionTag:kTagRoundTo label:@"Round to" outValue:&form.round_up] ||
+        ![self _parseDimensionTag:kTagAddLength label:@"Add Length" outValue:&form.drop_value] ||
+        ![self _parseDimensionTag:kTagTolerance label:@"Tolerance" outValue:&form.connect_tolerance]) {
       return NO;
     }
-  } else if (isArea) {
-    if (![self _parseDimensionText:[self _cachedTextForTag:kTagThickness]
-                             label:@"Thickness"
-                          focusTag:kTagThickness
-                          outValue:&_condition.thickness] ||
-        ![self _parsePlainText:[self _cachedTextForTag:kTagRise]
-                         label:@"Rise"
-                      focusTag:kTagRise
-                      outValue:&_condition.rise] ||
-        ![self _parsePlainText:[self _cachedTextForTag:kTagRun]
-                         label:@"Run"
-                      focusTag:kTagRun
-                      outValue:&_condition.run] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagRoundTo]
-                             label:@"Round to"
-                          focusTag:kTagRoundTo
-                          outValue:&_condition.round_up] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagTileX]
-                             label:@"Tile X"
-                          focusTag:kTagTileX
-                          outValue:&_condition.grid_size1] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagTileY]
-                             label:@"Tile Y"
-                          focusTag:kTagTileY
-                          outValue:&_condition.grid_size2] ||
-        ![self _parseDimensionText:[self _cachedTextForTag:kTagGap]
-                             label:@"Gap"
-                          focusTag:kTagGap
-                          outValue:&_condition.gap]) {
+  } else {
+    if (![self _parseDimensionTag:kTagRoundTo label:@"Round to" outValue:&form.round_up] ||
+        ![self _parseDimensionTag:kTagTileX label:@"Tile X" outValue:&form.grid_size1] ||
+        ![self _parseDimensionTag:kTagTileY label:@"Tile Y" outValue:&form.grid_size2] ||
+        ![self _parseDimensionTag:kTagGap label:@"Gap" outValue:&form.gap]) {
       return NO;
     }
   }
 
-  NSString *notes = _notesTextCache ?: @"";
-  _condition.notes = std::string(notes.UTF8String);
-  [self _syncFieldCacheFromCondition];
+  form.notes = OSTStdString(_notesTextCache ?: @"");
+  _condition = form;
   return YES;
 }
 
@@ -716,8 +696,8 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
     return;
 
   _condition = it->second;
+  [self _normalizeLoadedCondition];
   _elevParts = parseElevation(_condition.name);
-  _dirty = NO;
   _styleDisabled = [self _conditionHasTakeoffs:uid];
   _nameField = nil;
   _refNoField = nil;
@@ -728,6 +708,7 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
 
   [self _rebuildDimRows];
   [self _rebuildAdvRows];
+  [self _markFormSaved];
   [self _updateNavButtons];
   [_tableView reloadData];
   [_tableView
@@ -764,16 +745,8 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
                     actionWithTitle:@"Save"
                               style:UIAlertActionStyleDefault
                             handler:^(UIAlertAction *a) {
-                              if ([self _validateAndCollectTextFields]) {
-                                [self _shiftConflictingRefNosIfNeeded];
-                                self->_conditionsMap[self->_condition.uid] =
-                                    self->_condition;
-                                if (self->_delegate) {
-                                  [self->_delegate
-                                      editConditionViewController:self
-                                                 didSaveCondition:self->
-                                                                  _condition];
-                                }
+                              // a refused value or a failed save keeps the form and does not navigate
+                              if ([self _applyChanges]) {
                                 [self _loadConditionAtIndex:index];
                               }
                             }]];
@@ -781,7 +754,6 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
   [alert addAction:[UIAlertAction actionWithTitle:@"Discard"
                                             style:UIAlertActionStyleDestructive
                                           handler:^(UIAlertAction *a) {
-                                            self->_dirty = NO;
                                             [self _loadConditionAtIndex:index];
                                           }]];
 
@@ -803,34 +775,27 @@ static bool OSTParseStrictDouble(NSString *text, double *outValue) {
 #pragma mark - UITextFieldDelegate
 
 - (void)textFieldDidEndEditing:(UITextField *)textField {
-  _dirty = YES;
-
   NSInteger tag = textField.tag;
 
-  BOOL isDimensionField =
-      (tag == kTagHeight || tag == kTagWidth || tag == kTagThickness ||
-       tag == kTagDepth || tag == kTagElevVal || tag == kTagTolerance ||
-       tag == kTagRoundTo || tag == kTagAddLength || tag == kTagTileX ||
-       tag == kTagTileY || tag == kTagGap || tag == kTagSpacing);
-  if (isDimensionField) {
-    NSString *text = OSTTrimmedText(textField.text);
-    if (text.length > 0) {
-      bool valid = true;
-      double val = displayToInches(text, &valid);
-      if (valid) {
-        textField.text = inchesToDisplay(val);
-      }
+  if (OSTIsDimensionTag(tag)) {
+    // Windows _DimensionLineEdit.focusOutEvent: a text that parses is shown in the canonical form. The elevation is not one of
+    // these fields, its text stays as typed (COND-ELEV-01).
+    const std::string text = OSTStdString(textField.text);
+    if (!ost_import::text_rules::py_strip(text).empty()) {
+      if (const auto value = ost_domain::display_to_inches(text, _metric))
+        textField.text = inchesToDisplay(*value, _metric);
     }
   }
 
   _fieldTextCache[@(tag)] = textField.text ?: @"";
+  [self _updateDirty];
 }
 
 - (void)textViewDidChange:(UITextView *)textView {
   if (textView.tag != kTagNotes)
     return;
-  _dirty = YES;
   _notesTextCache = textView.text ?: @"";
+  [self _updateDirty];
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {

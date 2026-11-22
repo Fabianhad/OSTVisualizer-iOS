@@ -11,9 +11,18 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <stdexcept>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
+
+#if defined(__clang__)
+// Windows evaluates every quantity formula as separate IEEE double operations (CPython floats, no FMA). Clang on
+// arm64 contracts a*b + c*d into fused multiply-adds by default, which changes the last bits of areas, slopes,
+// arc centres and the ceil() of rounded quantities (a 1-in-25000 page scenario then differs by a whole rounding
+// increment). The default is restored at the end of this header.
+#pragma STDC FP_CONTRACT OFF
 #endif
 
 namespace ost_domain
@@ -32,6 +41,12 @@ namespace ost_domain
         UOM_SQUARE_ROOFING = 7,
         UOM_CUBIC_FEET = 8,
         UOM_CUBIC_YARDS = 9,
+        UOM_MM = 11,
+        UOM_MM2 = 12,
+        UOM_M = 13,
+        UOM_M2 = 14,
+        UOM_MM3 = 15,
+        UOM_M3 = 16,
     };
 
     // Calc type constants
@@ -66,25 +81,44 @@ namespace ost_domain
         case UOM_LINEAR_YARDS:
             return "LY";
         case UOM_SQUARE_INCHES:
-            return "SQ IN";
+            return "IN\xC2\xB2"; // IN + superscript 2 (UTF-8), as on Windows
         case UOM_SQUARE_FEET:
             return "SF";
         case UOM_SQUARE_YARDS:
             return "SY";
         case UOM_SQUARE_ROOFING:
-            return "ROOF";
+            return "SQ";
         case UOM_CUBIC_FEET:
             return "CF";
         case UOM_CUBIC_YARDS:
             return "CY";
+        case UOM_MM:
+            return "mm";
+        case UOM_MM2:
+            return "mm\xC2\xB2"; // mm + superscript 2
+        case UOM_M:
+            return "m";
+        case UOM_M2:
+            return "m\xC2\xB2"; // m + superscript 2
+        case UOM_MM3:
+            return "mm\xC2\xB3"; // mm + superscript 3
+        case UOM_M3:
+            return "m\xC2\xB3"; // m + superscript 3
         default:
             return "";
         }
     }
 
+    inline bool is_metric_uom(int code)
+    {
+        return code == UOM_MM || code == UOM_MM2 || code == UOM_M ||
+               code == UOM_M2 || code == UOM_MM3 || code == UOM_M3;
+    }
+
     inline std::vector<QtyOption> get_quantity_options_for_type(ConditionType ct)
     {
-        if (ct == ConditionType::Count || ct == ConditionType::Attachment)
+        // Count, Attachment and every unsupported type get the count options.
+        if (ct != ConditionType::Linear && ct != ConditionType::Area)
         {
             return {
                 {CALC_COUNT, "Count"},
@@ -132,7 +166,7 @@ namespace ost_domain
         };
     }
 
-    inline std::vector<UomOption> get_valid_uoms_for_calc_type(int calc_type)
+    inline std::vector<UomOption> get_valid_uoms_for_calc_type(int calc_type, bool metric = false)
     {
         // Count-like calc types
         static const std::set<int> countCalcs = {CALC_COUNT, 2, 17, 18, 19};
@@ -164,8 +198,14 @@ namespace ost_domain
         {
             return {{UOM_EACH, "EA"}};
         }
+        // Metric lists (bids with measure_base == 1): largest unit first.
+        static const std::vector<UomOption> lengthMetric = {{UOM_M, "m"}, {UOM_MM, "mm"}};
+        static const std::vector<UomOption> volumeMetric = {{UOM_M3, "m\xC2\xB3"}, {UOM_MM3, "mm\xC2\xB3"}};
+        static const std::vector<UomOption> areaMetric = {{UOM_M2, "m\xC2\xB2"}, {UOM_MM2, "mm\xC2\xB2"}};
         if (lengthCalcs.count(calc_type))
         {
+            if (metric)
+                return lengthMetric;
             return {
                 {UOM_LINEAR_FEET, "LF"},
                 {UOM_LINEAR_YARDS, "LY"},
@@ -174,6 +214,8 @@ namespace ost_domain
         }
         if (volumeCalcs.count(calc_type))
         {
+            if (metric)
+                return volumeMetric;
             return {
                 {UOM_CUBIC_FEET, "CF"},
                 {UOM_CUBIC_YARDS, "CY"},
@@ -181,13 +223,18 @@ namespace ost_domain
         }
         if (areaCalcs.count(calc_type))
         {
+            if (metric)
+                return areaMetric;
             return {
                 {UOM_SQUARE_FEET, "SF"},
                 {UOM_SQUARE_YARDS, "SY"},
-                {UOM_SQUARE_INCHES, "SQ IN"},
+                {UOM_SQUARE_ROOFING, "SQ"},
+                {UOM_SQUARE_INCHES, "IN\xC2\xB2"},
             };
         }
         // Default to length
+        if (metric)
+            return lengthMetric;
         return {
             {UOM_LINEAR_FEET, "LF"},
             {UOM_LINEAR_YARDS, "LY"},
@@ -196,6 +243,11 @@ namespace ost_domain
     }
 
     // --- UOM conversion ---
+
+    // Metric divisors: raw inches are divided by the unit's size in inches.
+    inline constexpr double UOM_MM_PER_INCH = 25.4;
+    inline constexpr double UOM_MM2_PER_SQIN = UOM_MM_PER_INCH * UOM_MM_PER_INCH;
+    inline constexpr double UOM_MM3_PER_CUIN = UOM_MM2_PER_SQIN * UOM_MM_PER_INCH;
 
     inline double convert_to_uom(double raw_value, int uom_code)
     {
@@ -232,8 +284,133 @@ namespace ost_domain
         case UOM_CUBIC_YARDS:
             divisor = 46656.0;
             break;
+        case UOM_MM:
+            divisor = 1.0 / UOM_MM_PER_INCH;
+            break;
+        case UOM_M:
+            divisor = 1000.0 / UOM_MM_PER_INCH;
+            break;
+        case UOM_MM2:
+            divisor = 1.0 / UOM_MM2_PER_SQIN;
+            break;
+        case UOM_M2:
+            divisor = 1000000.0 / UOM_MM2_PER_SQIN;
+            break;
+        case UOM_MM3:
+            divisor = 1.0 / UOM_MM3_PER_CUIN;
+            break;
+        case UOM_M3:
+            divisor = 1000000000.0 / UOM_MM3_PER_CUIN;
+            break;
         }
         return (divisor == 0.0) ? 0.0 : raw_value / divisor;
+    }
+
+    // convert_to_uom, then (when round_quantity is on and round_up > 0) round UP to the next multiple
+    // of round_up (given in inches) expressed in the same unit.
+    inline double convert_and_round_quantity(double raw_value, int uom_code,
+                                             bool round_quantity = false,
+                                             double round_up = 0.0)
+    {
+        double value = convert_to_uom(raw_value, uom_code);
+        if (round_quantity && round_up > 0.0)
+        {
+            double increment = convert_to_uom(round_up, uom_code);
+            if (increment > 0.0)
+                value = std::ceil(value / increment) * increment;
+        }
+        return value;
+    }
+
+    // --- UOM normalization (measurement system / calc-type compatibility) ---
+
+    // Imperial -> metric: lengths -> m, areas -> m2, volumes -> m3 (EACH and unknown codes unchanged).
+    // Metric -> imperial: mm, m -> LF; mm2, m2 -> SF; mm3, m3 -> CF.
+    inline int normalize_uom_for_system(int uom_code, bool metric)
+    {
+        if (metric)
+        {
+            switch (uom_code)
+            {
+            case UOM_INCHES:
+            case UOM_LINEAR_FEET:
+            case UOM_LINEAR_YARDS:
+                return UOM_M;
+            case UOM_SQUARE_INCHES:
+            case UOM_SQUARE_FEET:
+            case UOM_SQUARE_YARDS:
+            case UOM_SQUARE_ROOFING:
+                return UOM_M2;
+            case UOM_CUBIC_FEET:
+            case UOM_CUBIC_YARDS:
+                return UOM_M3;
+            default:
+                return uom_code;
+            }
+        }
+        switch (uom_code)
+        {
+        case UOM_MM:
+        case UOM_M:
+            return UOM_LINEAR_FEET;
+        case UOM_MM2:
+        case UOM_M2:
+            return UOM_SQUARE_FEET;
+        case UOM_MM3:
+        case UOM_M3:
+            return UOM_CUBIC_FEET;
+        default:
+            return uom_code;
+        }
+    }
+
+    inline std::vector<int> normalize_uoms_for_system(const std::vector<int> &uom_codes, bool metric)
+    {
+        std::vector<int> out;
+        for (int code : uom_codes)
+            out.push_back(normalize_uom_for_system(code, metric));
+        return out;
+    }
+
+    // Keeps the (system-normalized) unit when it is valid for the calc type, otherwise the first valid
+    // unit of that calc type. Calc type 0 (none) only converts between systems.
+    inline int normalize_uom_for_calculation(int calc_type, int uom_code, bool metric)
+    {
+        int normalized = normalize_uom_for_system(uom_code, metric);
+        if (calc_type == 0)
+            return normalized;
+        std::vector<UomOption> valid_uoms = get_valid_uoms_for_calc_type(calc_type, metric);
+        for (const UomOption &opt : valid_uoms)
+        {
+            if (opt.first == normalized)
+                return normalized;
+        }
+        return valid_uoms[0].first;
+    }
+
+    // zip semantics: stops at the shorter of the two lists.
+    inline std::vector<int> normalize_uoms_for_calculations(const std::vector<int> &calc_types,
+                                                            const std::vector<int> &uom_codes,
+                                                            bool metric)
+    {
+        std::vector<int> out;
+        for (size_t i = 0; i < calc_types.size() && i < uom_codes.size(); ++i)
+            out.push_back(normalize_uom_for_calculation(calc_types[i], uom_codes[i], metric));
+        return out;
+    }
+
+    // Rewrites uom1..3 of the condition in place (call with metric = (bid.measure_base == 1) whenever
+    // conditions are loaded or replaced). Idempotent.
+    inline Condition &normalize_condition_uoms_for_system(Condition &condition, bool metric)
+    {
+        std::vector<int> uoms = normalize_uoms_for_calculations(
+            {condition.calc_type1, condition.calc_type2, condition.calc_type3},
+            {condition.uom1, condition.uom2, condition.uom3},
+            metric);
+        condition.uom1 = uoms[0];
+        condition.uom2 = uoms[1];
+        condition.uom3 = uoms[2];
+        return condition;
     }
 
     // --- Geometry helpers ---
@@ -252,12 +429,15 @@ namespace ost_domain
         size_t n = verts.size();
         if (n < 3)
             return 0.0;
+        // Shoelace sum relative to the first vertex: a translation costs no precision.
         double area = 0.0;
+        const double origin_x = verts[0].first;
+        const double origin_y = verts[0].second;
         for (size_t i = 0; i < n; i++)
         {
             size_t j = (i + 1) % n;
-            area += verts[i].first * verts[j].second;
-            area -= verts[j].first * verts[i].second;
+            area += (verts[i].first - origin_x) * (verts[j].second - origin_y) -
+                    (verts[j].first - origin_x) * (verts[i].second - origin_y);
         }
         return std::abs(area) / 2.0;
     }
@@ -322,11 +502,43 @@ namespace ost_domain
 
     inline double perp_slope(double dx, double dy)
     {
-        if (dx == 0.0)
-            return std::numeric_limits<double>::infinity();
         if (dy == 0.0)
+            return std::numeric_limits<double>::infinity();
+        if (dx == 0.0)
             return 0.0;
         return -dx / dy;
+    }
+
+    // sqrt(x*x + y*y), correctly rounded in all but pathological ties (double-double sum of squares plus
+    // one Newton step). Windows measures arcs with Python's math.hypot, which is accurate to the last
+    // bit; std::hypot differs from it by one ulp in roughly one call in six, and the arc circle test
+    // |radius1 - radius2| < 0.1 on a huge, nearly collinear circle flips on that last bit.
+    inline double accurate_hypot(double x, double y)
+    {
+        x = std::fabs(x);
+        y = std::fabs(y);
+        if (std::isinf(x) || std::isinf(y))
+            return std::numeric_limits<double>::infinity();
+        if (std::isnan(x) || std::isnan(y))
+            return std::numeric_limits<double>::quiet_NaN();
+        if (x < y)
+            std::swap(x, y);
+        if (y == 0.0)
+            return x;
+        // scale by a power of two so that 0.5 <= xs < 1 (exact)
+        int e = 0;
+        std::frexp(x, &e);
+        const double xs = std::ldexp(x, -e);
+        const double ys = std::ldexp(y, -e);
+        const double p1 = xs * xs;
+        const double e1 = std::fma(xs, xs, -p1);
+        const double p2 = ys * ys;
+        const double e2 = std::fma(ys, ys, -p2);
+        const double s = p1 + p2;
+        const double lo = ((p2 - (s - p1)) + e1) + e2;
+        double h = std::sqrt(s);
+        h += (std::fma(-h, h, s) + lo) / (2.0 * h);
+        return std::ldexp(h, e);
     }
 
     inline std::vector<std::pair<double, double>> quadratic_curve_points(
@@ -367,7 +579,7 @@ namespace ost_domain
             double mid_y = (y1 + y2) * 0.5;
             double dx = x2 - x1;
             double dy = y2 - y1;
-            double length = std::hypot(dx, dy);
+            double length = accurate_hypot(dx, dy);
             if (length > 0.0)
             {
                 dx /= length;
@@ -380,15 +592,28 @@ namespace ost_domain
         return {x1, y1, x2, y2, cx, cy};
     }
 
+    // Python int(value) of a float, saturated to the int range. Windows computes the segment count with
+    // unbounded integers and clamps it to [6, 64], so only the saturated value matters; a plain static_cast of a
+    // double beyond the int range is undefined behaviour (INT_MIN on x86-64, which gave 6 segments for chords over
+    // 1e10 inches). NaN and infinity make Python raise; here they saturate instead.
+    inline long long saturating_int(double value)
+    {
+        if (!(value < 2147483647.0))
+            return 2147483647LL;
+        if (value < -2147483648.0)
+            return -2147483648LL;
+        return static_cast<long long>(value);
+    }
+
     inline int calc_curve_segments(double x1, double y1, double x2, double y2,
                                    double cx, double cy)
     {
-        double chord_d = std::hypot(x2 - x1, y2 - y1);
-        double curve_d = (std::hypot(cx - x1, cy - y1) +
-                          std::hypot(x2 - cx, y2 - cy)) *
+        double chord_d = accurate_hypot(x2 - x1, y2 - y1);
+        double curve_d = (accurate_hypot(cx - x1, cy - y1) +
+                          accurate_hypot(x2 - cx, y2 - cy)) *
                          0.8;
-        int base = static_cast<int>(std::max(chord_d, curve_d) / 5.0);
-        base = std::max(6, std::min(64, base));
+        long long base = saturating_int(std::max(chord_d, curve_d) / 5.0);
+        base = std::max(6LL, std::min(64LL, base));
 
         if (chord_d > 0.0)
         {
@@ -396,17 +621,62 @@ namespace ost_domain
             double dy = y2 - y1;
             double t = ((cx - x1) * dx + (cy - y1) * dy) / (dx * dx + dy * dy);
             t = std::max(0.0, std::min(1.0, t));
-            double offset = std::hypot(cx - (x1 + t * dx), cy - (y1 + t * dy));
-            base += static_cast<int>(offset / 5.0);
+            double offset = accurate_hypot(cx - (x1 + t * dx), cy - (y1 + t * dy));
+            base += saturating_int(offset / 5.0);
         }
 
-        return std::max(6, std::min(64, base));
+        return static_cast<int>(std::max(6LL, std::min(64LL, base)));
+    }
+
+    // A control point within 1e-9 x chord length of an end point means "no curve": the straight chord.
+    // The band is relative to the chord length, not to the coordinates.
+    inline constexpr double STRAIGHT_CHORD_EPSILON = 1e-9;
+
+    inline bool control_is_at_an_end(double x1, double y1, double x2, double y2,
+                                     double cx, double cy)
+    {
+        double nearest = std::min(accurate_hypot(cx - x1, cy - y1),
+                                  accurate_hypot(cx - x2, cy - y2));
+        return nearest <= STRAIGHT_CHORD_EPSILON * accurate_hypot(x2 - x1, y2 - y1);
+    }
+
+    inline std::vector<std::pair<double, double>> straight_chord_points(
+        double x1, double y1, double x2, double y2, int segments)
+    {
+        std::vector<std::pair<double, double>> points;
+        points.reserve(static_cast<size_t>(segments) + 1);
+        for (int i = 0; i <= segments; ++i)
+        {
+            double t = static_cast<double>(i) / segments;
+            double u = 1.0 - t;
+            points.push_back({u * x1 + t * x2, u * y1 + t * y2});
+        }
+        return points;
+    }
+
+    // Floored float modulo (Python's '%' on floats): the result takes the sign of the modulus.
+    inline double floor_mod(double value, double modulus)
+    {
+        double mod = std::fmod(value, modulus);
+        if (mod != 0.0)
+        {
+            if ((modulus < 0.0) != (mod < 0.0))
+                mod += modulus;
+        }
+        else
+        {
+            mod = std::copysign(0.0, modulus);
+        }
+        return mod;
     }
 
     inline std::vector<std::pair<double, double>> advanced_curve_points(
         double x1, double y1, double x2, double y2,
         double cx, double cy, int segments)
     {
+        if (control_is_at_an_end(x1, y1, x2, y2, cx, cy))
+            return straight_chord_points(x1, y1, x2, y2, segments);
+
         double mid1_x = (x1 + cx) * 0.5;
         double mid1_y = (y1 + cy) * 0.5;
         double mid2_x = (cx + x2) * 0.5;
@@ -442,25 +712,23 @@ namespace ost_domain
 
         if (found)
         {
-            double radius1 = std::hypot(center_x - x1, center_y - y1);
-            double radius2 = std::hypot(center_x - x2, center_y - y2);
-            double radius_c = std::hypot(center_x - cx, center_y - cy);
+            double radius1 = accurate_hypot(center_x - x1, center_y - y1);
+            double radius2 = accurate_hypot(center_x - x2, center_y - y2);
+            double radius_c = accurate_hypot(center_x - cx, center_y - cy);
             if (std::abs(radius1 - radius2) < 0.1 &&
                 std::abs(radius1 - radius_c) < 0.1)
             {
                 double start_angle = std::atan2(y1 - center_y, x1 - center_x);
                 double end_angle = std::atan2(y2 - center_y, x2 - center_x);
-                double cross1 = (x1 - center_x) * (cy - center_y) -
-                                (y1 - center_y) * (cx - center_x);
-                double cross2 = (cx - center_x) * (y2 - center_y) -
-                                (cy - center_y) * (x2 - center_x);
-                bool clockwise = (cross1 + cross2) < 0.0;
-                if (clockwise && end_angle > start_angle)
-                    end_angle -= 2.0 * M_PI;
-                else if (!clockwise && end_angle < start_angle)
-                    end_angle += 2.0 * M_PI;
-
-                double angle_diff = end_angle - start_angle;
+                double control_angle = std::atan2(cy - center_y, cx - center_x);
+                // The arc always runs from the start through the control point to the end.
+                double ccw_to_end = floor_mod(end_angle - start_angle, 2.0 * M_PI);
+                double ccw_to_control = floor_mod(control_angle - start_angle, 2.0 * M_PI);
+                double angle_diff;
+                if (ccw_to_control <= ccw_to_end)
+                    angle_diff = ccw_to_end;
+                else
+                    angle_diff = ccw_to_end - 2.0 * M_PI;
                 std::vector<std::pair<double, double>> points;
                 points.reserve(static_cast<size_t>(segments) + 1);
                 for (int i = 0; i <= segments; ++i)
@@ -500,8 +768,8 @@ namespace ost_domain
         double total = 0.0;
         for (size_t i = 0; i + 1 < points.size(); ++i)
         {
-            total += std::hypot(points[i + 1].first - points[i].first,
-                                points[i + 1].second - points[i].second);
+            total += accurate_hypot(points[i + 1].first - points[i].first,
+                                    points[i + 1].second - points[i].second);
         }
         return total;
     }
@@ -515,8 +783,15 @@ namespace ost_domain
         return calc_linear_length(pos);
     }
 
-    inline double calc_slope_factor(double rise, double run)
+    // use_absolute: area conditions use the magnitudes of rise and run; every other type needs strictly
+    // positive values to form a slope.
+    inline double calc_slope_factor(double rise, double run, bool use_absolute = false)
     {
+        if (use_absolute)
+        {
+            rise = std::abs(rise);
+            run = std::abs(run);
+        }
         if (run > 0.0 && rise > 0.0)
             return std::sqrt(rise * rise + run * run) / run;
         return 1.0;
@@ -656,6 +931,23 @@ namespace ost_domain
         double q1 = 0.0, q2 = 0.0, q3 = 0.0;
     };
 
+    class UnsupportedConditionTypeError : public std::invalid_argument
+    {
+    public:
+        explicit UnsupportedConditionTypeError(const std::string &message)
+            : std::invalid_argument(message) {}
+    };
+
+    // Only Linear (0), Area (1), Count (2) and Attachment (3) are measured; any other stored Type
+    // (corrupted data) is unsupported.
+    inline bool is_supported_condition_type(ConditionType condition_type)
+    {
+        return condition_type == ConditionType::Linear ||
+               condition_type == ConditionType::Area ||
+               condition_type == ConditionType::Count ||
+               condition_type == ConditionType::Attachment;
+    }
+
     inline QuantityResult calculate_condition_quantities(
         ConditionType condition_type,
         int calc_type1, int calc_type2, int calc_type3,
@@ -667,10 +959,17 @@ namespace ost_domain
         double attachment_perimeter = 0.0,
         double rise = 0.0, double run = 0.0,
         double grid_size1 = 0.0, double grid_size2 = 0.0, double gap = 0.0,
-        int curve = -1)
+        int curve = -1,
+        bool round_quantity = false, double round_up = 0.0)
     {
+        if (!is_supported_condition_type(condition_type))
+        {
+            throw UnsupportedConditionTypeError(
+                "Unsupported condition type " +
+                std::to_string(static_cast<int>(condition_type)));
+        }
 
-        double slope = calc_slope_factor(rise, run);
+        double slope = calc_slope_factor(rise, run, condition_type == ConditionType::Area);
 
         // Pre-compute type-specific geometry
         double length_inches = 0.0;
@@ -717,7 +1016,7 @@ namespace ost_domain
                                         grid_size1, grid_size2, gap,
                                         bbox_w, bbox_h);
             }
-            return convert_to_uom(raw, uom);
+            return convert_and_round_quantity(raw, uom, round_quantity, round_up);
         };
 
         QuantityResult r;
@@ -730,6 +1029,14 @@ namespace ost_domain
     // --- Page-level quantity aggregation ---
     // Groups takeoffs by condition, sums per-takeoff quantities for each condition.
     // Matches desktop compute_page_quantities().
+
+    // Parent tokens that make a takeoff a root in the page quantities: '', '0' and the literal
+    // 'None' (Windows condition_quantity_service.py compute_page_quantities). Only the page
+    // quantities use this 3-token set; Takeoff::is_hole() keeps '' and '0' (user decision, QTY-18).
+    inline bool is_quantity_root_parent(const std::string &parent_uid)
+    {
+        return parent_uid.empty() || parent_uid == "0" || parent_uid == "None";
+    }
 
     inline std::unordered_map<std::string, QuantityResult> compute_page_quantities(
         const std::unordered_map<std::string, Condition> &conditions,
@@ -745,7 +1052,7 @@ namespace ost_domain
         std::unordered_map<std::string, std::vector<const Takeoff *>> holes_by_parent;
         for (const auto &t : takeoffs)
         {
-            if (t.is_hole())
+            if (!is_quantity_root_parent(t.parent_uid))
                 holes_by_parent[t.parent_uid].push_back(&t);
         }
 
@@ -759,23 +1066,45 @@ namespace ost_domain
                 continue;
             const Condition &cdn = cit->second;
 
+            // An unsupported condition type reports (0, 0, 0) and never disturbs the other conditions.
+            if (!is_supported_condition_type(cdn.condition_type))
+            {
+                result[cond_uid] = {0.0, 0.0, 0.0};
+                continue;
+            }
+
             double total_q1 = 0.0, total_q2 = 0.0, total_q3 = 0.0;
 
             for (const Takeoff *t : pair.second)
             {
-                // Skip holes — they are accounted for under their parent
-                if (t->is_hole())
+                // Only AREA takeoffs with a parent are holes (accounted for under their parent);
+                // every other condition type counts every takeoff, e.g. an attachment placed on an area.
+                if (cdn.is_area() && !is_quantity_root_parent(t->parent_uid))
                     continue;
 
-                // Gather hole positions for this takeoff
+                // Gather the area holes and attachment dimensions of this takeoff's children.
+                // A child counts only when its condition exists and it is on the same page.
                 std::vector<std::vector<double>> hole_pos;
+                double attachment_footprint = 0.0;
+                double attachment_perimeter = 0.0;
                 auto hit = holes_by_parent.find(t->uid);
                 if (hit != holes_by_parent.end())
                 {
-                    for (const Takeoff *h : hit->second)
+                    for (const Takeoff *child : hit->second)
                     {
-                        if (!h->position.empty())
-                            hole_pos.push_back(h->position);
+                        auto child_cit = conditions.find(child->condition_uid);
+                        if (child_cit == conditions.end() || child->page_uid != t->page_uid)
+                            continue;
+                        const Condition &child_cdn = child_cit->second;
+                        if (child_cdn.is_area() && !child->position.empty())
+                        {
+                            hole_pos.push_back(child->position);
+                        }
+                        else if (child_cdn.is_attachment())
+                        {
+                            attachment_footprint += child_cdn.width * child_cdn.depth;
+                            attachment_perimeter += 2.0 * (child_cdn.width + child_cdn.depth);
+                        }
                     }
                 }
 
@@ -787,10 +1116,11 @@ namespace ost_domain
                     cdn.uom1, cdn.uom2, cdn.uom3,
                     cdn.width, cdn.height, cdn.depth, cdn.thickness,
                     t->position, hole_pos,
-                    0.0, 0.0, // attachment_footprint, attachment_perimeter (TODO)
+                    attachment_footprint, attachment_perimeter,
                     cdn.rise, cdn.run,
                     cdn.grid_size1, cdn.grid_size2, cdn.gap,
-                    t->curve);
+                    t->curve,
+                    cdn.round_quantity, cdn.round_up);
 
                 total_q1 += qr.q1 * sign;
                 total_q2 += qr.q2 * sign;
@@ -804,3 +1134,7 @@ namespace ost_domain
     }
 
 } // namespace ost_domain
+
+#if defined(__clang__)
+#pragma STDC FP_CONTRACT DEFAULT
+#endif

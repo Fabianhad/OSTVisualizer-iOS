@@ -22,14 +22,14 @@ namespace ost_schema
         "BidTakeoffFromUID INTEGER, "
         "BidTakeoffToUID INTEGER, "
         "Position BLOB, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Width INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidAnnoInk ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -38,7 +38,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -47,7 +47,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -56,7 +56,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -65,7 +65,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB, "
         "Width INTEGER)",
 
@@ -81,7 +81,7 @@ namespace ost_schema
         "BidUID INTEGER, "
         "ParentUID INTEGER, "
         "Name TEXT, "
-        "Sequence INTEGER, "
+        "Sequence INTEGER DEFAULT 0, "
         "WasSent INTEGER, "
         "GUID TEXT)",
 
@@ -92,7 +92,7 @@ namespace ost_schema
         "BidTakeoffFromUID INTEGER, "
         "BidTakeoffToUID INTEGER, "
         "Position BLOB, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Width INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidCallOuts ("
@@ -102,14 +102,14 @@ namespace ost_schema
         "BidLayerUID INTEGER, "
         "Name BLOB, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
         "FontUnderline INTEGER, "
         "TextAlign INTEGER, "
         "Position TEXT, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Width INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidComments ("
@@ -118,7 +118,7 @@ namespace ost_schema
         "BidPageUID INTEGER, "
         "ParentCommentUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "UserName TEXT, "
         "Comment BLOB, "
         "Position TEXT, "
@@ -161,7 +161,7 @@ namespace ost_schema
         "ColorFill INTEGER, "
         "Width REAL, "
         "Height REAL, "
-        "Spacing REAL, "
+        "Spacing REAL DEFAULT 0, "
         "Thickness REAL, "
         "Rise REAL, "
         "Run REAL, "
@@ -225,7 +225,7 @@ namespace ost_schema
         "BidTakeoffToUID INTEGER, "
         "Position BLOB, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -246,16 +246,16 @@ namespace ost_schema
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB)",
 
         "CREATE TABLE IF NOT EXISTS BidHotLinks ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
         "BidPageUID INTEGER, "
-        "BidPageViewUID INTEGER, "
+        "BidPageViewUID INTEGER DEFAULT 0, "
         "BidLayerUID INTEGER, "
-        "Color INTEGER, "
+        "Color INTEGER DEFAULT 0, "
         "Position BLOB)",
 
         "CREATE TABLE IF NOT EXISTS BidLaborActivity ("
@@ -269,7 +269,7 @@ namespace ost_schema
         "IsActive INTEGER, "
         "UsesConditionQuantity INTEGER, "
         "RuleType TEXT, "
-        "RuleValue INTEGER, "
+        "RuleValue INTEGER DEFAULT 0, "
         "UseQtyIndex INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidLaborCostCodeTotals ("
@@ -285,7 +285,7 @@ namespace ost_schema
         "CREATE TABLE IF NOT EXISTS BidLaborCostCodes ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
-        "Type INTEGER, "
+        "Type INTEGER DEFAULT 0, "
         "CostCodeUID INTEGER, "
         "UOM INTEGER, "
         "IsActive INTEGER, "
@@ -308,7 +308,7 @@ namespace ost_schema
         "Position BLOB, "
         "Rotation REAL, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -386,14 +386,14 @@ namespace ost_schema
         "Sequence REAL, "
         "Invert INTEGER, "
         "Bitonal INTEGER, "
-        "DigitizerNX1 INTEGER, "
-        "DigitizerNY1 INTEGER, "
-        "DigitizerNX2 INTEGER, "
-        "DigitizerNY2 INTEGER, "
-        "DigitizerWidth REAL, "
-        "DigitizerHeight REAL, "
-        "DigitizerResX INTEGER, "
-        "DigitizerResY INTEGER, "
+        "DigitizerNX1 INTEGER DEFAULT 0, "
+        "DigitizerNY1 INTEGER DEFAULT 0, "
+        "DigitizerNX2 INTEGER DEFAULT 0, "
+        "DigitizerNY2 INTEGER DEFAULT 0, "
+        "DigitizerWidth REAL DEFAULT 0, "
+        "DigitizerHeight REAL DEFAULT 0, "
+        "DigitizerResX INTEGER DEFAULT 0, "
+        "DigitizerResY INTEGER DEFAULT 0, "
         "WasSent INTEGER, "
         "MasterPageUID INTEGER, "
         "TypicalPageRepeats INTEGER, "
@@ -463,15 +463,15 @@ namespace ost_schema
         "ParentUID INTEGER, "
         "No INTEGER, "
         "Quantity REAL, "
-        "Count REAL, "
+        "Count REAL DEFAULT 0, "
         "Rotation REAL, "
         "Position TEXT, "
-        "GridOffsetX REAL, "
-        "GridOffsetY REAL, "
-        "GridRotation REAL, "
-        "IsNegativeQuantity INTEGER, "
+        "GridOffsetX REAL DEFAULT 0, "
+        "GridOffsetY REAL DEFAULT 0, "
+        "GridRotation REAL DEFAULT 0, "
+        "IsNegativeQuantity INTEGER DEFAULT 0, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -485,7 +485,7 @@ namespace ost_schema
         "FlipY INTEGER, "
         "GUID TEXT, "
         "NameFontName TEXT, "
-        "NameFontColor INTEGER, "
+        "NameFontColor INTEGER DEFAULT 0, "
         "NameFontSize INTEGER, "
         "NameFontBold INTEGER, "
         "NameFontItalic INTEGER, "
@@ -523,7 +523,7 @@ namespace ost_schema
         "BidLayerUID INTEGER, "
         "Name BLOB, "
         "FontName TEXT, "
-        "FontColor INTEGER, "
+        "FontColor INTEGER DEFAULT 0, "
         "FontSize INTEGER, "
         "FontBold INTEGER, "
         "FontItalic INTEGER, "
@@ -534,7 +534,7 @@ namespace ost_schema
         "CREATE TABLE IF NOT EXISTS BidTransactionsHistory ("
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
-        "TransactionID INTEGER, "
+        "TransactionID INTEGER DEFAULT 0, "
         "SendDate TEXT, "
         "ReceiveDate TEXT, "
         "LoginNameFrom TEXT, "
@@ -549,7 +549,7 @@ namespace ost_schema
         "UID INTEGER PRIMARY KEY, "
         "BidUID INTEGER, "
         "Name TEXT, "
-        "Sequence INTEGER, "
+        "Sequence INTEGER DEFAULT 0, "
         "WasSent INTEGER)",
 
         "CREATE TABLE IF NOT EXISTS BidTypAreaCounts ("
@@ -604,7 +604,7 @@ namespace ost_schema
         "PrManagerUID INTEGER, "
         "JobSiteManagerUID INTEGER, "
         "SourceBidUID TEXT, "
-        "ExternalID INTEGER, "
+        "ExternalID INTEGER DEFAULT 0, "
         "QuickBidDB TEXT, "
         "BidNo INTEGER, "
         "BidType INTEGER, "
@@ -620,9 +620,9 @@ namespace ost_schema
         "PriceUsingDatabase TEXT, "
         "PriceUsingWorksheet TEXT, "
         "TakeoffIncrements REAL, "
-        "HoursPerDay INTEGER, "
-        "MeasureBase INTEGER, "
-        "WeekStartDay INTEGER, "
+        "HoursPerDay INTEGER DEFAULT 0, "
+        "MeasureBase INTEGER DEFAULT 0, "
+        "WeekStartDay INTEGER DEFAULT 0, "
         "QuantitiesInLegend INTEGER, "
         "JobSendRec INTEGER, "
         "ScaleStyle INTEGER, "
@@ -638,14 +638,14 @@ namespace ost_schema
         "EstimatedDays REAL, "
         "Percent REAL, "
         "ProjectOver REAL, "
-        "DPCMode INTEGER, "
-        "IsDPCUpdated INTEGER, "
-        "IgnoreBidAreas INTEGER, "
-        "SendImageFiles INTEGER, "
-        "HasSTSClash INTEGER, "
-        "SRPending INTEGER, "
-        "IsUnlocked INTEGER, "
-        "FullBidSent INTEGER, "
+        "DPCMode INTEGER DEFAULT 0, "
+        "IsDPCUpdated INTEGER DEFAULT 0, "
+        "IgnoreBidAreas INTEGER DEFAULT 0, "
+        "SendImageFiles INTEGER DEFAULT 0, "
+        "HasSTSClash INTEGER DEFAULT 0, "
+        "SRPending INTEGER DEFAULT 0, "
+        "IsUnlocked INTEGER DEFAULT 0, "
+        "FullBidSent INTEGER DEFAULT 0, "
         "TypicalType INTEGER, "
         "GUID TEXT, "
         "BidDate TEXT, "
@@ -688,9 +688,9 @@ namespace ost_schema
         "Type INTEGER, "
         "Name TEXT, "
         "Description TEXT, "
-        "Sequence INTEGER, "
+        "Sequence INTEGER DEFAULT 0, "
         "RuleType TEXT, "
-        "RuleValue INTEGER)",
+        "RuleValue INTEGER DEFAULT 0)",
 
         "CREATE TABLE IF NOT EXISTS DPCCalcFilter ("
         "UID INTEGER PRIMARY KEY, "
@@ -743,7 +743,7 @@ namespace ost_schema
         "ObjectUID INTEGER, "
         "BidUID INTEGER, "
         "TableName TEXT, "
-        "ChangeType INTEGER, "
+        "ChangeType INTEGER DEFAULT 0, "
         "ExtraInfo TEXT, "
         "ExtraInfo2 TEXT)",
 
@@ -760,10 +760,10 @@ namespace ost_schema
         "LoginRequired INTEGER, "
         "MeasureBase INTEGER, "
         "PriceUsing INTEGER, "
-        "QuantitiesInLegend INTEGER, "
-        "HoursPerDay INTEGER, "
-        "StartWeekOn INTEGER, "
-        "GridCountMethod INTEGER, "
+        "QuantitiesInLegend INTEGER DEFAULT 0, "
+        "HoursPerDay INTEGER DEFAULT 0, "
+        "StartWeekOn INTEGER DEFAULT 0, "
+        "GridCountMethod INTEGER DEFAULT 0, "
         "TakeoffIncrements REAL, "
         "ScaleStyle INTEGER, "
         "IsCustomScale INTEGER, "
@@ -776,13 +776,13 @@ namespace ost_schema
         "LabelHours2 TEXT, "
         "LabelHours3 TEXT, "
         "LabelHours4 TEXT, "
-        "IgnoreBidAreas INTEGER, "
-        "SendImageFiles INTEGER, "
+        "IgnoreBidAreas INTEGER DEFAULT 0, "
+        "SendImageFiles INTEGER DEFAULT 0, "
         "STSClientID TEXT, "
         "STSClientPassword INTEGER, "
-        "BackupNo INTEGER, "
-        "BackupPeriod INTEGER, "
-        "CompressPeriod INTEGER, "
+        "BackupNo INTEGER DEFAULT 2, "
+        "BackupPeriod INTEGER DEFAULT 2, "
+        "CompressPeriod INTEGER DEFAULT 3, "
         "LegendFlags INTEGER, "
         "StyleLibrarySelItemType INTEGER, "
         "StyleLibrarySelItemUID INTEGER, "
@@ -994,6 +994,7 @@ namespace ost_schema
         "BidConditionFolders",
         "BidPageFolders",
         "BidSettings",
+        "BidEmployees",
         "BidLayers",
         "BidTypAreaCounts",
         "BidConditions",
@@ -1031,16 +1032,339 @@ namespace ost_schema
 
     const std::vector<const char *> GLOBAL_SECTIONS = {
         "Employees",
+        "PayClasses",
         "AccessLevels",
         "CdnTypes",
         "JobStatuses",
     };
 
+    // Windows schema_contract.singular: two overrides, otherwise the trailing "s" is dropped.
     std::string singular(const std::string &table_name)
     {
+        if (table_name == "JobStatuses")
+            return "JobStatuse";
+        if (table_name == "PayClasses")
+            return "PayClass";
         if (!table_name.empty() && table_name.back() == 's')
             return table_name.substr(0, table_name.size() - 1);
         return table_name;
+    }
+
+    // Columns of type YESNO in the Windows schema (Windows database_creator.py _TABLE_DDL, 85 columns). The iOS DDL
+    // flattened them to INTEGER, but the importer converts their values like Access does (import_operations.py
+    // _convert_access_value: 'True'/'true'/'-1'/'1' -> -1, anything else -> 0).
+    const std::vector<std::pair<const char *, const char *>> YESNO_COLUMNS = {
+        {"BidAreas", "WasSent"},
+        {"BidCallOuts", "FontBold"},
+        {"BidCallOuts", "FontItalic"},
+        {"BidCallOuts", "FontUnderline"},
+        {"BidConditionFolders", "ExpandState"},
+        {"BidConditions", "IsTemplate"},
+        {"BidConditions", "Backout"},
+        {"BidConditions", "DropRun"},
+        {"BidConditions", "Grid"},
+        {"BidConditions", "Connect"},
+        {"BidConditions", "Trim"},
+        {"BidConditions", "Curve"},
+        {"BidConditions", "SnapToGrid"},
+        {"BidConditions", "ManualLength"},
+        {"BidConditions", "FontBold"},
+        {"BidConditions", "FontItalic"},
+        {"BidConditions", "DisplayDimension"},
+        {"BidConditions", "RoundQuantity"},
+        {"BidConditions", "IsCurvedSegment"},
+        {"BidConditions", "DisplayGridWhileDrawing"},
+        {"BidConditions", "ShowTakeoff"},
+        {"BidConditions", "DisplayName"},
+        {"BidDimensions", "FontBold"},
+        {"BidDimensions", "FontItalic"},
+        {"BidDimensions", "FontUnderline"},
+        {"BidEmployees", "IsActive"},
+        {"BidLaborActivity", "IsActive"},
+        {"BidLaborActivity", "UsesConditionQuantity"},
+        {"BidLaborCostCodes", "IsActive"},
+        {"BidLayers", "IsTemplate"},
+        {"BidLayers", "Show"},
+        {"BidLayers", "IsLocked"},
+        {"BidLegends", "FontBold"},
+        {"BidLegends", "FontItalic"},
+        {"BidLegends", "FontUnderline"},
+        {"BidLegends", "IsShowTotals"},
+        {"BidLegends", "MoveToCorner"},
+        {"BidPageFolders", "WasSent"},
+        {"BidPages", "IsCustomScale"},
+        {"BidPages", "FlipX"},
+        {"BidPages", "FlipY"},
+        {"BidPages", "Invert"},
+        {"BidPages", "Bitonal"},
+        {"BidPages", "WasSent"},
+        {"BidPages", "ZoomFlag"},
+        {"BidTakeoffs", "IsNegativeQuantity"},
+        {"BidTakeoffs", "FontBold"},
+        {"BidTakeoffs", "FontItalic"},
+        {"BidTakeoffs", "FontUnderline"},
+        {"BidTakeoffs", "TakeoffModified"},
+        {"BidTakeoffs", "FlipX"},
+        {"BidTakeoffs", "FlipY"},
+        {"BidTakeoffs", "NameFontBold"},
+        {"BidTakeoffs", "NameFontItalic"},
+        {"BidTakeoffs", "NameFontUnderline"},
+        {"BidTimeCardStates", "IsValid"},
+        {"BidTexts", "FontBold"},
+        {"BidTexts", "FontItalic"},
+        {"BidTexts", "FontUnderline"},
+        {"BidTypAreas", "WasSent"},
+        {"BidTypAreaCounts", "WasSent"},
+        {"BidZones", "IsNegativeValues"},
+        {"Bids", "IsAccepted"},
+        {"Bids", "RecalcNeeded"},
+        {"Bids", "QuantitiesInLegend"},
+        {"Bids", "JobSendRec"},
+        {"Bids", "IsCustomScale"},
+        {"Bids", "DeliverEntireBid"},
+        {"Bids", "DPCMode"},
+        {"Bids", "IsDPCUpdated"},
+        {"Bids", "IgnoreBidAreas"},
+        {"Bids", "SendImageFiles"},
+        {"Bids", "HasSTSClash"},
+        {"Bids", "SRPending"},
+        {"Bids", "IsUnlocked"},
+        {"Bids", "FullBidSent"},
+        {"Bids", "IsCalculatedForSlope"},
+        {"Bids", "IsCalculatedForLaborCostCodeTotals"},
+        {"Employees", "EnableLogin"},
+        {"JobStatuses", "Locked"},
+        {"Settings", "LoginRequired"},
+        {"Settings", "QuantitiesInLegend"},
+        {"Settings", "IsCustomScale"},
+        {"Settings", "IgnoreBidAreas"},
+        {"Settings", "SendImageFiles"},
+    };
+
+    // Windows raw_bid_integrity.BID_RELATIONSHIPS (144 relationships, same order). The parent column is always UID.
+    const std::vector<BidRelationship> BID_RELATIONSHIPS = {
+        {"Bids", "BidProjectUID", "BidProjects", false},
+        {"Bids", "OrigBidProjectUID", "BidProjects", false},
+        {"Bids", "JobStatusUID", "JobStatuses", false},
+        {"Bids", "EstimatorUID", "Employees", false},
+        {"Bids", "PrManagerUID", "Employees", false},
+        {"Bids", "JobSiteManagerUID", "Employees", false},
+        {"AffectDPCTypGroupViews", "BidTypGroupViewUID", "BidTypGroupViews", false},
+        {"AffectDPCTypGroupViews", "BidUID", "Bids", false},
+        {"BidPlanRooms", "BidUID", "Bids", false},
+        {"BidAreas", "BidUID", "Bids", false},
+        {"BidAreas", "ParentUID", "BidAreas", false},
+        {"BidTypAreas", "BidUID", "Bids", false},
+        {"BidConditionFolders", "BidUID", "Bids", false},
+        {"BidConditionFolders", "ParentUID", "BidConditionFolders", false},
+        {"BidPageFolders", "BidUID", "Bids", false},
+        {"BidPageFolders", "ParentUID", "BidPageFolders", false},
+        {"BidSettings", "BidUID", "Bids", false},
+        {"BidSettings", "BidPageSelectedUID", "BidPages", false},
+        {"BidEmployees", "BidUID", "Bids", false},
+        {"BidEmployees", "EmployeeUID", "Employees", false},
+        {"BidEmployees", "PayClassUID", "PayClasses", false},
+        {"BidLayers", "BidUID", "Bids", false},
+        {"BidTypAreaCounts", "BidAreaUID", "BidAreas", false},
+        {"BidTypAreaCounts", "BidTypAreaUID", "BidTypAreas", false},
+        {"BidConditions", "BidUID", "Bids", false},
+        {"BidConditions", "BidConditionFolderUID", "BidConditionFolders", false},
+        {"BidConditions", "BidLayerUID", "BidLayers", false},
+        {"BidConditions", "CdnTypeUID", "CdnTypes", false},
+        {"BidConditionUser", "BidUID", "Bids", false},
+        {"BidConditionUser", "ConditionUID", "BidConditions", false},
+        {"BidDPCSubscribers", "BidUID", "Bids", false},
+        {"BidDPCSubscribers", "BidEmployeeUID", "Employees", false},
+        {"BidLaborActivity", "BidUID", "Bids", false},
+        {"BidLaborActivity", "BidConditionUID", "BidConditions", false},
+        {"BidLaborActivity", "BidLaborCostCodeUID", "BidLaborCostCodes", false},
+        {"BidLaborCostCodes", "BidUID", "Bids", false},
+        {"BidLaborCostCodes", "CostCodeUID", "CostCodes", false},
+        {"BidLaborCostCodeTotals", "BidUID", "Bids", false},
+        {"BidLaborCostCodeTotals", "BidPageUID", "BidPages", false},
+        {"BidLaborCostCodeTotals", "BidAreaUID", "BidAreas", false},
+        {"BidLaborCostCodeTotals", "BidLaborCostCodeUID", "BidLaborCostCodes", false},
+        {"BidNotes", "BidUID", "Bids", false},
+        {"BidPercents", "BidTimeCardStateUID", "BidTimeCardStates", false},
+        {"BidPercents", "BidLaborCostCodeUID", "BidLaborCostCodes", false},
+        {"BidPercents", "BidLaborActivityUID", "BidLaborActivity", false},
+        {"BidPercents", "BidTakeoffUID", "BidTakeoffs", false},
+        {"BidPercents", "BidPageUID", "BidPages", false},
+        {"BidZones", "BidUID", "Bids", false},
+        {"BidZones", "BidLayerUID", "BidLayers", false},
+        {"BidTypGroupViews", "BidUID", "Bids", false},
+        {"BidTypGroupViews", "BidPageUID", "BidPages", false},
+        {"BidTypGroupViews", "BidConditionUID", "BidConditions", false},
+        {"BidPages", "BidUID", "Bids", false},
+        {"BidPages", "BidPageFolderUID", "BidPageFolders", false},
+        {"BidPages", "MasterPageUID", "BidPages", false},
+        {"BidTakeoffs", "BidUID", "Bids", false},
+        {"BidTakeoffs", "BidPageUID", "BidPages", true},
+        {"BidTakeoffs", "BidConditionUID", "BidConditions", true},
+        {"BidTakeoffs", "BidZoneUID", "BidZones", false},
+        {"BidTakeoffs", "BidAreaUID", "BidAreas", false},
+        {"BidTakeoffs", "BidTypAreaUID", "BidTypAreas", false},
+        {"BidTakeoffs", "ParentUID", "BidTakeoffs", false},
+        {"BidTakeoffs", "TypGroupTakeoffUID", "BidTakeoffs", false},
+        {"BidTakeoffs", "TypPageTakeoffUID", "BidTakeoffs", false},
+        {"BidTakeoffs", "TypGroupMarkerUID", "BidTakeoffs", false},
+        {"BidTakeoffTotals", "BidUID", "Bids", false},
+        {"BidTakeoffTotals", "BidPageUID", "BidPages", false},
+        {"BidTakeoffTotals", "BidZoneUID", "BidZones", false},
+        {"BidTakeoffTotals", "BidAreaUID", "BidAreas", false},
+        {"BidTakeoffTotals", "BidTypAreaUID", "BidTypAreas", false},
+        {"BidTakeoffTotals", "BidConditionUID", "BidConditions", false},
+        {"BidTimeCardStates", "BidUID", "Bids", false},
+        {"BidTimeCards", "BidTimeCardStateUID", "BidTimeCardStates", false},
+        {"BidTimeCards", "BidEmployeeUID", "BidEmployees", false},
+        {"BidTimeCards", "BidAreaUID", "BidAreas", false},
+        {"BidTimeCards", "BidTypicalAreaUID", "BidTypAreas", false},
+        {"BidTimeCards", "BidLaborCostCodeUID", "BidLaborCostCodes", false},
+        {"BidTransactionsHistory", "BidUID", "Bids", false},
+        {"BidHighlights", "BidUID", "Bids", false},
+        {"BidHighlights", "BidPageUID", "BidPages", false},
+        {"BidHighlights", "BidLayerUID", "BidLayers", false},
+        {"BidTexts", "BidUID", "Bids", false},
+        {"BidTexts", "BidPageUID", "BidPages", false},
+        {"BidTexts", "BidLayerUID", "BidLayers", false},
+        {"BidDimensions", "BidUID", "Bids", false},
+        {"BidDimensions", "BidPageUID", "BidPages", false},
+        {"BidDimensions", "BidTakeoffFromUID", "BidTakeoffs", false},
+        {"BidDimensions", "BidTakeoffToUID", "BidTakeoffs", false},
+        {"BidArrows", "BidUID", "Bids", false},
+        {"BidArrows", "BidPageUID", "BidPages", false},
+        {"BidArrows", "BidTakeoffFromUID", "BidTakeoffs", false},
+        {"BidArrows", "BidTakeoffToUID", "BidTakeoffs", false},
+        {"BidALines", "BidUID", "Bids", false},
+        {"BidALines", "BidPageUID", "BidPages", false},
+        {"BidALines", "BidTakeoffFromUID", "BidTakeoffs", false},
+        {"BidALines", "BidTakeoffToUID", "BidTakeoffs", false},
+        {"BidCallOuts", "BidUID", "Bids", false},
+        {"BidCallOuts", "BidPageUID", "BidPages", false},
+        {"BidCallOuts", "BidLayerUID", "BidLayers", false},
+        {"BidAnnotationRects", "BidUID", "Bids", false},
+        {"BidAnnotationRects", "BidPageUID", "BidPages", false},
+        {"BidAnnotationRects", "BidLayerUID", "BidLayers", false},
+        {"BidAnnotationOvals", "BidUID", "Bids", false},
+        {"BidAnnotationOvals", "BidPageUID", "BidPages", false},
+        {"BidAnnotationOvals", "BidLayerUID", "BidLayers", false},
+        {"BidAnnotationPolygons", "BidUID", "Bids", false},
+        {"BidAnnotationPolygons", "BidPageUID", "BidPages", false},
+        {"BidAnnotationPolygons", "BidLayerUID", "BidLayers", false},
+        {"BidAnnotationClouds", "BidUID", "Bids", false},
+        {"BidAnnotationClouds", "BidPageUID", "BidPages", false},
+        {"BidAnnotationClouds", "BidLayerUID", "BidLayers", false},
+        {"BidAnnoInk", "BidUID", "Bids", false},
+        {"BidAnnoInk", "BidPageUID", "BidPages", false},
+        {"BidLegends", "BidUID", "Bids", false},
+        {"BidLegends", "BidPageUID", "BidPages", false},
+        {"BidPageSettings", "BidPageUID", "BidPages", false},
+        {"BidPageSettings", "BidAreaUID", "BidAreas", false},
+        {"BidPageSettings", "BidTypAreaUID", "BidTypAreas", false},
+        {"BidAreaTranslations", "BidPageUID", "BidPages", false},
+        {"BidAreaTranslations", "MasterAreaUID", "BidAreas", false},
+        {"BidAreaTranslations", "TranslateAreaUID", "BidAreas", false},
+        {"BidMarkedPages", "BidPageUID", "BidPages", false},
+        {"BidComments", "BidUID", "Bids", false},
+        {"BidComments", "BidPageUID", "BidPages", false},
+        {"BidComments", "BidLayerUID", "BidLayers", false},
+        {"BidComments", "ParentCommentUID", "BidComments", false},
+        {"BidNamedViews", "BidUID", "Bids", false},
+        {"BidNamedViews", "BidPageUID", "BidPages", false},
+        {"BidHotLinks", "BidUID", "Bids", false},
+        {"BidHotLinks", "BidPageUID", "BidPages", false},
+        {"BidHotLinks", "BidPageViewUID", "BidNamedViews", false},
+        {"BidHotLinks", "BidLayerUID", "BidLayers", false},
+        {"BidTypicalGroupTotals", "BidUID", "Bids", false},
+        {"BidTypicalGroupTotals", "BidPageUID", "BidPages", false},
+        {"BidTypicalGroupTotals", "BidZoneUID", "BidZones", false},
+        {"BidTypicalGroupTotals", "BidAreaUID", "BidAreas", false},
+        {"BidTypicalGroupTotals", "BidConditionUID", "BidConditions", false},
+        {"Boost", "BidUID", "Bids", false},
+        {"Boost", "BidPageUID", "BidPages", false},
+        {"DPCCalcFilter", "BidUID", "Bids", false},
+        {"DPCCalcFilter", "BidPageUID", "BidPages", false},
+        {"STSTransactionHistory", "BidUID", "Bids", false},
+        {"Employees", "PayClassUID", "PayClasses", false},
+        {"Employees", "AccessLevelUID", "AccessLevels", false},
+    };
+
+    bool is_yesno_column(const std::string &table, const std::string &column)
+    {
+        for (const auto &entry : YESNO_COLUMNS)
+            if (table == entry.first && column == entry.second)
+                return true;
+        return false;
+    }
+
+    // Columns of type DATETIME (14) and IMAGE (30) in the Windows schema (Windows database_creator.py _TABLE_DDL). The iOS DDL
+    // types them TEXT / BLOB, but the importer converts their values by the Windows type (import_operations.py
+    // _convert_access_value, IMP-20): a DATETIME value that is not six whitespace separated integers forming a valid date
+    // becomes NULL; an IMAGE value that is empty becomes NULL. The ODBC driver reports IMAGE as "longbinary".
+    const std::vector<std::pair<const char *, const char *>> DATETIME_COLUMNS = {
+        {"BidComments", "CommentModified"},
+        {"BidEmployees", "DateAdded"},
+        {"BidLaborCostCodeTotals", "Date"},
+        {"BidNotes", "DateCreated"},
+        {"BidTimeCardStates", "Date"},
+        {"BidTransactionsHistory", "SendDate"},
+        {"BidTransactionsHistory", "ReceiveDate"},
+        {"Bids", "CreateDateTime"},
+        {"Bids", "ModDateTime"},
+        {"Bids", "LastReceiveDateTime"},
+        {"Bids", "LastSendDateTime"},
+        {"Bids", "BidDate"},
+        {"Bids", "CopyTimeStamp"},
+        {"Settings", "Created"},
+    };
+
+    const std::vector<std::pair<const char *, const char *>> IMAGE_COLUMNS = {
+        {"BidALines", "Position"},
+        {"BidAnnoInk", "Position"},
+        {"BidAnnotationClouds", "Position"},
+        {"BidAnnotationOvals", "Position"},
+        {"BidAnnotationPolygons", "Position"},
+        {"BidAnnotationRects", "Position"},
+        {"BidArrows", "Position"},
+        {"BidCallOuts", "Name"},
+        {"BidComments", "Comment"},
+        {"BidConditionFolders", "Description"},
+        {"BidConditions", "Notes"},
+        {"BidDimensions", "Position"},
+        {"BidHighlights", "Position"},
+        {"BidHotLinks", "Position"},
+        {"BidLaborCostCodes", "Notes"},
+        {"BidLegends", "Position"},
+        {"BidNamedViews", "Position"},
+        {"BidNotes", "Notes"},
+        {"BidPageFolders", "Description"},
+        {"BidPlanRooms", "Documents"},
+        {"BidProjects", "Description"},
+        {"BidTakeoffs", "Position"},
+        {"BidTexts", "Name"},
+        {"BidTypGroupViews", "Position"},
+        {"BidZones", "Notes"},
+        {"Bids", "Notes"},
+        {"Boost", "UploadURL"},
+        {"Boost", "CallbackURL"},
+        {"Locking", "Data"},
+        {"Transactions", "Data"},
+    };
+
+    bool is_datetime_column(const std::string &table, const std::string &column)
+    {
+        for (const auto &entry : DATETIME_COLUMNS)
+            if (table == entry.first && column == entry.second)
+                return true;
+        return false;
+    }
+
+    bool is_image_column(const std::string &table, const std::string &column)
+    {
+        for (const auto &entry : IMAGE_COLUMNS)
+            if (table == entry.first && column == entry.second)
+                return true;
+        return false;
     }
 
 }

@@ -60,17 +60,19 @@ namespace ost_domain
         bool is_count() const { return condition_type == ConditionType::Count; }
         bool is_attachment() const { return condition_type == ConditionType::Attachment; }
 
-        void get_rgb(float &r, float &g, float &b) const
+        // ColorFill is a BGR integer: r = c & 0xFF, g = (c >> 8) & 0xFF, b = (c >> 16) & 0xFF
+        // (Windows color_service.int_to_hex). A negative value (system colour / alpha bits) uses the low bytes of its
+        // two's complement, exactly like the Python ints there (-1 -> white): there is no grey fallback.
+        // Every place that turns a ColorFill into a colour (meshes, 2D overlays, list and edit swatches) uses this.
+        static void rgb_from_color_fill(int color_fill, float &r, float &g, float &b)
         {
-            if (color_fill < 0)
-            {
-                r = g = b = 0.5f;
-                return;
-            }
-            r = (color_fill & 0xFF) / 255.0f;
-            g = ((color_fill >> 8) & 0xFF) / 255.0f;
-            b = ((color_fill >> 16) & 0xFF) / 255.0f;
+            const unsigned int c = static_cast<unsigned int>(color_fill);
+            r = (c & 0xFFu) / 255.0f;
+            g = ((c >> 8) & 0xFFu) / 255.0f;
+            b = ((c >> 16) & 0xFFu) / 255.0f;
         }
+
+        void get_rgb(float &r, float &g, float &b) const { rgb_from_color_fill(color_fill, r, g, b); }
     };
 
 }

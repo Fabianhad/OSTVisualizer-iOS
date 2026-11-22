@@ -3,6 +3,9 @@
 
 #include <cmath>
 
+// The alpha below which a mesh takes the transparent passes is one rule of Core (Windows renderer.cpp mesh.transparent).
+#include "../Core/Domain/SceneRendering.hpp"
+
 struct Vec3
 {
     float x, y, z;
@@ -189,7 +192,7 @@ struct Color
     Color(float r, float g, float b) : r(r), g(g), b(b), a(1) {}
     Color(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {}
 
-    bool is_transparent() const { return a < 0.99f; }
+    bool is_transparent() const { return ost_domain::is_transparent_alpha(a); }
 };
 
 #endif

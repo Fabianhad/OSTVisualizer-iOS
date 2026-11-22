@@ -10,16 +10,26 @@
 #include <string>
 
 static const CGFloat kPointsPerInch = 72.0;
-static const CGFloat kMinThicknessPts = 2.0;
 
+// Where a pan gesture's touch went down, in `view`: its location at Began minus
+// the translation travelled before UIKit recognised the pan (Windows starts a
+// drag or a placement at the press position, RPV-M07). Use at Began only.
+static inline CGPoint PlanViewPanStartPoint(UIPanGestureRecognizer *pan,
+                                            UIView *view) {
+    CGPoint location = [pan locationInView:view];
+    CGPoint travelled = [pan translationInView:view];
+    return CGPointMake(location.x - travelled.x, location.y - travelled.y);
+}
+
+// What a tap can hit: the footprint of a takeoff on the canvas (a point shape, a linear band, an area, like the Windows item
+// shape) and its handles.
 struct TakeoffHitArea
 {
     std::string uid;
     std::string conditionUID;
     std::vector<CGPoint> polygon;
-    CGPoint center;
-    CGFloat hitRadius;
-    bool isPolygon;
+    // The backouts cut out of an area: a point inside one is not on this takeoff (it is on the hole takeoff, RPV-31).
+    std::vector<std::vector<CGPoint>> holes;
     std::vector<CGPoint> handleCenters;
     int cornerCount;
 };
@@ -32,10 +42,15 @@ struct TakeoffHitArea
     BOOL _editEnabled;
     BOOL _angleSnappingEnabled;
 
+    // The canvas is the DISPLAYED page: the PDF page flipped and turned with the page transform (width and height swapped
+    // for 90 / 270). _pageWidthPts / _pageHeightPts are the UNROTATED page (the PDF's own size when it can be read).
     UIView *_canvasView;
     CGFloat _pageWidthPts;
     CGFloat _pageHeightPts;
     int _pageRotation;
+    // page.flip_x / page.flip_y of the displayed page (set when the page is loaded, with the rotation)
+    BOOL _pageFlipX;
+    BOOL _pageFlipY;
     double _scaleFactor1;
     double _scaleFactor2;
 
