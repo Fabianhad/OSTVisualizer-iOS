@@ -250,9 +250,12 @@ namespace ost_store
     // A copy whose number would pass the highest condition number, 2147483647, is refused BEFORE anything is written (no row, no UID;
     // Windows _allocate_condition_identities, ConditionNumberOverflowError, condition_operations.py :56-62 in Windows 49a2d59):
     // `error`, when given, is then ost_domain::refuse_new_condition_numbers(highest, 1), highest being MAX(RefNo) of the
-    // bid (NULL numbers ignored, 0 for a bid without numbers, read as 64 bit inside the transaction after the ownership check). Every
-    // other failure leaves `error` empty (the caller shows the generic text), and so does a success. This is the only place that
-    // allocates condition numbers (iOS has no New Condition, no paste, no copy to another bid and no renumber).
+    // bid (NULL numbers ignored, 0 for a bid without numbers, read as 64 bit inside the transaction after the ownership check).
+    // A copy whose UID would pass 2147483647, the largest Access Long, is refused the same way (plan 4.2, owner decision N-M1-04:
+    // Windows keeps no UID ceiling, identity_allocation.py:5-47; this is a deliberate safe deviation): `error` is then
+    // "Cannot add a condition: no identity is left below 2147483647." (integrity::next_uid_within_access_limit). Every other failure
+    // leaves `error` empty (the caller shows the generic text), and so does a success. Condition numbers are allocated by
+    // insert_condition and duplicate_condition.
     std::string duplicate_condition(const std::string &db_path,
                                     const std::string &bid_uid,
                                     const std::string &condition_uid,

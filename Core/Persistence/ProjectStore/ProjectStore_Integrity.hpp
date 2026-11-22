@@ -38,6 +38,29 @@ namespace ost_store
         // statement failed. Must run inside the transaction that inserts the row.
         long long next_uid_preserving_references(ost_db::OstDatabase &db, const char *table);
 
+        // The UID allocator for a Windows Long column (Access COUNTER, 32 bit; plan 4.2, owner decision N-M1-04): `count` consecutive UIDs
+        // starting at next_uid_preserving_references(db, table), refused BEFORE anything is written when the last one would pass
+        // 2147483647 (first + count - 1 > 2147483647, computed in 64 bit: nothing wraps, whatever `count` is). Windows keeps no UID ceiling
+        // (identity_allocation.py:5-47, only RefNo is guarded: condition_operations.py:56-62): this is a deliberate safe deviation, so that
+        // a row the iOS store creates can still be exported into a Windows database (M3).
+        // true:  `first_out` is the first UID; the UIDs first_out .. first_out + count - 1 are free and within the limit.
+        // false: `first_out` is 0, nothing was written (the helper never writes): `count` < 1, the allocation would pass the limit, or a
+        //        statement failed (a missing table, an unusable MAX(UID) beyond 63 bits). The callers show their own text
+        //        ("Cannot add a <noun>: no identity is left below 2147483647.", no_identity_left_text). Must run inside the transaction
+        //        that inserts the rows.
+        // `no_identity_left` (optional) tells the two kinds of refusal apart: true only when the refusal IS the limit (first + count - 1 >
+        // 2147483647), false for `count` < 1 and for a failed statement, so that a caller shows the "no identity" text only when it is
+        // true and its generic failure text otherwise. Always written when given.
+        bool next_uid_within_access_limit(ost_db::OstDatabase &db, const char *table, long long count, long long &first_out,
+                                          bool *no_identity_left = nullptr);
+
+        // The largest UID of a Windows Long column (Access COUNTER, 32 bit): 2147483647.
+        constexpr long long kAccessLongMax = 2147483647LL;
+
+        // The refusal text of every writer that allocates a UID (plan 4.2 / 4.14, owner decision N-M1-03 may reword it):
+        // "Cannot add a <noun>: no identity is left below 2147483647." (noun: "condition", "folder", "layer", ...).
+        std::string no_identity_left_text(const std::string &noun);
+
         // The bid lock rule on one connection (plan 4.1; ost_domain::resolve_bid_status_lock; the writers call it INSIDE their transaction,
         // after the ownership checks). Reads Bids.JobStatusUID of the bid and, only when the bid has a status, the JobStatuses rows, and
         // sets `locked` ALWAYS (never left as it was). The rule is the Windows one, read as the stored values' TEXT:

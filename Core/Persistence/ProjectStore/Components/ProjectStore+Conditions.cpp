@@ -433,13 +433,6 @@ namespace ost_store
             return "";
         };
 
-        // Windows condition_operations._allocate_condition_identities: the new UID is MAX(UID) + 1 raised above every column
-        // that references BidConditions (BidConditionUser, BidLaborActivity, BidTakeoffTotals, BidTakeoffs, BidTypGroupViews,
-        // BidTypicalGroupTotals), so the copy never adopts a dangling reference.
-        const long long new_uid = integrity::next_uid_preserving_references(db, "BidConditions");
-        if (new_uid <= 0)
-            return fail();
-
         // Windows copies every column of the source row (the row must be a condition of the bid, else nothing is
         // inserted) and replaces UID, GUID and RefNo; a column the table lacks is simply not part of the copy.
         std::vector<std::string> columns;
@@ -491,6 +484,21 @@ namespace ost_store
                 return fail();
             }
             new_ref = highest + 1; // cannot overflow: highest <= kMaxConditionNumber - 1 here
+        }
+
+        // Windows condition_operations._allocate_condition_identities: the new UID is MAX(UID) + 1 raised above every column
+        // that references BidConditions (BidConditionUser, BidLaborActivity, BidTakeoffTotals, BidTakeoffs, BidTypGroupViews,
+        // BidTypicalGroupTotals), so the copy never adopts a dangling reference (identity_allocation.py:5-47). Deliberate safe deviation
+        // (plan 4.2, owner decision N-M1-04): Windows keeps no ceiling for the UID, iOS refuses a UID past 2147483647, the largest Access
+        // Long, BEFORE anything is written, so that no row is created that a Windows database could not hold (M3 export). After the
+        // ownership check and the number guard (plan 4.4 order: ownership, ..., UID limit, writes).
+        long long new_uid = 0;
+        bool no_identity_left = false;
+        if (!integrity::next_uid_within_access_limit(db, "BidConditions", 1, new_uid, &no_identity_left))
+        {
+            if (no_identity_left && error)
+                *error = integrity::no_identity_left_text("condition");
+            return fail();
         }
 
         const std::string guid = new_ost_guid();
