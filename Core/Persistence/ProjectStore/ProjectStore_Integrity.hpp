@@ -38,6 +38,25 @@ namespace ost_store
         // statement failed. Must run inside the transaction that inserts the row.
         long long next_uid_preserving_references(ost_db::OstDatabase &db, const char *table);
 
+        // The bid lock rule on one connection (plan 4.1; ost_domain::resolve_bid_status_lock; the writers call it INSIDE their transaction,
+        // after the ownership checks). Reads Bids.JobStatusUID of the bid and, only when the bid has a status, the JobStatuses rows, and
+        // sets `locked` ALWAYS (never left as it was). The rule is the Windows one, read as the stored values' TEXT:
+        //   - the bid has no status (JobStatusUID NULL or the empty text): unlocked, without reading JobStatuses (a broken JobStatuses
+        //     table does not matter then);
+        //   - the first JobStatuses row whose UID text equals the bid's status text wins (verbatim compare: "01" is not "1", "7" equals 7);
+        //     its `Locked` is set unless its stored text is "0", "False" or "" (a NULL, -1, 1, 2, "True", "false", " 0" are all set);
+        //   - a status that no row names, an empty or missing JobStatuses table, duplicate JobStatuses UIDs anywhere in the table
+        //     (Windows: the list is empty = unresolved), a Sequence cell that Python int() refuses or a real that is not finite in any row
+        //     (the Windows read raises there too: settings_reader.py:72, :361-370), a cell of any JobStatuses column (Name included) that is
+        //     not valid UTF-8 (a BLOB: Windows decodes it strictly and raises; a TEXT: the safe side), a bid that does not exist, a
+        //     Bids.JobStatusUID that is a BLOB: locked. The cells are read as the text Windows makes of them (ost_serializer.py
+        //     serialize_value: NULL = "NULL", a whole real = its integer digits, a BLOB = its UTF-8 text without any NUL, a TEXT keeps an
+        //     embedded NUL).
+        // Returns false and sets `locked = true` when the read itself failed (a missing Bids table or column, a JobStatuses table without
+        // UID, Locked or Sequence - Windows would read a missing Locked as unlocked, iOS fails closed -, any failed statement). Whether
+        // the unresolved cases above also return false is not part of the contract: callers refuse on `locked`. Reads only.
+        bool bid_is_locked(ost_db::OstDatabase &db, long long bid_uid, bool &locked);
+
         // The checks of a bid load (bid_data_reader.py get_bid_data, hierarchy_reader.py): a problem is reported as the Windows message.
         //
         // Windows require_valid_unique_bid_owned_uids over the stored UIDs of one table in row order ("" stands for a NULL UID): ""

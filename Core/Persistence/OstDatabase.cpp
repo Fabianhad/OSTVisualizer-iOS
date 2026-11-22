@@ -169,6 +169,18 @@ namespace ost_db
         return reinterpret_cast<const char *>(txt);
     }
 
+    std::string Statement::column_text_exact(int idx) const
+    {
+        if (!_stmt)
+            return "";
+        const void *data = sqlite3_column_type(_stmt, idx) == SQLITE_BLOB ? sqlite3_column_blob(_stmt, idx)
+                                                                         : static_cast<const void *>(sqlite3_column_text(_stmt, idx));
+        const int bytes = sqlite3_column_bytes(_stmt, idx);
+        if (!data || bytes <= 0)
+            return "";
+        return std::string(static_cast<const char *>(data), static_cast<std::size_t>(bytes));
+    }
+
     OstDatabase::~OstDatabase()
     {
         close();

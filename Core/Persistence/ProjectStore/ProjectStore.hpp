@@ -264,8 +264,9 @@ namespace ost_store
 
 }
 
-// One header per M1 feature (plan 4.4 and 6.1), included here once so that parallel streams never edit the same lines. The headers are
-// empty stubs that the stream named in plan 6.1 fills.
+// One header per M1 feature (plan 4.4 and 6.1), included here once so that parallel streams never edit the same lines. The first is the
+// bid lock guard for the UI; the others are empty stubs that the stream named in plan 6.1 fills.
+#include "ProjectStore_BidLock.hpp"
 #include "ProjectStore_ConditionCreate.hpp"
 #include "ProjectStore_ConditionFolders.hpp"
 #include "ProjectStore_Layers.hpp"
