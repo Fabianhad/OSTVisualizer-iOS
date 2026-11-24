@@ -1,10 +1,17 @@
 #import "../ViewController_Internal.h"
+#import "../../ConditionFoldersViewController.h"
+#import "../../../Services/ImportService+BidLock.h"
+#import "../../../Services/ImportService+ConditionCreate.h"
+#import "../../../Services/ImportService+ConditionFolders.h"
 #include "../../../Core/Domain/BrowserRules.hpp"
 #include "../../../Core/Domain/ConditionChoices.hpp"
+#include "../../../Core/Domain/ConditionCreate.hpp"
+#include "../../../Core/Domain/ConditionFolderUi.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
 
 @interface ViewController (Conditions) <ConditionsViewControllerDelegate,
-                                        EditConditionViewControllerDelegate>
+                                        EditConditionViewControllerDelegate,
+                                        ConditionFoldersViewControllerDelegate>
 @end
 
 @implementation ViewController (Conditions)
@@ -310,6 +317,206 @@
     [condVC loadConditionsFromProject:self.projectService.project];
   }
   [self _updateConditionQuantities];
+}
+
+#pragma mark - New Condition (plan 5.1)
+
+static NSString *OSTConditionText(const std::string &text) {
+  return [NSString stringWithUTF8String:text.c_str()] ?: @"";
+}
+
+// The "+" button and the "New Condition in <folder>" item of the Conditions sheet. The bid lock guard comes first (plan 4.1): on a locked bid
+// "This bid is locked." is shown and no form opens. `folderUID` "" = the top level.
+- (void)conditionsViewController:(ConditionsViewController *)vc
+    didRequestNewConditionInFolderUID:(NSString *)folderUID {
+  if ([self _refuseIfBidLocked])
+    return;
+  [self _presentNewConditionInFolderUID:folderUID fromController:vc];
+}
+
+// The Edit Condition dialog in its create mode (Windows on_create_requested, condition_action_handler.py:434-781): a form sheet, a centred
+// sheet on iPad (M1-19). The synthetic condition, the default layer, the metric defaults and the "Next number" line are Core's.
+- (void)_presentNewConditionInFolderUID:(NSString *)folderUID
+                         fromController:(UIViewController *)presenter {
+  const ost_data::ProjectData &project = self.projectService.project;
+  if (project.empty())
+    return;
+  EditConditionViewController *form = [[EditConditionViewController alloc]
+      initForNewConditionInFolder:folderUID ?: @""
+                     mergedLayers:project.merged_layers
+                           layers:project.layers
+                         cdnTypes:project.cdn_types
+                           metric:project.bid.measure_base == 1
+                       nextNumber:OSTConditionText(ost_domain::next_condition_number_text(project.conditions))];
+  form.delegate = self;
+
+  UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:form];
+  nav.modalPresentationStyle = UIModalPresentationFormSheet;
+  [presenter presentViewController:nav animated:YES completion:nil];
+}
+
+// Save of the New Condition form: the writer (one transaction, one condition), then what Windows does after a create: the project is read
+// again, the list reloads and the new row is selected and revealed. No placement starts (N-M1-10, the opposite of Duplicate), no mesh
+// refresh (a new condition has no takeoffs), no undo entry and the undo history stays (plan 4.7, 4.11).
+- (EditConditionCreateOutcome)editConditionViewController:(EditConditionViewController *)vc
+                                didRequestCreateCondition:(const ost_domain::CreateConditionSpec &)spec
+                                                  message:(NSString **)message {
+  NSString *refusal = nil;
+  NSString *newUID = [ImportService createCondition:spec inBid:self.bidUID error:&refusal];
+  if (!newUID) {
+    // a text of the store: the Windows text of a condition number past 2147483647, the name-length text, the limit text; the form shows it
+    if (refusal.length > 0) {
+      if (message)
+        *message = refusal;
+      return EditConditionCreateOutcomeFailed;
+    }
+    // no text: a locked bid is refused without one (plan 4.1): say so; any other failure is the generic "Failed to create condition."
+    if ([self _refuseIfBidLocked])
+      return EditConditionCreateOutcomeReported;
+    return EditConditionCreateOutcomeFailed;
+  }
+
+  // The condition is in the database; the project is read again to get its row. A bid that cannot be read again keeps the project as it is
+  // and the form tells the user once it has closed (Windows "Refresh Error", condition_action_handler.py:764-781).
+  ost_data::ProjectData fresh;
+  NSString *loadError = nil;
+  if (![ImportService loadProjectWithUID:self.bidUID project:fresh error:&loadError]) {
+    if (message)
+      *message = OSTConditionText(ost_domain::kConditionCreatedRefreshFailedText);
+    return EditConditionCreateOutcomeCreated;
+  }
+  const std::string key = std::string(newUID.UTF8String ?: "");
+  auto created = fresh.conditions.find(key);
+  if (created != fresh.conditions.end())
+    self.projectService.mutableProject.conditions[key] = created->second;
+
+  ConditionsViewController *condVC = self.conditionsVC;
+  if (condVC) {
+    [condVC loadConditionsFromProject:self.projectService.project];
+    [condVC selectConditionWithUID:newUID animated:YES];
+  }
+  [self _updateConditionQuantities];
+  return EditConditionCreateOutcomeCreated;
+}
+
+#pragma mark - Condition folders (plan 5.2)
+
+// The cause of a bid that cannot be read again after a write that went through (the same text the Duplicate flow shows).
+- (void)_presentConditionReloadFailure:(NSString *)loadError {
+  const ost_domain::DialogText text = ost_domain::load_failure_text(
+      ost_domain::display_name_for_bid(std::string(self.bidUID.UTF8String ?: ""),
+                                       self.projectService.project.bid_name),
+      std::string((loadError.length > 0 ? loadError : @"The bid could not be read.").UTF8String));
+  [self _presentConditionAlertWithTitle:OSTConditionText(text.title)
+                                message:OSTConditionText(text.message)];
+}
+
+// The "Folders" button: the folder manager is pushed inside the Conditions sheet (iPhone and iPad alike, N-M1-25). Opening it writes nothing,
+// so there is no lock check here; every action inside it asks conditionFoldersViewControllerMayWrite: first.
+- (void)conditionsViewControllerDidRequestFolders:(ConditionsViewController *)vc {
+  const ost_data::ProjectData &project = self.projectService.project;
+  if (project.empty())
+    return;
+  ConditionFoldersViewController *screen =
+      [[ConditionFoldersViewController alloc] initWithProject:project
+                                                         mode:ConditionFoldersModeManage
+                                             pickConditionUID:nil];
+  screen.delegate = self;
+  [vc.navigationController pushViewController:screen animated:YES];
+}
+
+// "Move to Folder..." of the long-press sheet: the same list as a picker. The lock is asked before the picker opens, and the pick asks again.
+- (void)conditionsViewController:(ConditionsViewController *)vc
+      didRequestMoveConditionUID:(NSString *)conditionUID {
+  if ([self _refuseIfBidLocked])
+    return;
+  const ost_data::ProjectData &project = self.projectService.project;
+  if (project.empty() || !conditionUID)
+    return;
+  ConditionFoldersViewController *screen =
+      [[ConditionFoldersViewController alloc] initWithProject:project
+                                                         mode:ConditionFoldersModePickFolder
+                                             pickConditionUID:conditionUID];
+  screen.delegate = self;
+  [vc.navigationController pushViewController:screen animated:YES];
+}
+
+#pragma mark - ConditionFoldersViewControllerDelegate
+
+// Plan 4.1: the folder manager is not a ViewController category, so it reaches the one lock helper through this method. YES = go on.
+- (BOOL)conditionFoldersViewControllerMayWrite:(ConditionFoldersViewController *)vc {
+  return ![self _refuseIfBidLocked];
+}
+
+// After a folder write (plan 4.11): the folders (and the moved condition) are read again from the database and ONLY the Conditions list and the
+// folder screen redraw: no mesh or overlay refresh and no undo clear (Windows condition_change_impact.py:27-82, invalidates_undo False).
+// A bid that cannot be read again keeps the project as it is and the cause is shown (the write itself went through).
+- (void)_refreshConditionFoldersFromScreen:(ConditionFoldersViewController *)screen
+                         movedConditionUID:(NSString *)movedConditionUID {
+  ost_data::ProjectData fresh;
+  NSString *loadError = nil;
+  if (![ImportService loadProjectWithUID:self.bidUID project:fresh error:&loadError]) {
+    [self _presentConditionReloadFailure:loadError];
+    return;
+  }
+  ost_data::ProjectData &project = self.projectService.mutableProject;
+  project.condition_folders = fresh.condition_folders;
+  if (movedConditionUID) {
+    // only the folder of that one condition changed
+    const std::string key = std::string(movedConditionUID.UTF8String ?: "");
+    auto now = fresh.conditions.find(key);
+    auto kept = project.conditions.find(key);
+    if (now != fresh.conditions.end() && kept != project.conditions.end())
+      kept->second.condition_folder_uid = now->second.condition_folder_uid;
+  }
+  [screen loadFoldersFromProject:project];
+  ConditionsViewController *condVC = self.conditionsVC;
+  if (condVC) {
+    [condVC loadConditionsFromProject:project];
+    if (movedConditionUID)
+      [condVC selectConditionWithUID:movedConditionUID animated:NO];
+  }
+}
+
+- (OSTConditionFolderOutcome *)conditionFoldersViewController:(ConditionFoldersViewController *)vc
+                                            createFolderNamed:(NSString *)name
+                                            inParentFolderUID:(NSString *)parentFolderUID {
+  OSTConditionFolderOutcome *outcome = [ImportService createConditionFolderNamed:name
+                                                                           inBid:self.bidUID
+                                                                    parentFolder:parentFolderUID];
+  if (outcome.ok)
+    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:nil];
+  return outcome;
+}
+
+- (OSTConditionFolderOutcome *)conditionFoldersViewController:(ConditionFoldersViewController *)vc
+                                              renameFolderUID:(NSString *)folderUID
+                                                       toName:(NSString *)name {
+  OSTConditionFolderOutcome *outcome = [ImportService renameConditionFolder:folderUID
+                                                                     toName:name
+                                                                      inBid:self.bidUID];
+  if (outcome.ok)
+    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:nil];
+  return outcome;
+}
+
+- (OSTConditionFolderOutcome *)conditionFoldersViewController:(ConditionFoldersViewController *)vc
+                                              deleteFolderUIDs:(NSArray<NSString *> *)folderUIDs {
+  OSTConditionFolderOutcome *outcome = [ImportService deleteConditionFolders:folderUIDs inBid:self.bidUID];
+  if (outcome.ok)
+    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:nil];
+  return outcome;
+}
+
+- (OSTConditionFolderOutcome *)conditionFoldersViewController:(ConditionFoldersViewController *)vc
+                                               moveConditionUID:(NSString *)conditionUID
+                                                    toFolderUID:(NSString *)folderUID {
+  OSTConditionFolderOutcome *outcome = [ImportService moveCondition:conditionUID
+                                                           toFolder:folderUID
+                                                              inBid:self.bidUID];
+  if (outcome.ok)
+    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:conditionUID];
+  return outcome;
 }
 
 @end

@@ -92,6 +92,13 @@ static const int kModeLabelTag2D = 50001;
 
 // ---- M1 conditions (S1) ----
 
+// The New Condition form (plan 5.1): the Edit Condition dialog in its create mode, presented as a form sheet over `presenter`, for the folder
+// `folderUID` ("" = the top level). The "+" and "New Condition in <folder>" of the Conditions sheet reach it through the delegate method
+// conditionsViewController:didRequestNewConditionInFolderUID:, which asks -_refuseIfBidLocked first; a caller that presents the form itself must
+// do the same. Implemented in Components/ViewController+Conditions.mm.
+- (void)_presentNewConditionInFolderUID:(NSString *)folderUID
+                         fromController:(UIViewController *)presenter;
+
 // ---- M1 layers (S2) ----
 
 // ---- M1 pages A (S3) ----
