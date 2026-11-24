@@ -31,6 +31,8 @@ namespace ost_store
     //   InUse                                  Windows "Delete Folder" / one line `Cannot delete "X" because it is in use.` per blocked folder
     //   UidExhausted, HierarchyNotSupported    the title of the action / result.message
     //   every other refusal                    the title of the action / "Failed to <create|rename|delete|move> ... ." + " " + DB_LOCKED_HINT
+    // A refusal that is shown with result.message (DuplicateName, NameTooLong, UidExhausted, HierarchyNotSupported) and carries no text, and an InUse
+    // that names no requested folder, give the last line: never an alert with an empty body.
     std::optional<ost_domain::DialogText> condition_folder_failure_dialog(ConditionFolderAction action,
                                                                          const ConditionFolderResult &result,
                                                                          const std::vector<ost_domain::FolderDeleteItem> &items);

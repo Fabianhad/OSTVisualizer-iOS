@@ -12,8 +12,8 @@ namespace ost_store
         {
             switch (action)
             {
-            case ConditionFolderAction::Create: return "New Folder";
-            case ConditionFolderAction::Rename: return "Rename Folder";
+            case ConditionFolderAction::Create: return ost_domain::kNewFolderTitle;
+            case ConditionFolderAction::Rename: return ost_domain::kRenameFolderTitle;
             case ConditionFolderAction::Delete: return ost_domain::kConditionFolderDeleteTitle;
             case ConditionFolderAction::Move: return ost_domain::kMoveToFolderTitle;
             }
@@ -49,10 +49,15 @@ namespace ost_store
             return std::nullopt; // Windows reverts silently (conditions_sidebar.py:1466-1469)
         case ConditionFolderRefusal::BidLocked:
             return ost_domain::DialogText{"Bid Locked", "This bid is locked."};
+        // the text of the store is shown only when the store gave one: an empty text is the generic failure of the action, never an empty body
         case ConditionFolderRefusal::DuplicateName:
-            return ost_domain::DialogText{"Duplicate Folder", result.message};
+            if (!result.message.empty())
+                return ost_domain::DialogText{"Duplicate Folder", result.message};
+            break;
         case ConditionFolderRefusal::NameTooLong:
-            return ost_domain::DialogText{ost_domain::kInvalidFolderNameTitle, result.message};
+            if (!result.message.empty())
+                return ost_domain::DialogText{ost_domain::kInvalidFolderNameTitle, result.message};
+            break;
         case ConditionFolderRefusal::InvalidName:
             return ost_domain::DialogText{ost_domain::kInvalidFolderNameTitle, ost_domain::kInvalidFolderNameText};
         case ConditionFolderRefusal::UidExhausted:

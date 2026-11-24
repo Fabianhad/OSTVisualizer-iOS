@@ -74,6 +74,18 @@ namespace ost_domain
     inline constexpr const char *kMoveToFolderTitle = "Move to Folder";       // the picker screen
     inline constexpr const char *kNoFolderRowTitle = "(No folder)";           // the picker row for the top level
 
+    // iOS-only texts (plan 4.14), pinned by test_condition_folder_ui.cpp. The title of the name alert of an action is also the title of the failure
+    // alert of that action (ProjectStore_ConditionFolderAlerts.hpp), so the two cannot drift apart.
+    inline constexpr const char *kNewFolderTitle = "New Folder";       // the "New Folder" name alert
+    inline constexpr const char *kRenameFolderTitle = "Rename Folder"; // the "Rename Folder" name alert
+    inline constexpr const char *kNoFoldersText = "No folders. Tap + to add one."; // the empty state of the folder screen
+
+    // Register CF-8 (the safe behaviour reports what was committed): a folder write went through but the bid could not be read again, so the list
+    // could not be refreshed. The title is the one of the Windows create warning (kConditionCreatedRefreshFailedTitle); the text says that the change was saved.
+    inline constexpr const char *kFolderChangeSavedRefreshFailedTitle = "Refresh Error";
+    inline constexpr const char *kFolderChangeSavedRefreshFailedText =
+        "The folder change was saved, but the list could not be refreshed. Reopen the bid to see it.";
+
     // ---- the refusal of a typed folder name -------------------------------------------------------------------------------------
 
     inline constexpr const char *kInvalidFolderNameTitle = "Invalid Folder Name";

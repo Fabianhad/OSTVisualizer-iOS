@@ -259,6 +259,26 @@ TEST(NewConditionTexts, TheRefreshWarningIsTheWindowsOne)
                  "The condition was created, but the conditions list could not be refreshed. Reopen the database to see the new condition.");
 }
 
+// Review of S1 (register CF-8, the safe behaviour reports what was committed): a folder write that went through but whose list could not be read
+// again says that the change was saved (the generic "Failed to load" text says nothing about the write). iOS-only text, pinned so that rewording
+// it is a visible decision; the title is the one of the Windows create warning.
+TEST(NewConditionTexts, TheRefreshWarningOfAFolderWriteSaysTheChangeWasSaved)
+{
+    CHECK_STR_EQ(ost_domain::kFolderChangeSavedRefreshFailedTitle, "Refresh Error");
+    CHECK_STR_EQ(ost_domain::kFolderChangeSavedRefreshFailedTitle, ost_domain::kConditionCreatedRefreshFailedTitle);
+    CHECK_STR_EQ(ost_domain::kFolderChangeSavedRefreshFailedText,
+                 "The folder change was saved, but the list could not be refreshed. Reopen the bid to see it.");
+}
+
+// Review of S1: the iOS-only texts of the create form's discard alert (Windows asks "Save changes before closing?" and forces the dirty flag,
+// register NC-3; the iOS form closes an untouched form silently and asks only for an edited one). Pinned so that rewording is a visible decision.
+TEST(NewConditionTexts, TheDiscardAlertOfTheCreateForm)
+{
+    CHECK_STR_EQ(ost_domain::kDiscardNewConditionTitle, "Unsaved Changes");
+    CHECK_STR_EQ(ost_domain::kDiscardNewConditionMessage, "Discard this new condition?");
+    CHECK_STR_EQ(ost_domain::kKeepEditingTitle, "Keep Editing");
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 // the folder a condition is listed under (the checkmark of the "Move to Folder" picker)
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -431,6 +451,37 @@ TEST(ConditionFolderFailure, ALimitOrSchemaRefusalWithoutATextIsTheGenericFailur
     }
 }
 
+// Review of S1 (hardening next to mutant F4): a duplicate-name or too-long-name refusal that carries NO text is the generic failure of the action,
+// never an alert with a title and an empty body. The real writers always set the text, so this only pins the fallback.
+TEST(ConditionFolderFailure, ANameRefusalWithoutATextIsTheGenericFailureOfTheAction)
+{
+    for (const ConditionFolderRefusal refusal : {ConditionFolderRefusal::DuplicateName, ConditionFolderRefusal::NameTooLong})
+    {
+        SCOPED_CONTEXT(ost_ftest::refusal_name(refusal));
+        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Move, refused(refusal)), std::string("Move to Folder|Failed to move the condition. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}}), std::string("Delete Folder|Failed to delete folder. ") + kHint);
+    }
+}
+
+// Review of S1: the title of the entry alert of an action ("New Folder", "Rename Folder") and the title of its failure alert are ONE constant, so the
+// two cannot drift apart; the empty-state line of the folder screen is pinned with them (iOS-only texts, plan 4.14).
+TEST(ConditionFolderFailure, TheEntryAlertAndTheFailureAlertOfAnActionShareTheirTitle)
+{
+    CHECK_STR_EQ(ost_domain::kNewFolderTitle, "New Folder");
+    CHECK_STR_EQ(ost_domain::kRenameFolderTitle, "Rename Folder");
+    CHECK_STR_EQ(ost_domain::kNoFoldersText, "No folders. Tap + to add one.");
+    const std::optional<DialogText> create =
+        ost_store::condition_folder_failure_dialog(ConditionFolderAction::Create, refused(ConditionFolderRefusal::WriteFailed), {});
+    REQUIRE(create.has_value());
+    CHECK_STR_EQ(create->title, ost_domain::kNewFolderTitle);
+    const std::optional<DialogText> rename =
+        ost_store::condition_folder_failure_dialog(ConditionFolderAction::Rename, refused(ConditionFolderRefusal::WriteFailed), {});
+    REQUIRE(rename.has_value());
+    CHECK_STR_EQ(rename->title, ost_domain::kRenameFolderTitle);
+}
+
 // Windows messagebox.py:84-105 / project_write_service.py:946-953: the blocked folders are named, one line each; the folder that holds the
 // condition may be a sub-folder (CF-11: the text names the selected folder anyway).
 TEST(ConditionFolderFailure, AFolderInUseIsNamedWithTheWindowsText)
@@ -485,14 +536,16 @@ TEST(ConditionFolderFailure, NoRefusalGivesAnEmptyAlert)
         const ConditionFolderRefusal refusal = static_cast<ConditionFolderRefusal>(value);
         if (refusal == ConditionFolderRefusal::None || refusal == ConditionFolderRefusal::BlankName)
             continue;
-        for (const ConditionFolderAction action : kActions)
-        {
-            SCOPED_CONTEXT(ost_ftest::refusal_name(refusal));
-            const std::optional<DialogText> dialog = ost_store::condition_folder_failure_dialog(action, refused(refusal, "text"), {{"A", "1"}});
-            REQUIRE(dialog.has_value());
-            CHECK(!dialog->title.empty());
-            CHECK(!dialog->message.empty());
-        }
+        // a refusal with a text of the store and one without (review of S1: an empty text must not give an empty body either)
+        for (const char *text : {"text", ""})
+            for (const ConditionFolderAction action : kActions)
+            {
+                SCOPED_CONTEXT(std::string(ost_ftest::refusal_name(refusal)) + (*text ? " with text" : " without text"));
+                const std::optional<DialogText> dialog = ost_store::condition_folder_failure_dialog(action, refused(refusal, text), {{"A", "1"}});
+                REQUIRE(dialog.has_value());
+                CHECK(!dialog->title.empty());
+                CHECK(!dialog->message.empty());
+            }
     }
 }
 
