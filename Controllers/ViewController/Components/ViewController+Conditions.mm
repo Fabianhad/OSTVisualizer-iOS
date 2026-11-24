@@ -417,6 +417,10 @@ static NSString *OSTConditionText(const std::string &text) {
   const ost_data::ProjectData &project = self.projectService.project;
   if (project.empty())
     return;
+  // One tap, one screen: a second tap while the first push is still animating finds the folder manager already on top of the stack (the
+  // stack changes when the push is issued), so it pushes nothing. Two managers would leave the lower one stale after a write.
+  if ([vc.navigationController.topViewController isKindOfClass:[ConditionFoldersViewController class]])
+    return;
   ConditionFoldersViewController *screen =
       [[ConditionFoldersViewController alloc] initWithProject:project
                                                          mode:ConditionFoldersModeManage

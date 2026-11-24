@@ -292,7 +292,9 @@ const NSInteger kMaxIndentLevel = 8;
   return configuration;
 }
 
-// The long-press menu: a UIMenu is anchored by the system (no popover anchor to set, plan 4.3).
+// The long-press menu: a UIMenu is anchored by the system (no popover anchor to set, plan 4.3). Each item presents an alert, so, like the swipe
+// actions, it goes on in the next turn of the run loop: the menu may still be closing when the handler runs, and an alert presented during that
+// would be dropped.
 - (UIContextMenuConfiguration *)tableView:(UITableView *)tableView
     contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath
                                         point:(CGPoint)point {
@@ -310,19 +312,25 @@ const NSInteger kMaxIndentLevel = 8;
                                                             image:[UIImage systemImageNamed:@"folder.badge.plus"]
                                                        identifier:nil
                                                           handler:^(UIAction *action) {
-                                                            [weakSelf _beginNewFolderInParent:uid];
+                                                            dispatch_async(dispatch_get_main_queue(), ^{
+                                                              [weakSelf _beginNewFolderInParent:uid];
+                                                            });
                                                           }];
                      UIAction *rename = [UIAction actionWithTitle:@"Rename"
                                                             image:[UIImage systemImageNamed:@"pencil"]
                                                        identifier:nil
                                                           handler:^(UIAction *action) {
-                                                            [weakSelf _beginRenameFolderUID:uid];
+                                                            dispatch_async(dispatch_get_main_queue(), ^{
+                                                              [weakSelf _beginRenameFolderUID:uid];
+                                                            });
                                                           }];
                      UIAction *remove = [UIAction actionWithTitle:@"Delete"
                                                             image:[UIImage systemImageNamed:@"trash"]
                                                        identifier:nil
                                                           handler:^(UIAction *action) {
-                                                            [weakSelf _confirmAndDeleteFolderUIDs:@[ uid ]];
+                                                            dispatch_async(dispatch_get_main_queue(), ^{
+                                                              [weakSelf _confirmAndDeleteFolderUIDs:@[ uid ]];
+                                                            });
                                                           }];
                      remove.attributes = UIMenuElementAttributesDestructive;
                      return [UIMenu menuWithTitle:name children:@[ inside, rename, remove ]];
