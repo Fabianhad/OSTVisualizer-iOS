@@ -110,7 +110,7 @@ const NSInteger kMaxIndentLevel = 8;
   ]];
 
   _emptyLabel = [[UILabel alloc] init];
-  _emptyLabel.text = @"No folders. Tap + to add one.";
+  _emptyLabel.text = OSTText(ost_domain::kNoFoldersText);
   _emptyLabel.textColor = [UIColor secondaryLabelColor];
   _emptyLabel.textAlignment = NSTextAlignmentCenter;
   _emptyLabel.numberOfLines = 0;
@@ -387,7 +387,7 @@ const NSInteger kMaxIndentLevel = 8;
 }
 
 - (void)_promptNewFolderInParent:(NSString *)parentFolderUID draft:(NSString *)draft {
-  UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"New Folder"
+  UIAlertController *alert = [UIAlertController alertControllerWithTitle:OSTText(ost_domain::kNewFolderTitle)
                                                                  message:nil
                                                           preferredStyle:UIAlertControllerStyleAlert];
   __weak ConditionFoldersViewController *weakSelf = self;
@@ -443,7 +443,7 @@ const NSInteger kMaxIndentLevel = 8;
   if (folder == _folders.end())
     return;
   NSString *storedName = OSTText(folder->second.name);
-  UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Rename Folder"
+  UIAlertController *alert = [UIAlertController alertControllerWithTitle:OSTText(ost_domain::kRenameFolderTitle)
                                                                  message:nil
                                                           preferredStyle:UIAlertControllerStyleAlert];
   __weak ConditionFoldersViewController *weakSelf = self;

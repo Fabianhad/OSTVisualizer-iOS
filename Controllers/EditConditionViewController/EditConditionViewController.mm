@@ -414,6 +414,24 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 // back (or a focus change that changes nothing) leaves it clean.
 - (void)_updateDirty {
   _dirty = ![[self _formState] isEqualToArray:_savedFormState];
+  [self _updateInteractiveDismissal];
+}
+
+// New Condition (review of S1, M1-06): an EDITED form cannot be swiped away, the attempt asks the same question as Cancel
+// (presentationControllerDidAttemptToDismiss:); an untouched form still closes by swipe-down, silently. Only the interactive dismissal is blocked:
+// the form's own dismiss calls (Cancel, Discard, a created condition) are not. The Edit mode keeps its behaviour.
+- (void)_updateInteractiveDismissal {
+  if (!_createMode)
+    return;
+  self.modalInPresentation = _dirty;
+  self.navigationController.modalInPresentation = _dirty;
+}
+
+// UIAdaptivePresentationControllerDelegate: the user swiped down an edited New Condition form (the navigation controller is the presented one,
+// ViewController+Conditions.mm sets this form as the delegate of its presentation).
+- (void)presentationControllerDidAttemptToDismiss:(UIPresentationController *)presentationController {
+  if (_createMode)
+    [self _cancel];
 }
 
 // Windows _apply_changes: YES when the form was saved or had nothing to save; NO when a value was refused or the save failed (the
@@ -759,10 +777,10 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   }
   __weak typeof(self) weakSelf = self;
   UIAlertController *alert = [UIAlertController
-      alertControllerWithTitle:@"Unsaved Changes"
-                       message:@"Discard this new condition?"
+      alertControllerWithTitle:OSTString(ost_domain::kDiscardNewConditionTitle)
+                       message:OSTString(ost_domain::kDiscardNewConditionMessage)
                 preferredStyle:UIAlertControllerStyleAlert];
-  [alert addAction:[UIAlertAction actionWithTitle:@"Keep Editing"
+  [alert addAction:[UIAlertAction actionWithTitle:OSTString(ost_domain::kKeepEditingTitle)
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
   [alert addAction:[UIAlertAction

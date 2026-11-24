@@ -352,6 +352,9 @@ static NSString *OSTConditionText(const std::string &text) {
 
   UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:form];
   nav.modalPresentationStyle = UIModalPresentationFormSheet;
+  // An EDITED form cannot be swiped away without the "Discard this new condition?" question (M1-06): the form sets modalInPresentation while it is
+  // edited and, as the delegate of this presentation, answers the attempt like its Cancel button. The delegate is weak, the nav keeps the form.
+  nav.presentationController.delegate = form;
   [presenter presentViewController:nav animated:YES completion:nil];
 }
 
@@ -401,14 +404,11 @@ static NSString *OSTConditionText(const std::string &text) {
 
 #pragma mark - Condition folders (plan 5.2)
 
-// The cause of a bid that cannot be read again after a write that went through (the same text the Duplicate flow shows).
-- (void)_presentConditionReloadFailure:(NSString *)loadError {
-  const ost_domain::DialogText text = ost_domain::load_failure_text(
-      ost_domain::display_name_for_bid(std::string(self.bidUID.UTF8String ?: ""),
-                                       self.projectService.project.bid_name),
-      std::string((loadError.length > 0 ? loadError : @"The bid could not be read.").UTF8String));
-  [self _presentConditionAlertWithTitle:OSTConditionText(text.title)
-                                message:OSTConditionText(text.message)];
+// A folder write went through but the bid could not be read again (register CF-8, the safe behaviour reports what was committed): the "Refresh
+// Error" title and a Core text that says the change was saved and what to do, not the "Failed to load" text, which says nothing of the write.
+- (void)_presentConditionFolderRefreshFailure {
+  [self _presentConditionAlertWithTitle:OSTConditionText(ost_domain::kFolderChangeSavedRefreshFailedTitle)
+                                message:OSTConditionText(ost_domain::kFolderChangeSavedRefreshFailedText)];
 }
 
 // The "Folders" button: the folder manager is pushed inside the Conditions sheet (iPhone and iPad alike, N-M1-25). Opening it writes nothing,
@@ -450,13 +450,14 @@ static NSString *OSTConditionText(const std::string &text) {
 
 // After a folder write (plan 4.11): the folders (and the moved condition) are read again from the database and ONLY the Conditions list and the
 // folder screen redraw: no mesh or overlay refresh and no undo clear (Windows condition_change_impact.py:27-82, invalidates_undo False).
-// A bid that cannot be read again keeps the project as it is and the cause is shown (the write itself went through).
+// A bid that cannot be read again keeps the project as it is and the user is told that the change was saved (the write itself went through, CF-8).
+// The selection of the main view stays as it was (plan 4.11: a folder write does not select anything), also for the condition that was moved.
 - (void)_refreshConditionFoldersFromScreen:(ConditionFoldersViewController *)screen
                          movedConditionUID:(NSString *)movedConditionUID {
   ost_data::ProjectData fresh;
   NSString *loadError = nil;
   if (![ImportService loadProjectWithUID:self.bidUID project:fresh error:&loadError]) {
-    [self _presentConditionReloadFailure:loadError];
+    [self _presentConditionFolderRefreshFailure];
     return;
   }
   ost_data::ProjectData &project = self.projectService.mutableProject;
@@ -473,8 +474,8 @@ static NSString *OSTConditionText(const std::string &text) {
   ConditionsViewController *condVC = self.conditionsVC;
   if (condVC) {
     [condVC loadConditionsFromProject:project];
-    if (movedConditionUID)
-      [condVC selectConditionWithUID:movedConditionUID animated:NO];
+    if (self.selectedConditionUID)
+      [condVC selectConditionWithUID:self.selectedConditionUID animated:NO];
   }
 }
 

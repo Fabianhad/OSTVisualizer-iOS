@@ -41,7 +41,9 @@ typedef NS_ENUM(NSInteger, EditConditionCreateOutcome) {
                                                   message:(NSString **)message;
 @end
 
-@interface EditConditionViewController : UIViewController
+// UIAdaptivePresentationControllerDelegate is adopted publicly: the presenter of the New Condition form sets the form as the delegate of the
+// presentation of its navigation controller (the swipe-down of an edited form asks to discard it, M1-06).
+@interface EditConditionViewController : UIViewController <UIAdaptivePresentationControllerDelegate>
 
 @property(nonatomic, weak) id<EditConditionViewControllerDelegate> delegate;
 
