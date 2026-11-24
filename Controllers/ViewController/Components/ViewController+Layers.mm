@@ -9,14 +9,12 @@
 - (void)_handleLayerToggle {
   // The layer list is the Windows one: the bid's layers merged with the locked
   // template layers, in Sequence order with stable ties, without the Comments
-  // layer (Core: merge_layers_for_bid, LP-24, LP-18).
-  if (self.projectService.project.empty() ||
-      self.projectService.project.merged_layers.empty())
+  // layer (Core: merge_layers_for_bid, LP-24, LP-18). The sheet also opens for
+  // a bid whose list is empty: Windows allows New Layer there (after_sequence 0,
+  // test_layers_sidebar.py:221-246), and "+" creates the first one (M1, 5.3).
+  if (self.projectService.project.empty())
     return;
-  self.projectService.sortedLayerUIDs.clear();
-  for (const auto &layer : self.projectService.project.merged_layers) {
-    self.projectService.sortedLayerUIDs.push_back(layer.uid);
-  }
+  [self _rebuildSortedLayerUIDs];
   UITableView *table =
       [[UITableView alloc] initWithFrame:CGRectZero
                                    style:UITableViewStyleInsetGrouped];
@@ -52,7 +50,13 @@
       initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                            target:self
                            action:@selector(_layersDone:)];
-  sheetVC.navigationItem.rightBarButtonItem = done;
+  // "+" = New Layer at the end of the list (Windows New with no row selected,
+  // layers_dialog.py:315-322). The first item is the rightmost.
+  UIBarButtonItem *add = [[UIBarButtonItem alloc]
+      initWithBarButtonSystemItem:UIBarButtonSystemItemAdd
+                           target:self
+                           action:@selector(_layersAddTapped:)];
+  sheetVC.navigationItem.rightBarButtonItems = @[ done, add ];
 
   UINavigationController *nav =
       [[UINavigationController alloc] initWithRootViewController:sheetVC];
@@ -247,6 +251,12 @@
   [self dismissViewControllerAnimated:YES completion:nil];
 }
 
+// The table of the open Layers sheet (nil when it was never opened): ViewController+LayerEditing.mm reloads it after a write. The associated
+// object is set in _handleLayerToggle, in this file only, so the key is the same literal.
+- (UITableView *)_layersTableView {
+  return objc_getAssociatedObject(self, "layerTable");
+}
+
 #pragma mark - UITableView DataSource/Delegate (Layers)
 
 - (NSInteger)tableView:(UITableView *)tableView
@@ -317,6 +327,34 @@
       [self _restorePlacementAfterLayerShow:layerUIDString
                                layerIsImage:layerIsImage];
   }
+}
+
+// M1 layer editing (plan 5.3): a tap still toggles the visibility (above); the
+// per-row actions are the trailing swipe (Delete, Rename) and the long-press
+// menu (Rename, New Layer Below, Move Up, Move Down, Delete), both built by
+// ViewController+LayerEditing.mm from Core's row rules. A row that offers
+// nothing returns nil.
+- (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView
+    trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
+  if (indexPath.row < 0 ||
+      (size_t)indexPath.row >= self.projectService.sortedLayerUIDs.size())
+    return nil;
+  NSString *layerUID = [NSString
+      stringWithUTF8String:self.projectService.sortedLayerUIDs[indexPath.row]
+                               .c_str()];
+  return [self _layerSwipeActionsForUID:layerUID];
+}
+
+- (UIContextMenuConfiguration *)tableView:(UITableView *)tableView
+    contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath
+                                        point:(CGPoint)point {
+  if (indexPath.row < 0 ||
+      (size_t)indexPath.row >= self.projectService.sortedLayerUIDs.size())
+    return nil;
+  NSString *layerUID = [NSString
+      stringWithUTF8String:self.projectService.sortedLayerUIDs[indexPath.row]
+                               .c_str()];
+  return [self _layerContextMenuForUID:layerUID];
 }
 
 @end
