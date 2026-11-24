@@ -36,8 +36,8 @@ static const int kModeLabelTag2D = 50001;
 @property(nonatomic) ost_domain::EditMode editMode;
 @property(nonatomic, copy) NSString *bidUID;
 // An area placement is in progress (the page menu is disabled meanwhile, plan 4.8 and 5.5). The callback
-// planView:areaPlacementInProgress: in ViewController.mm sets it (S3, one line; nothing sets it yet) and
-// ViewController+PageMenu.mm reads it when the menu is shown. It lives here, not in a marker block below: the category
+// planView:areaPlacementInProgress: in ViewController.mm sets it (ViewController.mm:727-728) and
+// ViewController+PageMenu.mm reads it when the menu is shown; the page rename, delete and Set Scale actions read it as their second line of defence. It lives here, not in a marker block below: the category
 // ViewController (Internal) cannot hold a property, and the ivar-plus-accessor pattern of ViewController.mm would need more edits there.
 @property(nonatomic) BOOL areaPlacementInProgress;
 

@@ -80,7 +80,10 @@ pairsToVec2(const std::vector<std::pair<double, double>> &pts) {
   _placePattern = condition.pattern;
   _placeThickness = condition.thickness;
   _placeSnapIncrement = snap;
+  // Starting placement with another condition drops the points of an unfinished area, so no area placement is in progress any more (the
+  // page menu and the toolbar read this flag; it would stay on until the next placement ended).
   _placePoints.clear();
+  [self _notifyAreaPlacementInProgress:NO];
   _placeLinearDragging = NO;
   _placeAreaRectDragging = NO;
 
