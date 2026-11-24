@@ -2253,3 +2253,34 @@ TEST(CondCreateRefusals, AConditionTypeUidWithABlankOrASignIsRefused)
     REQUIRE(!uid.empty());
     CHECK_EQ(db.count("SELECT CdnTypeUID FROM BidConditions WHERE UID = " + uid), 7);
 }
+
+// Found by the mutation check of the fix phase (not a Windows port): the name-length text tells the user to shorten the name, so the store gives it ONLY when the
+// name is the single problem. A name that is also blank, or a spec that also has a NUL, notes or a name that are not valid UTF-8 or a number that is not finite is
+// refused with the generic failure (an empty error channel): shortening the name alone would not make the save work. The control: the same long name alone gets the text.
+TEST(CondCreateNames, TheNameLengthTextIsGivenOnlyWhenTheNameIsTheOnlyProblem)
+{
+    TempDb db("cc_name_long_order");
+    REQUIRE(db.schema_ok());
+    seed_world(db);
+    const std::string before = db.snapshot_all();
+    refusal_call(db, "1", valid(repeat(" ", 300)), std::string());
+    {
+        CreateConditionSpec spec = valid(repeat("a", 300));
+        spec.height = std::numeric_limits<double>::quiet_NaN();
+        refusal_call(db, "1", spec, std::string());
+    }
+    {
+        CreateConditionSpec spec = valid(repeat("a", 300));
+        spec.notes = std::string("a\0b", 3);
+        refusal_call(db, "1", spec, std::string());
+    }
+    {
+        CreateConditionSpec spec = valid(repeat("a", 300));
+        spec.notes = "abc\xFF";
+        refusal_call(db, "1", spec, std::string());
+    }
+    refusal_call(db, "1", valid(repeat("a", 299) + std::string("\0", 1)), std::string());
+    refusal_call(db, "1", valid(repeat("a", 299) + "\xFF"), std::string());
+    CHECK_EQ(db.snapshot_all(), before);
+    expect_refused(db, "1", valid(repeat("a", 300)), std::string(kNameTooLongText));
+}

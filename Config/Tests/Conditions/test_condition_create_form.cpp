@@ -1687,3 +1687,44 @@ TEST(CondCreateValidate, NotesThatAreNotValidUtf8AreRefused)
     good.notes = repeat("note ", 5000);
     CHECK_FALSE(validate_create_spec(good).has_value());
 }
+
+// Found by the mutation check of the fix phase (not a Windows port): the name-length text tells the user to shorten the name, so it is given ONLY when the name is
+// the single problem. A name that is also blank, or a spec that also has a NUL, notes or a name that are not valid UTF-8 or a number that is not finite gets the
+// generic text: shortening the name alone would not make the save work. The control: the same long name alone gets the length text.
+TEST(CondCreateValidate, TheNameLengthTextIsGivenOnlyWhenTheNameIsTheOnlyProblem)
+{
+    const auto generic = [](const CreateConditionSpec &spec)
+    {
+        const std::optional<FormIssue> issue = validate_create_spec(spec);
+        REQUIRE(issue.has_value());
+        CHECK_STR_EQ(issue->title, kGenericTitle);
+        CHECK_STR_EQ(issue->message, kGenericMessage);
+    };
+    generic(named(repeat(" ", 300)));
+    generic(named(repeat("a", 299) + std::string("\0", 1)));
+    generic(named(repeat("a", 299) + "\xFF"));
+    {
+        CreateConditionSpec spec = named(repeat("a", 300));
+        spec.height = std::numeric_limits<double>::quiet_NaN();
+        generic(spec);
+    }
+    {
+        CreateConditionSpec spec = named(repeat("a", 300));
+        spec.connect_tolerance = std::numeric_limits<double>::infinity();
+        generic(spec);
+    }
+    {
+        CreateConditionSpec spec = named(repeat("a", 300));
+        spec.notes = std::string("a\0b", 3);
+        generic(spec);
+    }
+    {
+        CreateConditionSpec spec = named(repeat("a", 300));
+        spec.notes = "abc\xFF";
+        generic(spec);
+    }
+    const std::optional<FormIssue> long_only = validate_create_spec(named(repeat("a", 300)));
+    REQUIRE(long_only.has_value());
+    CHECK_STR_EQ(long_only->title, "Validation Error");
+    CHECK_STR_EQ(long_only->message, "Condition name must not be longer than 255 characters.");
+}
