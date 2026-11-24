@@ -8,6 +8,7 @@
 #include "../../../Core/Domain/PageDialogText.hpp"
 #import "../../../Services/ImportService+PageDelete.h"
 #import "../ViewController_Internal.h"
+#include <optional>
 #include <set>
 
 static NSString *OSTPageDeleteNS(const std::string &text) {
@@ -72,6 +73,9 @@ static BOOL OSTPageDeleteUTF8(NSString *text, std::string &utf8) {
 
 // The user confirmed: the plan is made again (nothing may have changed, but the write never trusts the question), then the write.
 - (void)_performDeleteOfPageUID:(NSString *)pageUID {
+  // The write asks the lock guard itself, whoever calls it (the store re-checks inside its transaction as well).
+  if ([self _refuseIfBidLocked])
+    return;
   std::string uid;
   if (!OSTPageDeleteUTF8(pageUID, uid))
     return;
@@ -85,16 +89,14 @@ static BOOL OSTPageDeleteUTF8(NSString *text, std::string &utf8) {
                                             inBid:self.bidUID
                                             error:&reason];
   if (!deleted) {
-    // Nothing was written and the selection is unchanged. The last page has its own text; every other refusal is the generic one with
-    // the database-locked hint (ui_event_coordinator.py:5962-5968).
+    // Nothing was written and the selection is unchanged. Core chooses the text: the last page has its own, every other refusal is the
+    // generic one with the database-locked hint (ui_event_coordinator.py:5962-5968). The reason itself is for the log.
     NSLog(@"Delete Page was refused: %@", reason ?: @"(no reason)");
-    const BOOL lastPage =
-        [reason isEqualToString:OSTPageDeleteNS(ost_domain::LAST_PAGE_MESSAGE)];
+    std::string reasonText;
+    if (reason.length > 0)
+      OSTPageDeleteUTF8(reason, reasonText);
     const ost_domain::DialogText failed =
-        lastPage ? ost_domain::DialogText{ost_domain::LAST_PAGE_TITLE,
-                                          ost_domain::LAST_PAGE_MESSAGE}
-                 : ost_domain::page_delete_failure_text(
-                       ost_domain::PageDeleteFailure::Delete);
+        ost_domain::page_delete_store_failure_text(reasonText);
     [self _presentPageAlertWithTitle:OSTPageDeleteNS(failed.title)
                              message:OSTPageDeleteNS(failed.message)
                           completion:nil];
@@ -117,10 +119,13 @@ static BOOL OSTPageDeleteUTF8(NSString *text, std::string &utf8) {
   const ost_data::ProjectData &project = self.projectService.project;
   const ost_data::PageDeletePlan plan = ost_data::plan_page_delete(project, uid);
   if (!plan.allowed) {
-    // Windows warns about the last page and says nothing about a page it does not know (ui_event_coordinator.py:5995-6001).
-    if (plan.refusal == ost_data::PageDeleteRefusal::LastPage)
-      [self _presentPageAlertWithTitle:OSTPageDeleteNS(ost_domain::LAST_PAGE_TITLE)
-                               message:OSTPageDeleteNS(ost_domain::LAST_PAGE_MESSAGE)
+    // Core says which refusal gets an alert: Windows warns about the last page and says nothing about a page it does not know
+    // (ui_event_coordinator.py:5993-6001).
+    const std::optional<ost_domain::DialogText> refusal =
+        ost_data::page_delete_refusal_text(plan.refusal);
+    if (refusal)
+      [self _presentPageAlertWithTitle:OSTPageDeleteNS(refusal->title)
+                               message:OSTPageDeleteNS(refusal->message)
                             completion:nil];
     return;
   }

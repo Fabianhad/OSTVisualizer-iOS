@@ -34,10 +34,16 @@ static void OSTPageRenameRestoreOffset(UIScrollView *bar, CGPoint offset) {
 
 // The Windows dialog opens with the whole name selected (rename_page_dialog.py:131-134). The system places the caret after the editing
 // event, so the selection is made on the next turn of the run loop. Named in addTarget:action: below, declared in ViewController_Internal.h.
+// The range is set directly: selectAll: can also bring up the Cut / Copy / Paste menu over the alert.
 - (void)_pageRenameFieldDidBeginEditing:(UITextField *)field {
   __weak UITextField *weakField = field;
   dispatch_async(dispatch_get_main_queue(), ^{
-    [weakField selectAll:nil];
+    UITextField *strongField = weakField;
+    if (!strongField)
+      return;
+    strongField.selectedTextRange =
+        [strongField textRangeFromPosition:strongField.beginningOfDocument
+                                toPosition:strongField.endOfDocument];
   });
 }
 
@@ -63,6 +69,8 @@ static void OSTPageRenameRestoreOffset(UIScrollView *bar, CGPoint offset) {
   [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
     nameField = field;
     field.text = draft;
+    // The "New Name:" label of the Windows dialog (the old name is in the message).
+    field.placeholder = @"New Name";
     // Sheet names such as "A-101": no capital letters, no corrections, no smart quotes or dashes.
     field.autocapitalizationType = UITextAutocapitalizationTypeNone;
     field.autocorrectionType = UITextAutocorrectionTypeNo;
@@ -73,6 +81,13 @@ static void OSTPageRenameRestoreOffset(UIScrollView *bar, CGPoint offset) {
     [field addTarget:weakSelf
                   action:@selector(_pageRenameFieldDidBeginEditing:)
         forControlEvents:UIControlEventEditingDidBegin];
+    // The Done key of the software keyboard puts the keyboard away (a text field of an alert does nothing on Return by itself), so the
+    // Rename button is in view again. The block holds the field weakly: the field holds the action.
+    __weak UITextField *weakField = field;
+    [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *action) {
+                       [weakField resignFirstResponder];
+                     }]
+        forControlEvents:UIControlEventEditingDidEndOnExit];
   }];
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
@@ -94,6 +109,9 @@ static void OSTPageRenameRestoreOffset(UIScrollView *bar, CGPoint offset) {
 // The user pressed Rename with `typed` in the field: the rule, then the write, then the memory and the bars.
 - (void)_commitRenameOfPageUID:(NSString *)pageUID
                      typedText:(NSString *)typed {
+  // The write asks the lock guard itself, whoever calls it (the store re-checks inside its transaction as well).
+  if ([self _refuseIfBidLocked])
+    return;
   std::string uid;
   if (!OSTPageRenameUTF8(pageUID, uid))
     return;
