@@ -98,6 +98,15 @@ static const int kModeLabelTag2D = 50001;
 
 // ---- M1 pages B (S4) ----
 
+// Set Scale (plan 5.4). Implemented in Components/ViewController+PageScale.mm; the page menu (ViewController+PageMenu.mm, S3's file: the integrator inserts the
+// "Set Scale..." item as the FIRST item, plan 4.8) calls them. The lock guard is called inside the first two (at the top), so the item needs none of its own.
+// Opens the form for the PRESSED page (a page menu acts on the page whose button was held, which is not always the active one). Does nothing for an unknown uid.
+- (void)_presentSetScaleForPageUID:(NSString *)pageUID;
+// The same for the page the 2D view shows now (the fallback of a caller that has no pressed page).
+- (void)_presentSetScaleForCurrentPage;
+// The subtitle of the menu item: the scale label of the page bar of Windows for that page (preset label, else custom label); nil when the page has no label.
+- (NSString *)_setScaleSubtitleForPageUID:(NSString *)pageUID;
+
 @end
 
 #endif
