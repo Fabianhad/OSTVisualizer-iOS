@@ -178,6 +178,7 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
     OSTDisableSmartPunctuation(field);
     field.translatesAutoresizingMaskIntoConstraints = NO;
     _elevValueField = field;
+    [self _noticeTypingInField:field];
     [cell.contentView addSubview:field];
 
     [NSLayoutConstraint activateConstraints:@[

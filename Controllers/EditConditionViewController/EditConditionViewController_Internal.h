@@ -148,6 +148,8 @@ struct AdvRow
 // Recomputes the dirty flag after a change of a text, a switch or a picker.
 - (void)_updateDirty;
 - (BOOL)_validateAndCollectTextFields;
+// Create mode: the form notices a text while it is typed (a UIControlEventEditingChanged action on the field); no-op in the Edit mode.
+- (void)_noticeTypingInField:(UITextField *)field;
 - (NSString *)_cachedTextForTag:(NSInteger)tag;
 - (UITableViewCell *)_detailCell:(UITableView *)table id:(NSString *)cellId;
 - (UITableViewCell *)_textFieldCell:(UITableView *)table

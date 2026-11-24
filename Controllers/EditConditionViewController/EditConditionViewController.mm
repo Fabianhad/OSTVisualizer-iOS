@@ -17,6 +17,22 @@ static std::string OSTStdString(NSString *text) {
   return utf8 ? std::string(utf8) : std::string();
 }
 
+// The exact UTF-8 bytes of an NSString for Core, used by the CREATE mode only (the same conversion as the folder, page and layer bridges). nil is the
+// empty string. A NUL is kept, so that Core refuses the text (validate_create_spec, N-M1-13) and it is never cut at the NUL as -UTF8String does; text
+// with no UTF-8 form (a lone surrogate) becomes a byte that is not valid UTF-8, which Core refuses too: never an empty or a shortened name.
+static std::string OSTExactUTF8(NSString *text) {
+  if (!text)
+    return std::string();
+  if (![text isKindOfClass:[NSString class]])
+    return std::string("\xFF");
+  NSData *data = [text dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:NO];
+  if (!data)
+    return std::string("\xFF");
+  if (data.length == 0)
+    return std::string();
+  return std::string(static_cast<const char *>(data.bytes), (size_t)data.length);
+}
+
 // The dimension fields (feet-inch text, or millimetres in a metric bid), the ones that normalise their text when they lose focus
 // (Windows _DimensionLineEdit). The elevation is a plain field and keeps what was typed (COND-ELEV-01).
 static BOOL OSTIsDimensionTag(NSInteger tag) {
@@ -427,6 +443,17 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   self.navigationController.modalInPresentation = _dirty;
 }
 
+// UIAdaptivePresentationControllerDelegate: the second layer of the same guard (the first is _noticeTypingInField:, which keeps _dirty current
+// while a field is typed). The swipe-down is asked here before it starts: the Edit mode always answers YES (unchanged); a New Condition form ends
+// the editing first (so a text still being typed is in the form state) and answers NO when it is edited, which makes UIKit call
+// presentationControllerDidAttemptToDismiss: below. An untouched form answers YES and closes silently.
+- (BOOL)presentationControllerShouldDismiss:(UIPresentationController *)presentationController {
+  if (!_createMode)
+    return YES;
+  [self.view endEditing:YES];
+  return !_dirty;
+}
+
 // UIAdaptivePresentationControllerDelegate: the user swiped down an edited New Condition form (the navigation controller is the presented one,
 // ViewController+Conditions.mm sets this form as the delegate of its presentation).
 - (void)presentationControllerDidAttemptToDismiss:(UIPresentationController *)presentationController {
@@ -666,9 +693,17 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 - (BOOL)_validateAndCollectTextFields {
   ost_domain::Condition form = _condition;
 
+  // The texts that become the stored condition (the name with its elevation suffix, the notes): the CREATE mode hands them to Core as the exact
+  // bytes, so that a NUL in them is refused by Core (validate_create_spec, N-M1-13) and not cut off by -UTF8String. The Edit mode keeps
+  // OSTStdString and its behaviour.
+  const BOOL exactText = _createMode;
+  auto storedText = [exactText](NSString *text) {
+    return exactText ? OSTExactUTF8(text) : OSTStdString(text);
+  };
+
   std::string baseName;
   if (const auto issue = ost_domain::parse_condition_name(
-          OSTStdString([self _cachedTextForTag:kTagName]), baseName)) {
+          storedText([self _cachedTextForTag:kTagName]), baseName)) {
     return [self _refuseWithIssue:*issue focusTag:kTagName];
   }
 
@@ -681,7 +716,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   // does not take is_top or z from the form: condition_to_save derives both from the saved NAME like a reload does (decided
   // 2026-11-19); for a text that passed, the number checked here is the one that derivation gives, so memory equals a reload.
   const std::string elevValue = ost_import::text_rules::py_strip(
-      OSTStdString([self _cachedTextForTag:kTagElevVal]));
+      storedText([self _cachedTextForTag:kTagElevVal]));
   const int elevType =
       _elevTypeSeg ? (int)_elevTypeSeg.selectedSegmentIndex : _elevParts.type;
   _elevParts.base_name = baseName;
@@ -759,7 +794,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     }
   }
 
-  form.notes = OSTStdString(_notesTextCache ?: @"");
+  form.notes = storedText(_notesTextCache ?: @"");
   _condition = form;
   return YES;
 }
@@ -991,6 +1026,26 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   [self _updateDirty];
 }
 
+// New Condition (review of the whole milestone, M1-06): the form notices a text WHILE it is typed, not only when the field loses focus. The
+// Name field has the focus from the start, so without this a typed name left the form "untouched" until the keyboard went away, and a swipe-down
+// closed it without the Discard question. The cache is what textFieldDidEndEditing: fills (that method still normalises the dimension texts when
+// the field is left). A UIAction with a weak self, so no selector is named. The Edit mode does not call this: its behaviour is unchanged.
+- (void)_noticeTypingInField:(UITextField *)field {
+  if (!_createMode)
+    return;
+  __weak EditConditionViewController *weakSelf = self;
+  __weak UITextField *weakField = field;
+  [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *changed) {
+          EditConditionViewController *strongSelf = weakSelf;
+          UITextField *strongField = weakField;
+          if (!strongSelf || !strongField)
+            return;
+          strongSelf->_fieldTextCache[@(strongField.tag)] = strongField.text ?: @"";
+          [strongSelf _updateDirty];
+        }]
+      forControlEvents:UIControlEventEditingChanged];
+}
+
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
   [textField resignFirstResponder];
   return YES;
@@ -1041,6 +1096,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   field.translatesAutoresizingMaskIntoConstraints = NO;
   field.adjustsFontSizeToFitWidth = YES;
   field.minimumFontSize = 11;
+  [self _noticeTypingInField:field];
   [cell.contentView addSubview:field];
 
   [NSLayoutConstraint activateConstraints:@[
