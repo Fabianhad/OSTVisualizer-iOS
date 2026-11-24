@@ -143,11 +143,16 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
         }]
       forControlEvents:UIControlEventEditingDidEndOnExit];
   if (selectInitialText) {
-    // UIKit puts the caret at the end when the editing begins, so the selection is made right after that
+    // UIKit puts the caret at the end when the editing begins, so the selection is made right after that. The range is set directly (like the
+    // Rename Page alert): selectAll: can also bring up the Cut / Copy / Paste menu over the alert.
     [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *began) {
             dispatch_async(dispatch_get_main_queue(), ^{
               UITextField *target = weakField;
-              [target selectAll:nil];
+              if (!target)
+                return;
+              target.selectedTextRange =
+                  [target textRangeFromPosition:target.beginningOfDocument
+                                     toPosition:target.endOfDocument];
             });
           }]
         forControlEvents:UIControlEventEditingDidBegin];

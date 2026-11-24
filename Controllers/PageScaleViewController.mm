@@ -456,9 +456,14 @@ static const CGFloat kKeyboardRoom = 300.0;
 
 #pragma mark - Cancel and Save
 
-// Windows Cancel: closes without writing, a dirty draft is dropped
+// Windows Cancel: closes without writing, a dirty draft is dropped. The form is finished from the moment Cancel is accepted (the same flag as
+// a Save that closes it), so a Save that arrives while the dismissal animation still runs writes nothing: the user cancelled this form. Like
+// Save it does nothing while an alert is up (the dismissal would then close the alert and leave the form open with the flag set).
 - (void)_cancel {
+  if (_finished || self.presentedViewController)
+    return;
   [self.view endEditing:YES];
+  _finished = YES;
   [self dismissViewControllerAnimated:YES completion:nil];
 }
 
