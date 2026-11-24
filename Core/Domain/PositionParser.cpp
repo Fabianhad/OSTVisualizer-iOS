@@ -1,6 +1,8 @@
 // Layer: Domain. See PositionParser.hpp for the Windows sources this file ports.
 #include "PositionParser.hpp"
 
+#include "../Import/TextRules.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -1538,6 +1540,17 @@ namespace ost_domain
             ++val_start;
         parts.value = (val_start < name.size()) ? name.substr(val_start) : std::string();
         return parts;
+    }
+
+    // elevation.py::reassemble_elevation (:62-67): trimmed = value.strip(); a blank value leaves the base name alone; the tag is " @T "
+    // for the type 0 and " @B " for every other type. py_strip is Python's str.strip (every Unicode white space), not the U+0020-only
+    // trim of the old Objective-C copy.
+    std::string reassemble_elevation(const std::string &base_name, int elevation_type, const std::string &value)
+    {
+        const std::string trimmed = ost_import::text_rules::py_strip(value);
+        if (trimmed.empty())
+            return base_name;
+        return base_name + (elevation_type == 0 ? " @T " : " @B ") + trimmed;
     }
 
     bool is_elevation_text(const std::string &text)

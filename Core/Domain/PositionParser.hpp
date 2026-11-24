@@ -65,6 +65,12 @@ namespace ost_domain
     // one, the last " @ " (else " @") is a legacy bare marker (bottom). T/B are case-sensitive.
     ElevationParts parse_elevation(const std::string &name);
 
+    // elevation.py::reassemble_elevation (:62-67; plan 5.1 / 4.13, replaces the Objective-C copy reassembleElevation of EditConditionHelpers.mm,
+    // which trims only U+0020): trimmed = value.strip() (Python str.strip: every Unicode white space, ost_import::text_rules::py_strip); a blank
+    // value gives `base_name` unchanged; else base_name + " @T " + trimmed for elevation_type 0 and base_name + " @B " + trimmed for every other type
+    // (1, 5, -1 ...).
+    std::string reassemble_elevation(const std::string &base_name, int elevation_type, const std::string &value);
+
     // elevation_text.py::is_elevation_text: the elevation grammar prefix patterns (feet+inches, feet only,
     // inches only, metres+centimetres, metres, centimetres), case-insensitive, matched at the start of the text.
     bool is_elevation_text(const std::string &text);
