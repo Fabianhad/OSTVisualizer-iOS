@@ -47,6 +47,15 @@ static std::string OSTPageScaleStdString(NSString *text) {
     return;
   const ost_domain::Page &page = found->second;
 
+  // the form goes on the topmost presented controller; one form at a time: a second call while a form is up (or still coming in) would stack another on it
+  UIViewController *presenter = self;
+  while (presenter.presentedViewController)
+    presenter = presenter.presentedViewController;
+  if ([presenter isKindOfClass:[UINavigationController class]] &&
+      [((UINavigationController *)presenter).topViewController
+          isKindOfClass:[PageScaleViewController class]])
+    return;
+
   PageScaleViewController *form =
       [[PageScaleViewController alloc] initWithPageUID:pageUID
                                               pageName:OSTPageScaleText(page.name)
@@ -59,9 +68,6 @@ static std::string OSTPageScaleStdString(NSString *text) {
   nav.modalPresentationStyle = UIModalPresentationFormSheet;
 
   // a form sheet on a centred sheet on iPad, full width on iPhone; no popover inside the form (N-M1-25)
-  UIViewController *presenter = self;
-  while (presenter.presentedViewController)
-    presenter = presenter.presentedViewController;
   [presenter presentViewController:nav animated:YES completion:nil];
 }
 

@@ -404,17 +404,28 @@ static const CGFloat kKeyboardRoom = 300.0;
     _state.custom2 = text;
 }
 
+// The text of the two numbers as it stands now: Windows reads edit.text() when it validates (set_scale_dialog.py:202-203). _customFieldChanged: keeps the state
+// current while typing; this covers a change that sent no editing event (the clear button). Only a field that is on screen counts: the field of a cell the
+// table dropped (a reload while the row was scrolled out of sight) holds an old text, and the state is newer.
+- (void)_syncCustomTextFromFields {
+  if (_customField1.window)
+    _state.custom1 = OSTScaleStdString(_customField1.text);
+  if (_customField2.window)
+    _state.custom2 = OSTScaleStdString(_customField2.text);
+}
+
 #pragma mark - Text field delegate
 
 // The table is a plain view controller's, so it does not make room for the keyboard by itself: while a number is edited the table can scroll its row above
-// the keyboard, and the row is brought into view.
+// the keyboard, and the row is brought into view. The row goes to the TOP of the table (not the middle): with a short visible height (a phone in
+// landscape) the middle of the table is where the keyboard starts, and the room below the content lets the table scroll far enough for the top.
 - (void)textFieldDidBeginEditing:(UITextField *)textField {
   UIEdgeInsets inset = _tableView.contentInset;
   inset.bottom = kKeyboardRoom;
   _tableView.contentInset = inset;
   [_tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:PageScaleRowCustomFields
                                                         inSection:PageScaleSectionScale]
-                    atScrollPosition:UITableViewScrollPositionMiddle
+                    atScrollPosition:UITableViewScrollPositionTop
                             animated:YES];
 }
 
@@ -457,6 +468,7 @@ static const CGFloat kKeyboardRoom = 300.0;
   if (_finished || self.presentedViewController)
     return;
   [self.view endEditing:YES];
+  [self _syncCustomTextFromFields];
   if (!_session->dirty(_state)) {
     [self _finishAndDismiss];
     return;
