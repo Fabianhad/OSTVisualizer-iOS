@@ -5,11 +5,6 @@
 #include "../../../Core/Domain/Types.hpp"
 #include <string>
 
-struct ElevationParts;
-
-ElevationParts parseElevation(const std::string &name);
-std::string reassembleElevation(const std::string &baseName, int type, const std::string &value);
-
 // Core inches_to_display: feet-inch text, or millimetres in a metric bid (FMT-01, COND-METRIC-01). The text parsers are
 // ost_domain::display_to_inches and the parse_* functions of Core/Domain/ConditionFormRules.hpp.
 NSString *inchesToDisplay(double inches, bool metric);
