@@ -71,7 +71,8 @@ static std::string OSTPageScaleStdString(NSString *text) {
   [presenter presentViewController:nav animated:YES completion:nil];
 }
 
-// The page the 2D view shows now.
+// The page the 2D view shows now: the entry point for a caller that means the ACTIVE page. The page menu does not use it (it acts on the pressed page,
+// _presentSetScaleForPageUID:), and nothing calls it today.
 - (void)_presentSetScaleForCurrentPage {
   const std::string &active = self.projectService.selected2DPageUID;
   if (active.empty())
