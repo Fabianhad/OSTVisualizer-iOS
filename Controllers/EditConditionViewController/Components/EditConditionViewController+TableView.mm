@@ -131,7 +131,7 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
         _textFieldCell:tableView
                  label:@"Name"
                  value:[NSString
-                           stringWithUTF8String:_elevParts.baseName.c_str()]
+                           stringWithUTF8String:_elevParts.base_name.c_str()]
                    tag:kTagName];
     _nameField = (UITextField *)[cell viewWithTag:kTagName];
     return cell;
@@ -218,6 +218,16 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
     return cell;
   }
   case TopRow::RefNo: {
+    if (_createMode) {
+      // New Condition: the number the writer will give, read-only (N-M1-07, register NC-1); no field, so nothing to parse or focus
+      UITableViewCell *cell = [self _detailCell:tableView id:@"NextNumberCell"];
+      cell.textLabel.text = @"Cond. No.";
+      cell.detailTextLabel.text = _nextNumberText;
+      cell.detailTextLabel.textColor = [UIColor secondaryLabelColor];
+      cell.selectionStyle = UITableViewCellSelectionStyleNone;
+      _refNoField = nil;
+      return cell;
+    }
     UITableViewCell *cell = [self
         _textFieldCell:tableView
                  label:@"Cond. No."

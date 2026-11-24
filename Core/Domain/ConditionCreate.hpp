@@ -141,6 +141,19 @@ namespace ost_domain
     // "Failed to create condition.".
     FormIssue condition_create_failed_issue(const std::string &detail = std::string());
 
+    // condition_action_handler.py:764-773: the condition was created, but the conditions list could not be read again (the form shows it once it has
+    // closed): the title and the text of the Windows warning, verbatim.
+    inline constexpr const char *kConditionCreatedRefreshFailedTitle = "Refresh Error";
+    inline constexpr const char *kConditionCreatedRefreshFailedText =
+        "The condition was created, but the conditions list could not be refreshed. Reopen the database to see the new condition.";
+
+    // The discard alert of the create form (iOS-only texts, plan 4.14; register NC-3): Windows forces the dirty flag of the New Condition dialog and
+    // asks "Save changes before closing?" even for an untouched form (condition_action_handler.py:758); the iOS form closes an untouched form
+    // silently and asks for an EDITED one whether to discard it ("Keep Editing" / "Discard"). Pinned by test_condition_folder_ui.cpp.
+    inline constexpr const char *kDiscardNewConditionTitle = "Unsaved Changes";
+    inline constexpr const char *kDiscardNewConditionMessage = "Discard this new condition?";
+    inline constexpr const char *kKeepEditingTitle = "Keep Editing";
+
     // conditions_sidebar.py:1499-1513 _resolve_folder_context_uid over the pre-order nodes of build_condition_tree: the uid of the nearest FOLDER
     // node at or above nodes[index] (the node itself when it is a folder; otherwise the closest preceding node with a smaller depth, repeated, until a
     // folder is found); "" (the top level) when there is none or when `index` is out of range.

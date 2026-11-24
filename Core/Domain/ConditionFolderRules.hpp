@@ -91,11 +91,11 @@ namespace ost_domain
                                                         std::string &new_name,
                                                         FolderNameCheck *check = nullptr);
 
-    // conditions_sidebar.py:1499-1513 _resolve_folder_context_uid + :989-1001 _request_create_in_context: the parent of a new folder (or
-    // of a new condition) is the nearest FOLDER ancestor-or-self of the CLICKED item. The caller passes the folder uid of the clicked item
-    // (a folder row: its own uid; a condition or a type group: the folder it sits in; the root: ""). Answer: that uid when it is a folder
-    // of `folders`, else "" (the root; a condition whose folder uid is unknown sits at the root).
-    std::string folder_context_uid(const std::unordered_map<std::string, ConditionFolder> &folders, const std::string &clicked_folder_uid);
+    // conditions_sidebar.py:1499-1513 _resolve_folder_context_uid + :989-1001 _request_create_in_context (the parent of a new folder or of a
+    // new condition is the nearest FOLDER ancestor-or-self of the CLICKED item) is ONE rule, ost_domain::folder_context_uid(nodes, index) of
+    // ConditionCreate.hpp, over the pre-order nodes of build_condition_tree: the Conditions list asks it for every section of the tree it
+    // shows. (A second overload over a folder map and a folder uid used to be here; it was the same rule for a caller that had already found
+    // the folder, no screen called it, and it was removed in the UI step of S1. Its test now asks the rule of the tree: test_condition_folder_rules.cpp.)
 
     // ---- delete ---------------------------------------------------------------------------------------------------------------
 

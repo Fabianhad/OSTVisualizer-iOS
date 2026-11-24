@@ -2,6 +2,7 @@
 #define EDITCONDITIONVIEWCONTROLLER_INTERNAL_H
 
 #import "EditConditionViewController.h"
+#include "../../Core/Domain/PositionParser.hpp"
 #include "../../Core/Domain/UomService.hpp"
 #include <optional>
 #include <vector>
@@ -81,14 +82,6 @@ struct AdvRow
     double dimVal;
 };
 
-// --- Elevation parsing result ---
-struct ElevationParts
-{
-    std::string baseName;
-    int type;
-    std::string value;
-};
-
 // --- Class extension — ivars visible to all category .mm files ---
 @interface EditConditionViewController () <UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate, UITextViewDelegate>
 {
@@ -123,9 +116,25 @@ struct ElevationParts
     UITextField *_elevValueField;
     NSMutableDictionary<NSNumber *, NSString *> *_fieldTextCache;
     NSString *_notesTextCache;
-    ElevationParts _elevParts;
+    // The elevation of the name in the form: ost_domain::parse_elevation of the loaded name (base_name, type 0 top / 1 bottom, value)
+    ost_domain::ElevationParts _elevParts;
     UIBarButtonItem *_prevButton;
     UIBarButtonItem *_nextButton;
+    UIBarButtonItem *_saveButton;
+
+    // --- Create mode (New Condition, plan 5.1): nothing of this is used by the Edit mode ---
+    BOOL _createMode;
+    // A Save is being written / was written: a second tap (a double tap) creates nothing
+    BOOL _createInFlight;
+    BOOL _createDone;
+    // The Name field took the focus once, when the form first appeared
+    BOOL _createFocused;
+    // The synthetic condition (ost_domain::new_condition_form): the "stored" condition a Save is compared with, the folder the condition is
+    // created in ("" = the top level), the bid's own default layer ("" = none) and the text of the read-only Cond. No. row
+    ost_domain::Condition _createForm;
+    std::string _createFolderUID;
+    std::string _createDefaultLayerUID;
+    NSString *_nextNumberText;
 }
 @end
 
