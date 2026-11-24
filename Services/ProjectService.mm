@@ -1,4 +1,5 @@
 #import "ProjectService.h"
+#include "../Core/Data/PageMenuRules.hpp"
 #include "../Core/Data/PageNavigation.hpp"
 #include "../Core/Meshing/ExportMeshSet.hpp"
 #include <exception>
@@ -37,6 +38,11 @@
 #pragma mark - Project Loading
 
 - (void)loadProject:(const ost_data::ProjectData &)project {
+  [self loadProject:project selectingPage:std::string()];
+}
+
+- (void)loadProject:(const ost_data::ProjectData &)project
+      selectingPage:(const std::string &)pageUID {
   _project = project;
   _selected3DPageUIDs.clear();
   _selected2DPageUID.clear();
@@ -54,10 +60,25 @@
   }
   // LP-12: the saved page of the bid (BidPageSelectedUID) when it still
   // exists, else the first page of the tree walk; 3D and 2D start with it.
-  const std::string firstPage = ost_data::initial_page_uid(_project);
+  // A reload that names a page (Delete Page: the page that followed the
+  // deleted one) starts with that page when the project still has it.
+  const std::string firstPage =
+      ost_data::page_selection_after_reload(_project, pageUID);
   if (!firstPage.empty()) {
     _selected3DPageUIDs.insert(firstPage);
     _selected2DPageUID = firstPage;
+  }
+}
+
+#pragma mark - Page Names
+
+// Rename Page (plan 5.5, 4.11): only the names of the page list are copied from
+// the project; nothing else about the selection or the order changes.
+- (void)refreshPageNames {
+  for (PageEntry &entry : _pageList) {
+    const auto page = _project.pages.find(entry.uid);
+    if (page != _project.pages.end())
+      entry.name = page->second.name;
   }
 }
 

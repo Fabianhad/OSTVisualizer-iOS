@@ -118,6 +118,31 @@ static const int kModeLabelTag2D = 50001;
 
 // ---- M1 pages A (S3) ----
 
+// The page menu (plan 4.8), ViewController+PageMenu.mm: attaches the long-press menu to a page button of the 3D or the 2D bar (called by
+// _selectorButtonWithTitle:tag:font:action: in ViewController+PageSelector.mm; the 3D folder buttons and the mode chips get none).
+- (void)_attachPageMenuToButton:(UIButton *)button;
+// The list of items of the menu, built each time the menu is shown (Set Scale, Rename Page, Delete Page: the order is documented there).
+- (NSArray<UIMenuElement *> *)_pageMenuItemsForPageUID:(NSString *)pageUID
+                                               onBar2D:(BOOL)onBar2D;
+// The controller the page alerts are presented on (the topmost presented one) and an OK alert on it; `completion` runs after OK.
+- (UIViewController *)_pagePresenter;
+- (void)_presentPageAlertWithTitle:(NSString *)title
+                           message:(NSString *)message
+                        completion:(void (^)(void))completion;
+// Rename Page (ViewController+PageRename.mm): the menu item's action, the alert, the commit of the typed name, and the text field's
+// select-all, which addTarget:action: names.
+- (void)_renamePageWithUID:(NSString *)pageUID;
+- (void)_presentRenameAlertForPageUID:(NSString *)pageUID
+                                draft:(NSString *)draft;
+- (void)_commitRenameOfPageUID:(NSString *)pageUID
+                     typedText:(NSString *)typed;
+- (void)_pageRenameFieldDidBeginEditing:(UITextField *)field;
+// Delete Page (ViewController+PageDelete.mm): the menu item's action, the write after the confirmation, and the reload that selects the
+// page that followed the deleted one (YES when the bid was read again).
+- (void)_deletePageWithUID:(NSString *)pageUID;
+- (void)_performDeleteOfPageUID:(NSString *)pageUID;
+- (BOOL)_reloadProjectSelectingPage:(NSString *)pageUID;
+
 // ---- M1 pages B (S4) ----
 
 @end

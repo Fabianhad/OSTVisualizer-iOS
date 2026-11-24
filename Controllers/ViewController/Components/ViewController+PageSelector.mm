@@ -276,6 +276,9 @@
   [btn addTarget:self
                 action:action
       forControlEvents:UIControlEventTouchUpInside];
+  // The long-press page menu (plan 4.8: Set Scale, Rename Page, Delete Page). Only the page buttons get it: the 3D folder buttons that
+  // this factory also makes are skipped by their tag (ViewController+PageMenu.mm).
+  [self _attachPageMenuToButton:btn];
   return btn;
 }
 
