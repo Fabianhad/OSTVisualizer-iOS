@@ -52,6 +52,7 @@ namespace ost_domain
         if (index < 0 || static_cast<std::size_t>(index) >= presets.size())
             return state;
         ScaleFormState picked = state;
+        picked.mode = ScaleInputMode::Predefined;
         picked.has_preset = true;
         picked.preset_sf1 = presets[static_cast<std::size_t>(index)].sf1;
         picked.preset_sf2 = presets[static_cast<std::size_t>(index)].sf2;

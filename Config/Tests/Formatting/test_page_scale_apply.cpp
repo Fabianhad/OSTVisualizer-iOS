@@ -178,7 +178,7 @@ TEST(SetScale_PickerRow, TheOpeningStateOfASessionPointsAtItsRow)
     CHECK_EQ(scale_form_preset_index(ScaleFormSession(0.26, 12.0).initial()), 0);
 }
 
-// Picking a row sets the preset pair and keeps everything else (the picker only works with the Pre-defined radio on: the mode stays as it is).
+// Picking a row sets the preset pair and turns the Pre-defined radio on; the style, the custom texts and the switch stay.
 TEST(SetScale_PickerPick, APickSetsThePairAndKeepsTheRest)
 {
     ScaleFormState state = state_with_preset(kScaleStyleArchitectural, 0.125, 12.0);
@@ -212,15 +212,26 @@ TEST(SetScale_PickerPick, APickSetsThePairAndKeepsTheRest)
     CHECK_EQ(filled.preset_sf1, 0.03125);
     CHECK_EQ(filled.preset_sf2, 12.0);
 
-    // the mode of a Custom form stays Custom (the form only offers the picker with the Pre-defined radio on; the rule is "the pick changes the pair, nothing else")
+    // a pick on a Custom form turns the Pre-defined radio on: the touch form offers the preset menu in both modes, and choosing a preset is choosing the radio (the Windows combo
+    // is only enabled with the radio on, so there a pick never happens in Custom mode; set_scale_dialog.py:167-189 also turns the radio on for a style change)
     ScaleFormState custom = state_with_preset(kScaleStyleArchitectural, 0.125, 12.0);
     custom.mode = ScaleInputMode::Custom;
-    CHECK(scale_form_after_preset_pick(custom, 1).mode == ScaleInputMode::Custom);
+    custom.custom1 = "3";
+    custom.custom2 = "4";
+    const ScaleFormState fromCustom = scale_form_after_preset_pick(custom, 1);
+    CHECK(fromCustom.mode == ScaleInputMode::Predefined);
+    CHECK_EQ(fromCustom.preset_sf1, 0.0625);
+    CHECK_STR_EQ(fromCustom.custom1, "3");
+    CHECK_STR_EQ(fromCustom.custom2, "4");
 }
 
-// A row outside the list of the style changes nothing.
+// A row outside the list of the style changes nothing (the radio stays as it is too).
 TEST(SetScale_PickerPick, ARowOutsideTheListChangesNothing)
 {
+    ScaleFormState custom = state_with_preset(kScaleStyleCivil, 1.0, 240.0);
+    custom.mode = ScaleInputMode::Custom;
+    CHECK(scale_form_after_preset_pick(custom, 99).mode == ScaleInputMode::Custom);
+    CHECK(scale_form_after_preset_pick(custom, -1).mode == ScaleInputMode::Custom);
     const ScaleFormState state = state_with_preset(kScaleStyleCivil, 1.0, 240.0);
     for (int index : {-1, 11, 12, 100, -100})
     {

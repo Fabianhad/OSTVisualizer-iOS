@@ -6,7 +6,7 @@
 //     ui_event_coordinator.py:5597-5643 _save_scale_settings, so the wording is an iOS-only text, plan 4.14, N-M1-03);
 //   - the footer of the form (the current scale of the page with the label rule of the Windows page bar, page_settings_bar.py:159-206, plus the
 //     explanation of the pair, which Windows does not have);
-//   - the row of the Pre-defined picker that a form state shows, and the form state after a row is picked (set_scale_dialog.py:167-189);
+//   - the row of the Pre-defined preset menu that a form state shows, and the form state after a row is picked (set_scale_dialog.py:167-189);
 //   - what refreshes after a save (plan 4.11, Windows ui_event_coordinator.py:3318-3359 _on_page_metadata_changed): the plan view of the active 2D page
 //     (zoom kept), the 3D scene when a selected page changed, the quantities when the active or a selected page changed.
 // Deliberate differences from Windows, each pinned by a test that says so:
@@ -48,14 +48,15 @@ namespace ost_domain
     // `sf1` / `sf2` are the pair the page stores (the form opens on it).
     std::string scale_form_footer_text(const std::string &page_name, double sf1, double sf2);
 
-    // The row of scale_presets(state.style) that the Pre-defined picker shows for this state: the first preset whose pair equals the state's preset pair
+    // The row of scale_presets(state.style) that the Pre-defined preset menu marks for this state: the first preset whose pair equals the state's preset pair
     // exactly (the state takes the pair from the list, so an exact comparison finds it); -1 when the state has no preset (has_preset false), the style has
     // no presets, or the pair is not in the list of that style.
     int scale_form_preset_index(const ScaleFormState &state);
 
-    // The user picked row `index` of the picker (set_scale_dialog.py _on_predefined_scale_changed): the state's preset pair becomes the pair of that row and
-    // has_preset is true; the style, the radio, the custom texts and the switch stay (the picker is only usable with the Pre-defined radio on). An index
-    // outside the list of the state's style (negative, too large, or a style without presets) returns the state unchanged.
+    // The user picked row `index` of the preset menu (set_scale_dialog.py _on_predefined_scale_changed): the state's preset pair becomes the pair of that row,
+    // has_preset is true and the Pre-defined radio is on (the Windows combo is only enabled with the radio on, so a pick never happens in Custom mode there; the
+    // touch form offers the menu in both modes and choosing a preset is choosing the radio, like the style change of :167-189); the style, the custom texts and
+    // the switch stay. An index outside the list of the state's style (negative, too large, or a style without presets) returns the state unchanged (the radio too).
     ScaleFormState scale_form_after_preset_pick(const ScaleFormState &state, int index);
 
     // What a successful save refreshes (plan 4.11).
