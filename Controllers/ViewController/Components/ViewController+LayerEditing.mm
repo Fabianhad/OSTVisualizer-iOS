@@ -137,6 +137,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
 - (void)_layerDeleteTapped:(NSString *)layerUID;
 - (BOOL)_reloadLayerLists;
 - (void)_layerSheetChangedSelectingUID:(NSString *)layerUID;
+- (void)_layerSheetRefreshAfterFailedWrite;
 @end
 
 @implementation ViewController (LayerEditing)
@@ -185,6 +186,15 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
     }
   }
   [self _refreshConditionsListForLayerVisibility];
+}
+
+// A write that failed or was refused changed nothing, but what the sheet shows may be out of date. Windows loads the list again after a failed
+// write: the dialog after every move, worked or not (layers_dialog.py:652), the sidebar after a failed create, delete or rename
+// (ui_event_coordinator.py:6578-6580, :6647-6648, :6917-6918). The lists are read again, quietly: a read that fails too keeps the lists as they
+// are and says nothing more (the failure alert is already up).
+- (void)_layerSheetRefreshAfterFailedWrite {
+  if ([self _reloadLayerLists])
+    [self _layerSheetChangedSelectingUID:nil];
 }
 
 - (BOOL)_layerNameIsBlank:(NSString *)typed {
@@ -247,6 +257,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
                                                error:&storeText];
   if (!newUID) {
     OSTLayerPresentDialog(self, ost_domain::layer_write_failure_text(ost_domain::LayerAction::Create, OSTLayerStd(storeText)));
+    [self _layerSheetRefreshAfterFailedWrite];
     return;
   }
   // The layer is in the file. A list that cannot be read again keeps the new state and says so (Windows: "Refresh Error").
@@ -305,6 +316,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
   NSString *storeText = nil;
   if (![ImportService renameLayer:layerUID toName:OSTLayerNS(check.name) inBid:self.bidUID error:&storeText]) {
     OSTLayerPresentDialog(self, ost_domain::layer_write_failure_text(ost_domain::LayerAction::Rename, OSTLayerStd(storeText)));
+    [self _layerSheetRefreshAfterFailedWrite];
     return;
   }
   if (![self _reloadLayerLists]) {
@@ -337,6 +349,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
     return;
   if (![ImportService swapLayer:layerUID withLayer:OSTLayerNS(plan.neighbor_uid) inBid:self.bidUID]) {
     OSTLayerPresentDialog(self, ost_domain::layer_write_failure_text(ost_domain::LayerAction::Move, std::string()));
+    [self _layerSheetRefreshAfterFailedWrite];
     return;
   }
   if (![self _reloadLayerLists]) {
@@ -406,6 +419,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
     return;
   if (![ImportService deleteLayers:layerUIDs inBid:self.bidUID]) {
     OSTLayerPresentDialog(self, ost_domain::layer_write_failure_text(ost_domain::LayerAction::Delete, std::string()));
+    [self _layerSheetRefreshAfterFailedWrite];
     return;
   }
   // The layers are gone from the file. Layers only are re-read (never the whole bid: the undo history stays, 4.11).
