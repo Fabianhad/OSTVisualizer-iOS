@@ -80,6 +80,20 @@ TEST(DelPageOrder, TheLockRefusalComesBeforeTheLastPageRefusal)
     expect_refused_with(db, "20", {"200"}, ost_domain::LAST_PAGE_MESSAGE);
 }
 
+// The open bid must exist BEFORE the pages are judged (plan 4.4 item 2: the uids parse, the bid exists, THEN the rows belong to it): a call that names a bid
+// without a Bids row is refused with the Windows "Bids has no row" text of THAT bid, whether the page exists and belongs to another bid or does not exist at
+// all. A store that skipped the step still refused every one of these calls, but with the text of a later rule ("does not belong", "BidPages has no row").
+TEST(DelPageOrder, TheOpenBidMustExistBeforeThePagesAreJudged)
+{
+    TempDb db("delpage_ord_bid_exists_first");
+    world(db);
+    const std::string no_bid_11 = "Bids has no row for UID 11; the requested authoritative owner does not exist.";
+    expect_refused_with(db, "99", {"100"}, ost_delpage_oracle::kMsgOrphanBid99);
+    expect_refused_with(db, "11", {"100", "101"}, no_bid_11);
+    expect_refused_with(db, "11", {"200"}, no_bid_11);
+    expect_refused_with(db, "11", {"999"}, no_bid_11);
+}
+
 // A refusal in the MIDDLE of the cascade (the identity rules of the page's own comments and takeoffs run after step 1, and after step 2, have written) must
 // roll those writes back: page 100 is the master of page 101 (step 1 clears it), the reply 6 on page 101 hangs under the comment 5 on page 100 (step 2
 // detaches it), and then a duplicate takeoff uid (or a malformed one) on page 100 refuses the delete. Every table is identical afterwards, the master
