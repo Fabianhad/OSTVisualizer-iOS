@@ -12,6 +12,8 @@
 #include "ConditionFolderOracleData.hpp"
 #include "ConditionFoldersTestSupport.hpp"
 
+#include "Domain/ConditionCreate.hpp"
+#include "Domain/ConditionTree.hpp"
 #include "Import/TextRules.hpp"
 
 #include <chrono>
@@ -466,18 +468,48 @@ TEST(ConditionFolderRules, RenamingAFolderThatIsNotThereIsRefusedSilently)
 // Port of tests/presentation/components/test_conditions_sidebar.py:1006-1068 (test_condition_context_new_folder_uses_clicked_target_and_root_is_top_level
 // and test_condition_context_new_keeps_right_clicked_folder_target): the CLICKED target decides, not the current item at trigger time; the root item
 // means the top level ("" ); the tests expect ["f1", ""] for the folder and the condition creation.
+// ONE rule, ost_domain::folder_context_uid(nodes, index) of ConditionCreate.hpp (the Conditions list calls it for every section of the tree it
+// shows; the map-and-uid overload that used to live in ConditionFolderRules.hpp was the same rule for a caller that had already found the folder
+// and was removed, S1 UI). Every expectation of the old test is kept, asked of the tree the screen really has: a folder row is its own context, a
+// type group or a condition is the folder it sits in, a root node and a condition whose folder uid is not a folder of the bid ("ghost", "0") sit at
+// the top level (conditions_sidebar.py:462-467).
 TEST(ConditionFolderRules, TheClickedTargetDecidesTheParentFolder)
 {
     const FolderMap folders = {{"f1", {"f1", "First", ""}}, {"f2", {"f2", "Second", ""}}};
-    CHECK_STR_EQ(ost_domain::folder_context_uid(folders, "f1"), "f1"); // a click on the folder f1 (menu built while f2 was current)
-    CHECK_STR_EQ(ost_domain::folder_context_uid(folders, ""), "");     // the root item
-    CHECK_STR_EQ(ost_domain::folder_context_uid(folders, "f2"), "f2");
+    ConditionMap conditions = conditions_of({{"in1", "f1"}, {"in2", "f2"}, {"root", ""}, {"ghost", "ghost"}, {"zero", "0"}});
+    const std::vector<ost_domain::ConditionTreeNode> nodes = ost_domain::build_condition_tree(conditions, folders, {});
+
+    auto context_of = [&nodes](ost_domain::ConditionTreeNode::Kind kind, const std::string &uid)
+    {
+        for (std::size_t i = 0; i < nodes.size(); ++i)
+            if (nodes[i].kind == kind && nodes[i].uid == uid)
+                return ost_domain::folder_context_uid(nodes, i);
+        return std::string("<not in the tree>");
+    };
+    using Kind = ost_domain::ConditionTreeNode::Kind;
+    CHECK_STR_EQ(context_of(Kind::Folder, "f1"), "f1"); // a click on the folder f1 (menu built while f2 was current)
+    CHECK_STR_EQ(context_of(Kind::Folder, "f2"), "f2");
     // a condition or a type group inside f1 passes the folder it sits in
-    CHECK_STR_EQ(ost_domain::folder_context_uid(folders, "f1"), "f1");
-    // a condition whose folder uid is not a folder of the bid sits at the root (conditions_sidebar.py:462-467)
-    CHECK_STR_EQ(ost_domain::folder_context_uid(folders, "ghost"), "");
-    CHECK_STR_EQ(ost_domain::folder_context_uid(folders, "0"), "");
-    CHECK_STR_EQ(ost_domain::folder_context_uid(FolderMap{}, "f1"), "");
+    CHECK_STR_EQ(context_of(Kind::Condition, "in1"), "f1");
+    CHECK_STR_EQ(context_of(Kind::Condition, "in2"), "f2");
+    // the root item: the top level; a condition without a folder, and one whose folder uid is not a folder of the bid, sit at the root
+    CHECK_STR_EQ(context_of(Kind::Condition, "root"), "");
+    CHECK_STR_EQ(context_of(Kind::Condition, "ghost"), "");
+    CHECK_STR_EQ(context_of(Kind::Condition, "zero"), "");
+    // a type group is the folder it sits in: the group of the conditions of f1 says f1, the group at the top level (ghost, zero, root) says ""
+    std::size_t groups = 0;
+    for (std::size_t i = 0; i + 1 < nodes.size(); ++i)
+        if (nodes[i].kind == Kind::TypeGroup)
+        {
+            ++groups;
+            CHECK_STR_EQ(ost_domain::folder_context_uid(nodes, i), ost_domain::folder_context_uid(nodes, i + 1)); // its first condition
+            CHECK_STR_EQ(ost_domain::folder_context_uid(nodes, i), nodes[i].depth == 0 ? "" : nodes[i - 1].uid);
+        }
+    CHECK_EQ(groups, static_cast<std::size_t>(3));
+    // no folders at all: the top level everywhere
+    const std::vector<ost_domain::ConditionTreeNode> flat = ost_domain::build_condition_tree(conditions, FolderMap{}, {});
+    for (std::size_t i = 0; i < flat.size(); ++i)
+        CHECK_STR_EQ(ost_domain::folder_context_uid(flat, i), "");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------

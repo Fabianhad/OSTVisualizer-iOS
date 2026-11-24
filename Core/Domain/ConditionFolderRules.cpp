@@ -109,11 +109,6 @@ namespace ost_domain
         return details.issue == FolderNameIssue::None ? FolderRenameDecision::Write : FolderRenameDecision::Refused;
     }
 
-    std::string folder_context_uid(const std::unordered_map<std::string, ConditionFolder> &folders, const std::string &clicked_folder_uid)
-    {
-        return folders.count(clicked_folder_uid) > 0 ? clicked_folder_uid : std::string();
-    }
-
     ConditionFolderDeletePlan plan_condition_folder_delete(const std::unordered_map<std::string, ConditionFolder> &folders,
                                                            const std::unordered_map<std::string, Condition> &conditions,
                                                            const std::vector<std::string> &requested)

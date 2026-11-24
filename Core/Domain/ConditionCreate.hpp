@@ -141,6 +141,12 @@ namespace ost_domain
     // "Failed to create condition.".
     FormIssue condition_create_failed_issue(const std::string &detail = std::string());
 
+    // condition_action_handler.py:764-773: the condition was created, but the conditions list could not be read again (the form shows it once it has
+    // closed): the title and the text of the Windows warning, verbatim.
+    inline constexpr const char *kConditionCreatedRefreshFailedTitle = "Refresh Error";
+    inline constexpr const char *kConditionCreatedRefreshFailedText =
+        "The condition was created, but the conditions list could not be refreshed. Reopen the database to see the new condition.";
+
     // conditions_sidebar.py:1499-1513 _resolve_folder_context_uid over the pre-order nodes of build_condition_tree: the uid of the nearest FOLDER
     // node at or above nodes[index] (the node itself when it is a folder; otherwise the closest preceding node with a smaller depth, repeated, until a
     // folder is found); "" (the top level) when there is none or when `index` is out of range.
