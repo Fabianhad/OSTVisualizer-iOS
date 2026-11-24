@@ -74,9 +74,13 @@ const ost_domain::BidLayer *OSTListedLayer(const std::vector<ost_domain::BidLaye
 
 // The one text field alert of New Layer and Rename: one field, Cancel, and the action, which stays disabled while the typed text is blank
 // (`isBlank`, Core's check). `onAction` gets the text as typed; the rules run there, on the project as it is when the button is pressed. Both
-// blocks capture only a weak self (the caller makes them), so the alert, its actions and the field's action form no cycle: the action the
-// field's block touches is captured weakly.
-void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString *actionTitle, NSString *initialText,
+// blocks capture only a weak self (the caller makes them), so the alert, its actions and the field's actions form no cycle: the alert, the
+// action and the field that the field's blocks touch are captured weakly.
+// The field is a plain name field: the keyboard neither corrects nor spell-checks it (Windows stores exactly what is typed, and the Edit Condition
+// fields switch autocorrection off too), the Return key does what the button does (Windows: Enter accepts the input dialog), and a Rename starts
+// with the old name selected (`selectInitialText`, Windows selectAll(), layers_dialog.py:343 and layers_sidebar.py:283). The name is handed to
+// `onAction` once, by the button or by Return, whichever comes first.
+void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString *actionTitle, NSString *initialText, BOOL selectInitialText,
                               BOOL (^isBlank)(NSString *typed), void (^onAction)(NSString *typed)) {
   UIAlertController *alert =
       [UIAlertController alertControllerWithTitle:title
@@ -86,16 +90,22 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
     textField.text = initialText;
     textField.placeholder = @"Layer name";
     textField.autocapitalizationType = UITextAutocapitalizationTypeWords;
+    textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    textField.spellCheckingType = UITextSpellCheckingTypeNo;
     textField.clearButtonMode = UITextFieldViewModeWhileEditing;
     textField.returnKeyType = UIReturnKeyDone;
   }];
   __weak UIAlertController *weakAlert = alert;
+  __block BOOL handedOver = NO;
   UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"Cancel"
                                                    style:UIAlertActionStyleCancel
                                                  handler:nil];
   UIAlertAction *action = [UIAlertAction actionWithTitle:actionTitle
                                                    style:UIAlertActionStyleDefault
                                                  handler:^(UIAlertAction *chosen) {
+    if (handedOver)
+      return;
+    handedOver = YES;
     UIAlertController *strongAlert = weakAlert;
     NSString *typed = strongAlert.textFields.firstObject.text;
     onAction(typed ? typed : @"");
@@ -115,6 +125,33 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
           strongAction.enabled = !isBlank(typed ? typed : @"");
         }]
       forControlEvents:UIControlEventEditingChanged];
+  // Return = the button, when the button is enabled (a blank name does nothing). The alert is dismissed first, as a button press does, and the
+  // name goes on once it is gone, so an alert of the rules (a duplicate name) is presented over the Layers sheet and not dropped.
+  [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *returned) {
+          UIAlertController *strongAlert = weakAlert;
+          UIAlertAction *strongAction = weakAction;
+          UITextField *strongField = weakField;
+          if (handedOver || !strongAlert || !strongAction.enabled)
+            return;
+          handedOver = YES;
+          NSString *typed = strongField.text;
+          NSString *name = typed ? [typed copy] : @"";
+          [strongAlert dismissViewControllerAnimated:YES
+                                          completion:^{
+                                            onAction(name);
+                                          }];
+        }]
+      forControlEvents:UIControlEventEditingDidEndOnExit];
+  if (selectInitialText) {
+    // UIKit puts the caret at the end when the editing begins, so the selection is made right after that
+    [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *began) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+              UITextField *target = weakField;
+              [target selectAll:nil];
+            });
+          }]
+        forControlEvents:UIControlEventEditingDidBegin];
+  }
   [OSTLayerPresenter(root) presentViewController:alert animated:YES completion:nil];
 }
 
@@ -226,7 +263,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
   __weak ViewController *weakSelf = self;
   NSString *selectedUID = [afterUID copy];
   OSTLayerPresentNameAlert(
-      self, @"New Layer", @"Create", @"",
+      self, @"New Layer", @"Create", @"", NO,
       ^BOOL(NSString *typed) {
         ViewController *strongSelf = weakSelf;
         return strongSelf ? [strongSelf _layerNameIsBlank:typed] : YES;
@@ -285,7 +322,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
   __weak ViewController *weakSelf = self;
   NSString *uid = [layerUID copy];
   OSTLayerPresentNameAlert(
-      self, @"Rename Layer", @"Rename", OSTLayerNS(row->name),
+      self, @"Rename Layer", @"Rename", OSTLayerNS(row->name), YES,
       ^BOOL(NSString *typed) {
         ViewController *strongSelf = weakSelf;
         return strongSelf ? [strongSelf _layerNameIsBlank:typed] : YES;
@@ -312,7 +349,12 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
       OSTLayerPresentAlert(self, OSTLayerNS(check.title), OSTLayerNS(check.message));
     return;
   }
-  const std::vector<ost_domain::BidLayer> before = project.merged_layers;
+  // The list as it is NOW, with the live visibility the sheet shows (is_listed_layer_visible): the visibility toggles of this session change
+  // ProjectData::layers only, so the Show stored in merged_layers may be older than the one the reload returns, and a harmless rename would then
+  // look like a change of Show and redraw for nothing. Windows' snapshot holds the live Show.
+  std::vector<ost_domain::BidLayer> before = project.merged_layers;
+  for (ost_domain::BidLayer &entry : before)
+    entry.show = project.is_listed_layer_visible(entry.uid);
   NSString *storeText = nil;
   if (![ImportService renameLayer:layerUID toName:OSTLayerNS(check.name) inBid:self.bidUID error:&storeText]) {
     OSTLayerPresentDialog(self, ost_domain::layer_write_failure_text(ost_domain::LayerAction::Rename, OSTLayerStd(storeText)));
@@ -428,6 +470,10 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
     return;
   }
   [self _layerSheetChangedSelectingUID:nil];
+  // Windows draws everything again after a delete (project_write_service.py reload_and_notify). A deleted layer is never in use, so no mesh is
+  // built again, but the page background follows the layer named "image" (PlanView renderOverlaysForPage): deleting a hidden layer of that name
+  // brings the page back, so the overlays are drawn again.
+  [self _refreshOverlays];
 }
 
 #pragma mark - Row actions (swipe and long-press menu)

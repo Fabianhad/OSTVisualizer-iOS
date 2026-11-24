@@ -96,7 +96,7 @@ static const int kModeLabelTag2D = 50001;
 
 // The Layers sheet (plan 5.3). ViewController+Layers.mm owns the sheet, its table and the visibility; ViewController+LayerEditing.mm owns the
 // editing. Every method here is called, or named in a selector, from the OTHER file.
-// Implemented in Components/ViewController+Layers.mm: the table of the open Layers sheet (nil when it was never opened), and the reload of the
+// Implemented in Components/ViewController+Layers.mm: the table of the Layers sheet opened last (nil when it was never opened), and the reload of the
 // Conditions list after a layer change (it calls loadConditionsFromProject:; ViewController+LayerEditing.mm calls it after every write).
 - (UITableView *)_layersTableView;
 - (void)_refreshConditionsListForLayerVisibility;

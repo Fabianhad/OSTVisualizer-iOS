@@ -12,6 +12,11 @@
   // layer (Core: merge_layers_for_bid, LP-24, LP-18). The sheet also opens for
   // a bid whose list is empty: Windows allows New Layer there (after_sequence 0,
   // test_layers_sidebar.py:221-246), and "+" creates the first one (M1, 5.3).
+  // Nothing opens while the main controller already presents something (a second tap on Layers, or an
+  // alert): UIKit would refuse the second presentation, and the table stored below would then be an
+  // orphan that _layersTableView hands to the editing flows instead of the one on screen.
+  if (self.presentedViewController)
+    return;
   if (self.projectService.project.empty())
     return;
   [self _rebuildSortedLayerUIDs];
@@ -251,8 +256,9 @@
   [self dismissViewControllerAnimated:YES completion:nil];
 }
 
-// The table of the open Layers sheet (nil when it was never opened): ViewController+LayerEditing.mm reloads it after a write. The associated
-// object is set in _handleLayerToggle, in this file only, so the key is the same literal.
+// The table of the Layers sheet that was opened last (nil when it was never opened; after Done it stays, and reloading it is harmless):
+// ViewController+LayerEditing.mm reloads it after a write. The associated object is set in _handleLayerToggle, in this file only, so the key
+// is the same literal. _handleLayerToggle does not run while something is presented, so this is always the sheet on screen when one is up.
 - (UITableView *)_layersTableView {
   return objc_getAssociatedObject(self, "layerTable");
 }
