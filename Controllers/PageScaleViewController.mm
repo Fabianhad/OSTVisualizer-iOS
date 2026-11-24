@@ -37,6 +37,8 @@ typedef NS_ENUM(NSInteger, PageScaleRow) {
 
 static const NSInteger kCustomField1Tag = 1;
 static const NSInteger kCustomField2Tag = 2;
+// Room, in points, that the table gets below its last row while one of the two numbers is edited: the keyboard covers the lower part of a small phone
+static const CGFloat kKeyboardRoom = 300.0;
 
 @interface PageScaleViewController () <UITableViewDataSource,
                                        UITableViewDelegate, UITextFieldDelegate>
@@ -403,6 +405,34 @@ static const NSInteger kCustomField2Tag = 2;
 }
 
 #pragma mark - Text field delegate
+
+// The table is a plain view controller's, so it does not make room for the keyboard by itself: while a number is edited the table can scroll its row above
+// the keyboard, and the row is brought into view.
+- (void)textFieldDidBeginEditing:(UITextField *)textField {
+  UIEdgeInsets inset = _tableView.contentInset;
+  inset.bottom = kKeyboardRoom;
+  _tableView.contentInset = inset;
+  [_tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:PageScaleRowCustomFields
+                                                        inSection:PageScaleSectionScale]
+                    atScrollPosition:UITableViewScrollPositionMiddle
+                            animated:YES];
+}
+
+// The room is given back when neither number is being edited any more (moving from the first to the second ends one edit and starts the next)
+- (void)textFieldDidEndEditing:(UITextField *)textField {
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [weakSelf _releaseKeyboardRoomIfIdle];
+  });
+}
+
+- (void)_releaseKeyboardRoomIfIdle {
+  if (_customField1.isFirstResponder || _customField2.isFirstResponder)
+    return;
+  UIEdgeInsets inset = _tableView.contentInset;
+  inset.bottom = 0;
+  _tableView.contentInset = inset;
+}
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
   if (textField.tag == kCustomField1Tag) {
