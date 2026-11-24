@@ -94,6 +94,21 @@ static const int kModeLabelTag2D = 50001;
 
 // ---- M1 layers (S2) ----
 
+// The Layers sheet (plan 5.3). ViewController+Layers.mm owns the sheet, its table and the visibility; ViewController+LayerEditing.mm owns the
+// editing. Every method here is called, or named in a selector, from the OTHER file.
+// Implemented in Components/ViewController+Layers.mm: the table of the open Layers sheet (nil when it was never opened), and the reload of the
+// Conditions list after a layer change (it calls loadConditionsFromProject:; ViewController+LayerEditing.mm calls it after every write).
+- (UITableView *)_layersTableView;
+- (void)_refreshConditionsListForLayerVisibility;
+// Implemented in Components/ViewController+LayerEditing.mm: the "+" of the sheet's navigation bar (New Layer at the end; the selector is named by
+// ViewController+Layers.mm), the swipe and the long-press menu of a row (called by the table delegate methods of ViewController+Layers.mm; nil =
+// nothing to offer for that row) and the rebuild of ProjectService.sortedLayerUIDs from merged_layers (called when the sheet opens and after
+// every reload of the lists).
+- (void)_layersAddTapped:(id)sender;
+- (UISwipeActionsConfiguration *)_layerSwipeActionsForUID:(NSString *)layerUID;
+- (UIContextMenuConfiguration *)_layerContextMenuForUID:(NSString *)layerUID;
+- (void)_rebuildSortedLayerUIDs;
+
 // ---- M1 pages A (S3) ----
 
 // ---- M1 pages B (S4) ----
