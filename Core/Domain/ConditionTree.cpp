@@ -13,6 +13,7 @@
 // UID, which is the rowid order SELECT ... FROM BidConditions / BidConditionFolders returns.
 #include "ConditionTree.hpp"
 #include <algorithm>
+#include <deque>
 
 namespace ost_domain
 {
@@ -101,14 +102,67 @@ namespace ost_domain
                 }
             }
 
+            // Pre-order, depth first. The walk keeps its own stack of frames on the heap instead of recursing (plan 5.2, register
+            // CF-10): Windows reads a chain of 8000 nested folders, and one native frame per level would overflow a 1 MB main-thread stack.
             std::vector<ConditionTreeNode> build()
             {
                 std::vector<ConditionTreeNode> nodes;
-                emit_children(std::string(), 0, nodes);
+                std::deque<Frame> stack; // a deque: a frame never moves, so the pointers of its children into its own groups stay valid
+                open_frame(stack, std::string(), 0);
+                while (!stack.empty())
+                {
+                    Frame &frame = stack.back();
+                    if (frame.next == frame.children.size())
+                    {
+                        stack.pop_back();
+                        continue;
+                    }
+                    const Child child = frame.children[frame.next++];
+                    const int depth = frame.depth;
+
+                    ConditionTreeNode node;
+                    node.depth = depth;
+                    if (child.is_folder)
+                    {
+                        node.kind = ConditionTreeNode::Kind::Folder;
+                        node.uid = child.folder->uid;
+                        node.name = child.folder->name;
+                        nodes.push_back(node);
+                        open_frame(stack, child.folder->uid, depth + 1); // its children come before the next sibling
+                        continue;
+                    }
+                    node.kind = ConditionTreeNode::Kind::TypeGroup;
+                    node.uid = child.group->uid;
+                    node.name = child.group->name;
+                    nodes.push_back(node);
+
+                    std::vector<const Condition *> rows = child.group->conditions;
+                    std::stable_sort(rows.begin(), rows.end(),
+                                     [](const Condition *a, const Condition *b) { return a->ref_no < b->ref_no; });
+                    for (const Condition *row : rows)
+                    {
+                        ConditionTreeNode leaf;
+                        leaf.kind = ConditionTreeNode::Kind::Condition;
+                        leaf.depth = depth + 1;
+                        leaf.uid = row->uid;
+                        leaf.name = row->name;
+                        nodes.push_back(leaf);
+                    }
+                }
                 return nodes;
             }
 
         private:
+            // The children of one parent still to be emitted: `children` points into `groups` (and into the folders), `next` is the
+            // index of the child to emit next.
+            struct Frame
+            {
+                int depth = 0;
+                std::vector<Group> groups;
+                std::vector<Child> children;
+                std::size_t next = 0;
+            };
+
             // _build_cdn_type_groups: one group per CdnTypeUID in order of first appearance; the title of a group is
             // "(unassigned)" without a type, the type's name, or "Unknown" for a type uid with no CdnTypes row.
             std::vector<Group> make_groups(const std::vector<const Condition *> &conditions) const
@@ -142,54 +196,23 @@ namespace ost_domain
 
             // The children of one parent (the root when parent_uid is empty): sub-folders first, then the type groups of
             // the conditions placed directly here, stable-sorted by title.
-            void emit_children(const std::string &parent_uid, int depth, std::vector<ConditionTreeNode> &nodes)
+            void open_frame(std::deque<Frame> &stack, const std::string &parent_uid, int depth)
             {
-                std::vector<Group> groups;
+                stack.emplace_back();
+                Frame &frame = stack.back();
+                frame.depth = depth;
                 auto placed = _conditions_by_folder.find(parent_uid);
                 if (placed != _conditions_by_folder.end())
-                    groups = make_groups(placed->second);
+                    frame.groups = make_groups(placed->second);
 
-                std::vector<Child> children;
                 auto sub_folders = _children_by_parent.find(parent_uid);
                 if (sub_folders != _children_by_parent.end())
                     for (const ConditionFolder *folder : sub_folders->second)
-                        children.push_back(Child{true, folder, nullptr, &folder->name});
-                for (const Group &group : groups)
-                    children.push_back(Child{false, nullptr, &group, &group.name});
-                std::stable_sort(children.begin(), children.end(),
+                        frame.children.push_back(Child{true, folder, nullptr, &folder->name});
+                for (const Group &group : frame.groups)
+                    frame.children.push_back(Child{false, nullptr, &group, &group.name});
+                std::stable_sort(frame.children.begin(), frame.children.end(),
                                  [](const Child &a, const Child &b) { return *a.name < *b.name; });
-
-                for (const Child &child : children)
-                {
-                    ConditionTreeNode node;
-                    node.depth = depth;
-                    if (child.is_folder)
-                    {
-                        node.kind = ConditionTreeNode::Kind::Folder;
-                        node.uid = child.folder->uid;
-                        node.name = child.folder->name;
-                        nodes.push_back(node);
-                        emit_children(child.folder->uid, depth + 1, nodes);
-                        continue;
-                    }
-                    node.kind = ConditionTreeNode::Kind::TypeGroup;
-                    node.uid = child.group->uid;
-                    node.name = child.group->name;
-                    nodes.push_back(node);
-
-                    std::vector<const Condition *> rows = child.group->conditions;
-                    std::stable_sort(rows.begin(), rows.end(),
-                                     [](const Condition *a, const Condition *b) { return a->ref_no < b->ref_no; });
-                    for (const Condition *row : rows)
-                    {
-                        ConditionTreeNode leaf;
-                        leaf.kind = ConditionTreeNode::Kind::Condition;
-                        leaf.depth = depth + 1;
-                        leaf.uid = row->uid;
-                        leaf.name = row->name;
-                        nodes.push_back(leaf);
-                    }
-                }
             }
 
             const std::unordered_map<std::string, CdnType> &_cdn_types;
