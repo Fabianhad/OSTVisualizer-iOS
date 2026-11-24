@@ -785,3 +785,58 @@ TEST(ConditionFolderRules, TheInUseLineNamesTheSelectedFolderEvenWhenADescendant
     CHECK_STR_EQ(got.dialog.message, "Cannot delete \"Root\" because it is in use.\n\nDelete the other 1 item(s)?");
     CHECK(got.deletable == std::vector<std::string>({"o"}));
 }
+
+// Mutation check of the fix run (a requested uid that is no folder). A folder listed at the root because its parent uid is dangling ("p9") or
+// the text "0" is nobody's sub-folder: a request for that unknown uid (unknown_folder is true, the screens do nothing with it) must not raise the
+// iOS "Folders inside it move to the top level." flag, while a request for a real parent still does.
+TEST(ConditionFolderRules, ARequestedUidThatIsNoFolderIsNobodysParentForTheSubfoldersFlag)
+{
+    const FolderMap folders = {{"p", {"p", "Parent", ""}}, {"k", {"k", "Kid", "p"}}, {"d", {"d", "Dangling", "p9"}}, {"z", {"z", "Zero", "0"}}};
+    auto plan_for = [&folders](std::vector<std::string> requested) { return ost_domain::plan_condition_folder_delete(folders, {}, requested); };
+
+    CHECK(plan_for({"p"}).subfolders_move); // k survives under the deleted p
+    for (const std::vector<std::string> &requested : {std::vector<std::string>{"p9"}, std::vector<std::string>{"0"}, std::vector<std::string>{"p9", "0"}})
+    {
+        SCOPED_CONTEXT("request " + ost_ftest::join(requested));
+        const ost_domain::ConditionFolderDeletePlan plan = plan_for(requested);
+        CHECK_FALSE(plan.subfolders_move);
+        CHECK(plan.unknown_folder);
+        CHECK(plan.blocked.empty());
+        CHECK(plan.deletable == requested);
+    }
+}
+
+// Mutation check of the fix run (blank before unchanged). conditions_sidebar.py:1466-1471: a blank text is checked BEFORE "the name the editor
+// started with", so a folder whose stored name is empty (a foreign file) renamed to blank spaces is a silent refusal (Blank), never "Unchanged".
+TEST(ConditionFolderRules, ABlankTextOverAnEmptyStoredNameIsStillBlankNotUnchanged)
+{
+    const FolderMap folders = {{"e", {"e", "", ""}}, {"f", {"f", "Walls", ""}}};
+    for (const std::string &typed : std::vector<std::string>{"", " ", "   ", "\t\n", "\xC2\xA0"})
+    {
+        SCOPED_CONTEXT("typed " + ost_test::detail::quote(typed));
+        const Rename got = rename_of(folders, "e", typed);
+        CHECK_STR_EQ(decision_name(got.decision), "Refused");
+        CHECK_STR_EQ(issue_name(got.check.issue), "Blank");
+        CHECK_STR_EQ(got.new_name, "");
+        CHECK_STR_EQ(got.check.name, "");
+    }
+    // the same text over a stored name that has letters is refused as Blank too, and a real name is written
+    CHECK_STR_EQ(decision_name(rename_of(folders, "f", "   ").decision), "Refused");
+    CHECK_STR_EQ(decision_name(rename_of(folders, "e", "Floors").decision), "Write");
+}
+
+// Mutation check of the fix run (parent "0"). The Windows reader reads a ParentUID of NULL, 0, "0" or "" as no parent (test_bid_data_reader.py:358),
+// so "0" means the root even when some folder has the uid "0" (a damaged file: the loader refuses non-positive uids, the store reads raw rows).
+// The folder below is listed at the root, not under that folder, and it is a sibling of the root folders.
+TEST(ConditionFolderRules, AParentUidZeroMeansTheRootEvenWhenAFolderHasTheUidZero)
+{
+    const FolderMap folders = {{"0", {"0", "Zero", ""}}, {"a", {"a", "Kid of zero", "0"}}, {"b", {"b", "Under a", "a"}}};
+    CHECK_STR_EQ(ost_domain::effective_condition_folder_parent(folders, folders.at("a")), "");
+    CHECK_STR_EQ(ost_domain::effective_condition_folder_parent(folders, folders.at("b")), "a");
+
+    // "Zero" and "Kid of zero" are both root folders: the name rule sees them as siblings of a new root folder ...
+    CHECK_STR_EQ(issue_name(ost_domain::check_condition_folder_name(folders, "", "", "kid of ZERO").issue), "DuplicateSibling");
+    CHECK_STR_EQ(issue_name(ost_domain::check_condition_folder_name(folders, "0", "", "zero").issue), "DuplicateSibling");
+    // ... and a folder under "a" is not.
+    CHECK_STR_EQ(issue_name(ost_domain::check_condition_folder_name(folders, "a", "", "zero").issue), "None");
+}
