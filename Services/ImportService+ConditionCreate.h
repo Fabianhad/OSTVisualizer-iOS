@@ -15,6 +15,8 @@
 // failed statement). *errorText (errorText may be NULL) is a text the user must see and is nil for every other failure (the caller then shows
 // ost_domain::condition_create_failed_issue()): the Windows text when the new number would pass the highest condition number 2147483647, the
 // text when no uid is left below 2147483647, and the name-length text of N-M1-13. nil on success.
+// A locked bid is refused with NO text (the writer has no lock text of its own, plan 4.1): when this answers nil and *errorText is nil, the caller asks
+// +isBidLocked: (ImportService+BidLock.h) and says "This bid is locked." when it answers YES, else it shows the generic text.
 + (NSString *)createCondition:(const ost_domain::CreateConditionSpec &)spec
                         inBid:(NSString *)bidUID
                         error:(NSString **)errorText;

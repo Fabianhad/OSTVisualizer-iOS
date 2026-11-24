@@ -2199,3 +2199,57 @@ TEST(CondCreateRollback, AFailedCommitAnswersNothingAndLeavesNothingBehind)
     expect_created(db, "1", valid(), "1", 1, false);
     CHECK_EQ(db.count("SELECT COUNT(*) FROM BidConditions"), 1);
 }
+
+// =====================================================================================================================
+// Added by the fixer after the independent review (not Windows ports): notes that are not text, the spelling of a condition type uid
+// =====================================================================================================================
+
+// The notes are stored as TEXT (plan 4.5; Windows writes a BLOB of the str, which is always valid text). Bytes that are not valid UTF-8 would be read back by the loader
+// as windows-1252, so the text read back would differ from the text written (and an export could not round-trip it): refused like an invalid name, with the generic
+// failure and nothing written. The UI converts from NSString, which is always valid UTF-8, so this is a guard and no user-visible rule. The control: valid UTF-8 notes
+// (accents, an emoji, line breaks, a tab) are stored exactly.
+TEST(CondCreateNames, NotesThatAreNotValidUtf8AreRefusedAndWriteNothing)
+{
+    TempDb db("cc_notes_utf8");
+    REQUIRE(db.schema_ok());
+    seed_world(db);
+    const std::string before = db.snapshot_all();
+    for (const char *notes : {"\xC3\x28", "\xED\xA0\x80", "\xC0\x80", "\xF4\x90\x80\x80", "abc\xFF", "\xE2\x82", "\x80", "ok \xF0\x9F\x98"})
+    {
+        SCOPED_CONTEXT(std::string("notes bytes starting ") + std::to_string(static_cast<unsigned char>(notes[0])));
+        CreateConditionSpec spec = valid("Wall");
+        spec.notes = notes;
+        refusal_call(db, "1", spec, std::string());
+    }
+    CHECK_EQ(db.snapshot_all(), before);
+    CreateConditionSpec good = valid("Wall");
+    good.notes = "caf\xC3\xA9 \xF0\x9F\x98\x80\nline 2\ttab";
+    const std::string uid = ost_store::insert_condition(db.path(), "1", good);
+    REQUIRE(!uid.empty());
+    CHECK_STR_EQ(db.text("SELECT Notes FROM BidConditions WHERE UID = " + uid), good.notes);
+}
+
+// NC-8 and the spelling (Windows condition_operations.py:326-334 reads the type with int(val), which accepts " 7" and "+7"; the layer and the folder are digits-only in
+// Windows too, bid_owned_identity.py:112, the type is not): the iOS writer reads a condition type uid as ASCII digits only, like a layer and a folder, so a blank or a
+// sign makes it malformed (the generic failure, nothing written). No UI path produces such a uid (the type comes from a CdnTypes row's uid text); this pins the
+// recorded deviation. "007" stays a spelling of 7 (the 1:1 port above).
+TEST(CondCreateRefusals, AConditionTypeUidWithABlankOrASignIsRefused)
+{
+    TempDb db("cc_cdn_type_spelling");
+    REQUIRE(db.schema_ok());
+    seed_world(db);
+    const std::string before = db.snapshot_all();
+    for (const char *bad : {" 7", "7 ", "+7", "\t7", "7\n", " 7 "})
+    {
+        SCOPED_CONTEXT(std::string("cdn type uid '") + bad + "'");
+        CreateConditionSpec spec = valid();
+        spec.cdn_type_uid = bad;
+        refusal_call(db, "1", spec, std::string());
+    }
+    CHECK_EQ(db.snapshot_all(), before);
+    CreateConditionSpec spec = valid();
+    spec.cdn_type_uid = "007";
+    const std::string uid = ost_store::insert_condition(db.path(), "1", spec);
+    REQUIRE(!uid.empty());
+    CHECK_EQ(db.count("SELECT CdnTypeUID FROM BidConditions WHERE UID = " + uid), 7);
+}

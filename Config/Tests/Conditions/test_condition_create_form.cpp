@@ -1665,3 +1665,25 @@ TEST(CondCreateSpec, TheStyleIsTheMarkedChangeElseTheFormsOwn)
         CHECK_FALSE(spec.backout);
     }
 }
+
+// Added by the fixer after the independent review (not a Windows port): the notes are stored as TEXT, so notes that are not valid UTF-8 are refused like a name that
+// is not valid UTF-8 (overlong form, UTF-16 surrogate, above U+10FFFF, stray continuation byte, truncated sequence, a bad byte at the end): the generic text, even when
+// the name is fine. Valid notes (accents, emoji, line breaks, a tab, a long text) are accepted: the notes have no length limit here.
+TEST(CondCreateValidate, NotesThatAreNotValidUtf8AreRefused)
+{
+    for (const char *notes : {"\xC3\x28", "\xED\xA0\x80", "\xC0\x80", "\xF4\x90\x80\x80", "abc\xFF", "\xE2\x82", "\x80", "ok \xF0\x9F\x98"})
+    {
+        SCOPED_CONTEXT("bytes of '" + std::to_string(static_cast<unsigned char>(notes[0])) + "...'");
+        CreateConditionSpec spec = named("Wall");
+        spec.notes = notes;
+        const std::optional<FormIssue> issue = validate_create_spec(spec);
+        REQUIRE(issue.has_value());
+        CHECK_STR_EQ(issue->title, kGenericTitle);
+        CHECK_STR_EQ(issue->message, kGenericMessage);
+    }
+    CreateConditionSpec good = named("Wall");
+    good.notes = "caf\xC3\xA9 \xF0\x9F\x98\x80\nline 2\ttab";
+    CHECK_FALSE(validate_create_spec(good).has_value());
+    good.notes = repeat("note ", 5000);
+    CHECK_FALSE(validate_create_spec(good).has_value());
+}

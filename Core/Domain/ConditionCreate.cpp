@@ -17,8 +17,8 @@ namespace ost_domain
 
     namespace
     {
-        // The Windows synthetic condition starts as a Linear condition (condition_action_handler.py:552-587): the colour 13353215 (BGR) is the
-        // light yellow the dialog proposes, the pattern is Transparent.
+        // The Windows synthetic condition starts as a Linear condition (condition_action_handler.py:552-587): the colour 13353215 (0xCBC0FF, ColorFill is
+        // BGR, so R 255, G 192, B 203) is the pink the dialog proposes, the pattern is Transparent.
         constexpr int kNewConditionColorFill = 13353215;
 
         bool is_known_style(int condition_type)
@@ -261,6 +261,10 @@ namespace ost_domain
         // Text that is not valid UTF-8 is never a name (utf16_length: nullopt): a writer refuses it, it never repairs it.
         const std::optional<std::size_t> units = utf16_length(spec.name);
         if (!units)
+            return condition_create_failed_issue();
+        // The same for the notes: they are stored as TEXT (plan 4.5), and the loader would read invalid bytes back as windows-1252, so the text read
+        // back would not be the text written (Windows binds a str, which is always valid text).
+        if (!utf16_length(spec.notes))
             return condition_create_failed_issue();
         // NC-5: the Windows writer accepts an empty name (the dialog refuses it first with name.strip()); a blank one is refused here
         if (ost_import::text_rules::py_strip(spec.name).empty())

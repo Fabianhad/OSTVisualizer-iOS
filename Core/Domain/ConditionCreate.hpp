@@ -130,7 +130,8 @@ namespace ost_domain
 
     // The store-level guards (the form refuses the same values with the Windows texts before it gets here). nullopt = the spec may be written.
     //   - a name longer than 255 UTF-16 units (ost_domain::utf16_length): "Validation Error" / kConditionNameTooLongMessage;
-    //   - a blank name (text.strip() empty, Python str.strip: Unicode white space), a name that is not valid UTF-8, a NaN or infinite number
+    //   - a blank name (text.strip() empty, Python str.strip: Unicode white space), a name or notes that are not valid UTF-8, a NUL in the name or
+    //     the notes (a C string cut), a NaN or infinite number
     //     in any real field (height, width, depth, thickness, rise, run, display_size, spacing, drop_value, round_up, grid_size1, grid_size2,
     //     gap, connect_tolerance): condition_create_failed_issue() (the generic text, decision D10).
     // A huge FINITE number is accepted; display_size is not range-checked here (the form checks 10..500).
