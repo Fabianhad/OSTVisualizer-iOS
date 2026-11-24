@@ -14,6 +14,7 @@
 // list the reload returned) and draws the page and the meshes again only when it answers false (plan 4.11).
 #include "LayerEditTestSupport.hpp"
 
+#include "Data/ProjectData.hpp"
 #include "Domain/Layer.hpp"
 #include "Domain/LayerChangeImpact.hpp"
 
@@ -236,4 +237,54 @@ TEST(LayerChangeImpact, RenameOfAPlainLayerOnTheDevicePackListPreservesRendering
     after[2].name = "Spare";
     after[3].show = false; // a visibility change in the same reload is not "only a rename"
     CHECK_FALSE(layer_rename_preserves_rendering(before, after));
+}
+
+// The snapshot ViewController+LayerEditing.mm takes before a rename (review of the layers UI, defect 4): the merged list with each row's Show
+// replaced by what the sheet shows (ProjectData::is_listed_layer_visible: the live visibility of the bid's own layers, the stored Show of a shared
+// row). A visibility toggle of the session changes ProjectData::layers only, never merged_layers[...].show, while the reload after the rename
+// returns the stored Show: compared as it is, the stale list reads as a change of Show and a harmless rename would redraw the page for nothing.
+// Windows' snapshot holds the live Show (layer_change_impact.py:25 compares it). This pins the recipe with the real rule, not a new rule.
+TEST(LayerChangeImpact, TheSnapshotBeforeARenameHoldsTheLiveVisibilityOfTheSession)
+{
+    ost_data::ProjectData project;
+    project.bid.uid = "10";
+    project.merged_layers = {layer("101", "10", "Image", true, 0, false, true), layer("105", "10", "Walls", true, 4),
+                             layer("106", "10", "Floors", true, 5), layer("8", "", "Shared Template", false, 7, true, true)};
+    for (const BidLayer &l : project.merged_layers)
+    {
+        if (l.bid_uid != "10")
+            continue;
+        ost_domain::Layer live;
+        live.uid = l.uid;
+        live.name = l.name;
+        live.visible = l.show;
+        live.sequence = l.sequence;
+        project.layers[l.uid] = live;
+    }
+    project.layers["106"].visible = false; // Floors was hidden in the sheet after the load: the stored Show of the list entry is still true
+
+    // what the reload after the rename of Walls returns: the file holds Floors hidden
+    std::vector<BidLayer> after = project.merged_layers;
+    after[2].show = false;
+    after[1].name = "Spare";
+
+    // the list as it was loaded reads as a change of Show (what the sheet used to ask)
+    CHECK_FALSE(layer_rename_preserves_rendering(project.merged_layers, after));
+
+    // the snapshot with the live Show reads as the rename it is; the shared row keeps its stored (hidden) Show
+    std::vector<BidLayer> snapshot = project.merged_layers;
+    for (BidLayer &entry : snapshot)
+        entry.show = project.is_listed_layer_visible(entry.uid);
+    CHECK(snapshot[1].show);
+    CHECK_FALSE(snapshot[2].show);
+    CHECK_FALSE(snapshot[3].show);
+    CHECK(layer_rename_preserves_rendering(snapshot, after));
+
+    // a change of Show that really happened in the same reload still counts (Walls hidden by another writer)
+    after[1].show = false;
+    CHECK_FALSE(layer_rename_preserves_rendering(snapshot, after));
+    after[1].show = true;
+    // and a rename to a role name never preserves, whatever the snapshot
+    after[1].name = "Image ";
+    CHECK_FALSE(layer_rename_preserves_rendering(snapshot, after));
 }
