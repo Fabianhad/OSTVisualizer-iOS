@@ -354,3 +354,118 @@ TEST(LayerEditReview, ReloadReadsALockedBidLikeAnyOther)
     CHECK_STR_EQ(ost_ltest::own_text(own), ost_ltest::own_text(project.layers));
     CHECK_STR_EQ(ost_ltest::merged_text(merged), ost_ltest::merged_text(project.merged_layers));
 }
+
+// LY-4b (deviation, safe side): Windows _unique_nonempty_uids (project_write_service.py:6884-6892, `if uid and uid not in seen`) silently drops an
+// empty uid and deletes the rest. Here an empty or malformed element refuses the WHOLE call and writes nothing: a list with such an element is a
+// bug of the caller, and a partial delete would hide it. The same call without the bad element works.
+TEST(LayerEditReview, AnEmptyOrMalformedUidAmongValidOnesRefusesTheWholeDelete)
+{
+    TempDb db("rev_delete_empty_uid");
+    REQUIRE(db.schema_ok());
+    seed_m1(db);
+    const std::string before = db.snapshot_all();
+    const std::vector<std::vector<std::string>> lists = {
+        {"107", ""}, {"", "107"}, {"107", "abc", "106"}, {"107", "-1"}, {"107", "106 "}, {"107", "0"}};
+    int index = 0;
+    for (const std::vector<std::string> &list : lists)
+    {
+        SCOPED_CONTEXT("list " + std::to_string(index++));
+        CHECK_FALSE(ost_store::delete_layers(db.path(), "10", list));
+        CHECK_STR_EQ(db.snapshot_all(), before);
+    }
+    CHECK(ost_store::delete_layers(db.path(), "10", {"107"}));
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidLayers WHERE UID = 107"), 0);
+}
+
+// plan_layer_move: the neighbour must be a row of the OPEN bid. The merged list never holds a row of another bid that is not a shared template, but
+// the plan must not rely on that: a listed neighbour of another bid is refused whatever its template / locked flags are (the shared-template rule
+// alone, IsTemplate and IsLocked and another bid, would let an unflagged foreign neighbour through). The same list with a neighbour of the open bid
+// is allowed, so the refusal is about the bid and not about the position.
+TEST(LayerEditReview, ANeighbourOfAnotherBidIsRefusedWhateverItsFlags)
+{
+    auto make = [](const char *uid, const char *bid, int sequence, bool is_template, bool is_locked)
+    {
+        ost_domain::BidLayer layer;
+        layer.uid = uid;
+        layer.bid_uid = bid;
+        layer.name = std::string("Layer ") + uid;
+        layer.show = true;
+        layer.sequence = sequence;
+        layer.is_template = is_template;
+        layer.is_locked = is_locked;
+        return layer;
+    };
+    for (const bool is_template : {false, true})
+    {
+        for (const bool is_locked : {false, true})
+        {
+            SCOPED_CONTEXT(std::string("template ") + (is_template ? "1" : "0") + " locked " + (is_locked ? "1" : "0"));
+            const std::vector<ost_domain::BidLayer> below = {make("1", "10", 1, false, false), make("2", "20", 2, is_template, is_locked)};
+            const ost_domain::LayerMovePlan down = ost_domain::plan_layer_move(below, "10", "1", +1);
+            CHECK_FALSE(down.allowed);
+            CHECK_STR_EQ(down.neighbor_uid, "");
+            CHECK(!down.refusal.empty());
+            const std::vector<ost_domain::BidLayer> above = {make("2", "20", 1, is_template, is_locked), make("1", "10", 2, false, false)};
+            const ost_domain::LayerMovePlan up = ost_domain::plan_layer_move(above, "10", "1", -1);
+            CHECK_FALSE(up.allowed);
+            CHECK_STR_EQ(up.neighbor_uid, "");
+            CHECK(!up.refusal.empty());
+        }
+    }
+    const std::vector<ost_domain::BidLayer> own_neighbour = {make("1", "10", 1, false, false), make("2", "10", 2, false, false)};
+    const ost_domain::LayerMovePlan allowed = ost_domain::plan_layer_move(own_neighbour, "10", "1", +1);
+    CHECK(allowed.allowed);
+    CHECK_STR_EQ(allowed.neighbor_uid, "2");
+}
+
+// reload_layers judges the UIDs of the bid's OWN layers first, exactly like load_project (a layer UID that is not a positive integer fails the read
+// with the Windows text, the outputs stay untouched). A shared row with a bad UID that comes earlier in the table must not change WHICH problem is
+// reported: without the own-rows check the merged read would name the shared row (-5) instead of the bid's own row (0).
+TEST(LayerEditReview, ReloadFailsLikeLoadProjectForABidWhoseOwnLayerUidIsMalformed)
+{
+    TempDb db("rev_reload_bad_uid");
+    REQUIRE(db.schema_ok());
+    seed_m1(db);
+    put_layer(db, -5, "NULL", "Broken shared", "-1", "8", "-1", "-1"); // a shared row with a non-positive uid, first in rowid order
+    put_layer(db, 0, "10", "Broken own", "-1", "9");                   // an own row with uid 0
+    ost_data::ProjectData project;
+    std::string load_error;
+    CHECK_FALSE(ost_store::load_project(db.path(), "10", project, &load_error));
+    CHECK(load_error.find("malformed UID 0") != std::string::npos);
+
+    std::unordered_map<std::string, ost_domain::Layer> own;
+    own["9"].uid = "9";
+    std::vector<ost_domain::BidLayer> merged(1);
+    merged[0].uid = "9";
+    std::string error;
+    CHECK_FALSE(ost_store::reload_layers(db.path(), "10", own, merged, &error));
+    CHECK_STR_EQ(error, load_error);
+    CHECK_EQ(own.size(), static_cast<std::size_t>(1)); // untouched
+    CHECK_EQ(merged.size(), static_cast<std::size_t>(1));
+}
+
+// plan_layer_move: an empty uid means "no layer selected" and is refused even when a listed row happens to carry an empty uid (the store never
+// produces one, the plan does not rely on that).
+TEST(LayerEditReview, AnEmptyUidIsNeverMovableEvenWhenARowCarriesIt)
+{
+    auto make = [](const char *uid, int sequence)
+    {
+        ost_domain::BidLayer layer;
+        layer.uid = uid;
+        layer.bid_uid = "10";
+        layer.name = std::string("Layer ") + uid;
+        layer.show = true;
+        layer.sequence = sequence;
+        return layer;
+    };
+    const std::vector<ost_domain::BidLayer> listed = {make("", 1), make("2", 2), make("3", 3)};
+    for (const int direction : {-1, +1})
+    {
+        SCOPED_CONTEXT("direction " + std::to_string(direction));
+        const ost_domain::LayerMovePlan plan = ost_domain::plan_layer_move(listed, "10", "", direction);
+        CHECK_FALSE(plan.allowed);
+        CHECK_STR_EQ(plan.neighbor_uid, "");
+        CHECK(!plan.refusal.empty());
+    }
+    CHECK(ost_domain::plan_layer_move(listed, "10", "2", +1).allowed); // the same list moves a row that has a uid
+}
