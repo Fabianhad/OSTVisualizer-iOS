@@ -1,8 +1,8 @@
 // Layer: Domain
 // Pure C++. No UIKit, no Foundation, no sqlite, no Objective-C.
 //
-// Two texts of the page screens (plan 5.5, 5.6) that no other Core file holds: the prompt of the Rename Page alert and the text of a delete
-// that was committed although the bid could not be read again.
+// Texts of the page screens (plan 5.5, 5.6) that no other Core file holds: the prompt of the Rename Page alert, the text of a delete that
+// was committed although the bid could not be read again, and the alert of a delete the store refused.
 //
 // Windows sources (HEAD 49a2d59):
 //   ost_visualizer/presentation/dialogs/rename_page_dialog.py:55-100   title "Rename Page", the read-only "Old Name:" row
@@ -25,4 +25,11 @@ namespace ost_domain
     //   with a reason:    "The page was deleted, but the bid could not be read again: <reason>\n\nThe bid will close. Open it again to continue."
     //   without a reason: "The page was deleted, but the bid could not be read again.\n\nThe bid will close. Open it again to continue."
     DialogText page_delete_reload_failed_text(const std::string &reason);
+
+    // The alert for a delete that the STORE refused (`reason` is the `reason` of ost_store::delete_pages, the errorText of
+    // +[ImportService deletePages:inBid:error:], "" when the store gave none). The last page has its own text: a reason that is exactly
+    // LAST_PAGE_MESSAGE gives {LAST_PAGE_TITLE, LAST_PAGE_MESSAGE}. Every other reason (a failed identity check, a failed statement, a failed
+    // read, a locked bid: the reason is for the log) gives the generic page_delete_failure_text(Delete) with its database-locked hint
+    // (ui_event_coordinator.py:5962-5968). The comparison is exact: a reason that only looks like the last-page text is a generic failure.
+    DialogText page_delete_store_failure_text(const std::string &reason);
 }

@@ -14,7 +14,10 @@
 //   ost_visualizer/presentation/managers/ui_access_manager.py:166-191            _PLACEMENT_BLOCKED (an area placement blocks both items)
 // iOS decisions: N-M1-05 (2D bar: Rename and Delete, 3D bar: Rename only), plan 4.8 (an item is disabled, not hidden, while it cannot act).
 #pragma once
+#include "../Domain/BrowserRules.hpp"
+#include "PageDeletePlan.hpp"
 #include "ProjectData.hpp"
+#include <optional>
 #include <set>
 #include <string>
 
@@ -58,4 +61,9 @@ namespace ost_data
     // load opens (ost_data::initial_page_uid: the saved page when it still exists, else the first page of the tree walk). "" for a project
     // without pages. The uid is compared as exact text. The project is never changed.
     std::string page_selection_after_reload(const ProjectData &project, const std::string &requested_uid);
+
+    // The alert the screen shows when ost_data::plan_page_delete refuses a delete BEFORE any question (ui_event_coordinator.py:5995-6001):
+    // the last page is announced with {LAST_PAGE_TITLE, LAST_PAGE_MESSAGE}. A page the project does not know and an empty project get no
+    // alert (Windows stages nothing and says nothing, :5993-5994), and an allowed plan has nothing to say: std::nullopt for those.
+    std::optional<ost_domain::DialogText> page_delete_refusal_text(PageDeleteRefusal refusal);
 }

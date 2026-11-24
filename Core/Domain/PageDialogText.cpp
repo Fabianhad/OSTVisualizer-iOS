@@ -1,5 +1,6 @@
 // Layer: Domain. The texts of the page screens: see PageDialogText.hpp (plan 5.5, 5.6).
 #include "PageDialogText.hpp"
+#include "PageDeletion.hpp"
 
 namespace ost_domain
 {
@@ -15,5 +16,14 @@ namespace ost_domain
         message += reason.empty() ? std::string(".") : ": " + reason;
         message += "\n\nThe bid will close. Open it again to continue.";
         return {"Delete Page", message};
+    }
+
+    DialogText page_delete_store_failure_text(const std::string &reason)
+    {
+        // ui_event_coordinator.py:5962-5968: every refusal of the delete is "Failed to delete page. <hint>"; the last page is the one the
+        // store names exactly (ProjectStore delete_pages sets LAST_PAGE_MESSAGE) and Windows warns about it under its own text (:5995-6001).
+        if (reason == LAST_PAGE_MESSAGE)
+            return {LAST_PAGE_TITLE, LAST_PAGE_MESSAGE};
+        return page_delete_failure_text(PageDeleteFailure::Delete);
     }
 }

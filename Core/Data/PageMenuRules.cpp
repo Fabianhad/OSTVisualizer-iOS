@@ -2,6 +2,7 @@
 #include "PageMenuRules.hpp"
 #include "PageDeletePlan.hpp"
 #include "PageNavigation.hpp"
+#include "../Domain/PageDeletion.hpp"
 #include "../Domain/PageRules.hpp"
 
 namespace ost_data
@@ -36,6 +37,15 @@ namespace ost_data
         if (!requested_uid.empty() && project.pages.find(requested_uid) != project.pages.end())
             return requested_uid;
         return initial_page_uid(project);
+    }
+
+    std::optional<ost_domain::DialogText> page_delete_refusal_text(PageDeleteRefusal refusal)
+    {
+        // ui_event_coordinator.py:5993-6001: the last page is warned about; a page that is not in the page order stages nothing and says
+        // nothing (:5993-5994); an empty project has no page to delete.
+        if (refusal == PageDeleteRefusal::LastPage)
+            return ost_domain::DialogText{ost_domain::LAST_PAGE_TITLE, ost_domain::LAST_PAGE_MESSAGE};
+        return std::nullopt;
     }
 
     bool page_delete_has_content(const ProjectData &project, const std::string &page_uid, const std::set<std::string> &pages_with_content)
