@@ -14,6 +14,7 @@
 #include "ProjectStore_Integrity.hpp"
 #include "../OstDatabase.hpp"
 #include "../OstSchema.hpp"
+#include "../../Domain/PageDeletion.hpp"
 #include "../../Domain/PositionParser.hpp"
 #include <algorithm>
 #include <cmath>
@@ -424,13 +425,12 @@ namespace ost_store
                 for (const char *table : {"BidDimensions", "BidALines", "BidArrows"})
                     if (!delete_takeoff_links(table))
                         return false;
-                // Page scoped tables: through the bid's pages AND by their own BidUID (PAGE_DELETE_CHILD_TABLES).
-                for (const char *table : {"BidDimensions", "BidALines", "BidArrows", "BidHighlights", "BidTexts", "BidCallOuts",
-                                          "BidAnnotationRects", "BidAnnotationOvals", "BidAnnotationPolygons", "BidAnnotationClouds",
-                                          "BidAnnoInk", "BidLegends", "BidComments", "BidPageSettings", "BidAreaTranslations",
-                                          "BidMarkedPages", "BidPercents", "BidTakeoffTotals", "BidLaborCostCodeTotals",
-                                          "BidTypicalGroupTotals", "BidTypGroupViews", "Boost", "DPCCalcFilter"})
+                // Page scoped tables: through the bid's pages AND by their own BidUID. The list is the one of Delete Page
+                // (ost_domain::PAGE_DELETE_CHILD_TABLES, constants.py:83-110), shared so that a page table is added in ONE place and
+                // both cascades cover it (the catalog test DelPageCatalog pins both).
+                for (std::size_t i = 0; i < ost_domain::PAGE_DELETE_CHILD_TABLE_COUNT; ++i)
                 {
+                    const char *table = ost_domain::PAGE_DELETE_CHILD_TABLES[i];
                     if (!delete_through_pages(table) || !delete_by_bid(table))
                         return false;
                 }
