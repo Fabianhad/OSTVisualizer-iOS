@@ -416,6 +416,21 @@ TEST(ConditionFolderFailure, TheLimitAndSchemaTextsUnderTheTitleOfTheAction)
     CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(ConditionFolderRefusal::UidExhausted, limit)), "New Folder|" + limit);
 }
 
+// Review of S1 (mutant F4: a body that always uses result.message survived): a limit or schema refusal that carries NO text is the generic failure of
+// the action (the title of the action, the iOS wording and the database-locked hint), never an alert with an empty message. The text of the store
+// is used only when the store gave one.
+TEST(ConditionFolderFailure, ALimitOrSchemaRefusalWithoutATextIsTheGenericFailureOfTheAction)
+{
+    for (const ConditionFolderRefusal refusal : {ConditionFolderRefusal::UidExhausted, ConditionFolderRefusal::HierarchyNotSupported})
+    {
+        SCOPED_CONTEXT(ost_ftest::refusal_name(refusal));
+        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Move, refused(refusal)), std::string("Move to Folder|Failed to move the condition. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}}), std::string("Delete Folder|Failed to delete folder. ") + kHint);
+    }
+}
+
 // Windows messagebox.py:84-105 / project_write_service.py:946-953: the blocked folders are named, one line each; the folder that holds the
 // condition may be a sub-folder (CF-11: the text names the selected folder anyway).
 TEST(ConditionFolderFailure, AFolderInUseIsNamedWithTheWindowsText)
