@@ -1560,3 +1560,108 @@ TEST(CondCreateReassemble, TheNameReadsBackThroughTheLoader)
     CHECK_EQ(z, 0.0);
     CHECK_FALSE(top);
 }
+
+// Added in the independent review (not a Windows port): what the form keeps of the Windows synthetic condition in BOTH measurement systems. Only the thickness,
+// the spacing and the first unit follow the metric rows (N-M1-08); the width stays the Windows 12.0 (a Count / Attachment gets its metric width through its style
+// choice, apply_style_change), the other units and quantities, the Connect controls and the snap are the same numbers in a metric bid.
+TEST(CondCreateForm, OnlyThicknessSpacingAndFirstUnitFollowTheMeasurementSystem)
+{
+    const Condition imperial = new_condition_form("40", false);
+    const Condition metric = new_condition_form("40", true);
+    CHECK_EQ(imperial.width, 12.0);
+    CHECK_EQ(metric.width, 12.0);
+    CHECK_EQ(metric.thickness, mm_to_inches(100.0));
+    CHECK_EQ(metric.spacing, mm_to_inches(100.0));
+    CHECK_EQ(metric.uom1, 13);
+    for (const Condition &form : {imperial, metric})
+    {
+        CHECK_EQ(form.calc_type1, 1);
+        CHECK_EQ(form.calc_type2, 0);
+        CHECK_EQ(form.calc_type3, 0);
+        CHECK_EQ(form.uom2, -1);
+        CHECK_EQ(form.uom3, -1);
+        CHECK_EQ(form.height, 0.0);
+        CHECK_EQ(form.depth, 0.0);
+        CHECK_EQ(form.display_size, 100.0);
+        CHECK_EQ(form.color_fill, 13353215);
+        CHECK(form.connect);
+        CHECK_EQ(form.connect_tolerance, 6.0);
+        CHECK_EQ(form.snap_to_linear, -1);
+    }
+}
+
+// Added in the independent review: the store-level guards leave the dialog's own ranges to the dialog. A Display Size outside 10..500 (the form refuses it with
+// "Display Size must be between 10% and 500%.") and a negative or zero dimension are NOT refused here: Windows' writer has no such rule, and a Rise / Run keeps its
+// sign (Linear).
+TEST(CondCreateValidate, TheFormsRangesAreNotTheStoresRules)
+{
+    for (const double display_size : {0.0, 5.0, 9.99, 500.01, 600.0, -3.0})
+    {
+        SCOPED_CONTEXT("display size " + std::to_string(display_size));
+        CreateConditionSpec spec = named("Wall");
+        spec.display_size = display_size;
+        CHECK_FALSE(validate_create_spec(spec).has_value());
+    }
+    CreateConditionSpec spec = named("Wall");
+    spec.rise = -2.5;
+    spec.run = -4.0;
+    spec.thickness = 0.0;
+    spec.width = -1.0;
+    CHECK_FALSE(validate_create_spec(spec).has_value());
+}
+
+// Added in the second independent review (not a Windows port): the style of the spec. Windows build_spec reads the type from the CHANGES (`changes.get(
+// "condition_type", synthetic.condition_type)`, condition_action_handler.py:595): a type that is in `values` but not marked is no change and is never taken, and
+// without a ConditionType change the style is the form's own (the synthetic condition is Linear, so only a caller with another form shows it). A table miss in the
+// form keeps the plain spec defaults like the Windows `TYPE_DEFAULTS.get(cond_type, {})`.
+TEST(CondCreateSpec, TheStyleIsTheMarkedChangeElseTheFormsOwn)
+{
+    const Condition form = new_condition_form("40", false);
+    {
+        SCOPED_CONTEXT("a type in values that is not marked is no change");
+        ConditionChanges changes;
+        changes.values.condition_type = ConditionType::Count;
+        changes.values.name = "Wall";
+        changes.mark(ConditionField::Name);
+        const CreateConditionSpec spec = build_create_spec(form, changes, "", "40", false);
+        CHECK_EQ(spec.condition_type, 0);
+        CHECK_EQ(spec.calc_type1, 1);
+        CHECK_EQ(spec.uom1, 2);
+        CHECK_EQ(spec.shape, -1);
+        CHECK_FALSE(spec.backout);
+    }
+    {
+        SCOPED_CONTEXT("no change: the style of the form");
+        Condition area_form = form;
+        area_form.condition_type = ConditionType::Area;
+        const CreateConditionSpec spec = build_create_spec(area_form, ConditionChanges(), "", "40", false);
+        CHECK_EQ(spec.condition_type, 1);
+        CHECK_EQ(spec.calc_type1, 11);
+        CHECK_EQ(spec.uom1, 5);
+        CHECK_EQ(spec.spacing, 6.0);
+        CHECK(spec.display_grid_while_drawing);
+    }
+    {
+        SCOPED_CONTEXT("a marked change wins over the form");
+        Condition area_form = form;
+        area_form.condition_type = ConditionType::Area;
+        const CreateConditionSpec spec = build_create_spec(area_form, type_only(2), "", "40", false);
+        CHECK_EQ(spec.condition_type, 2);
+        CHECK_EQ(spec.calc_type1, 23);
+        CHECK_EQ(spec.shape, 0);
+        CHECK(spec.backout);
+        CHECK_FALSE(spec.display_grid_while_drawing);
+    }
+    {
+        SCOPED_CONTEXT("a form of a style outside the table keeps the plain spec defaults");
+        Condition odd_form = form;
+        odd_form.condition_type = static_cast<ConditionType>(99);
+        const CreateConditionSpec spec = build_create_spec(odd_form, ConditionChanges(), "", "40", false);
+        CHECK_EQ(spec.condition_type, 99);
+        CHECK_EQ(spec.calc_type1, 0);
+        CHECK_EQ(spec.uom1, 0);
+        CHECK_EQ(spec.shape, -1);
+        CHECK_EQ(spec.thickness, 4.0);
+        CHECK_FALSE(spec.backout);
+    }
+}

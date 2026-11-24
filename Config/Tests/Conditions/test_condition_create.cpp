@@ -2106,3 +2106,96 @@ TEST(CondCreateAlloc, AnUnreadableTableOrColumnIsAGenericFailure)
         CHECK_STR_EQ(refs_of(a), "1,2");
     }
 }
+
+// =====================================================================================================================
+// Added in the independent review (not Windows ports): the ORDER of the checks and the lock under every spelling of the bid uid
+// =====================================================================================================================
+
+// Plan 4.4 item 2 puts the bid lock BEFORE the name / value rules and before the UID limit (ownership, bid lock, name / value rules, UID limit, writes), and
+// Windows refuses a locked bid before the writer runs at all, without a text (project_write_service.py:701-704). So on a locked bid a spec that would ALSO be
+// refused for its name, the number limit or the UID limit is refused with NO text: a text such as "Condition name must not be longer than 255 characters." or the
+// overflow text would tell the user to fix something that could never be saved. Once the bid is open again the SAME calls give the texts, so the empty error text
+// above is the lock's doing and not a missing rule.
+TEST(CondCreateLock, TheLockComesBeforeTheNameTheNumberAndTheUidRules)
+{
+    {
+        SCOPED_CONTEXT("name rules");
+        TempDb db("cc_lock_order_name");
+        REQUIRE(db.schema_ok());
+        seed_world(db);
+        seed_status(db, 5, "-1", "Locked");
+        set_bid_status(db, 1, "5");
+        expect_refused(db, "1", valid(repeat("a", 300)), std::string());
+        expect_refused(db, "1", valid(""), std::string());
+        db.must("UPDATE JobStatuses SET Locked = 0 WHERE UID = 5");
+        expect_refused(db, "1", valid(repeat("a", 300)), std::string(kNameTooLongText));
+        expect_created(db, "1", valid(), "1", 1);
+    }
+    {
+        SCOPED_CONTEXT("number limit");
+        TempDb db("cc_lock_order_number");
+        REQUIRE(db.schema_ok());
+        seed_limit_world(db, 2147483647LL);
+        seed_status(db, 5, "-1", "Locked");
+        set_bid_status(db, 1, "5");
+        expect_refused(db, "1", valid(), std::string());
+        db.must("UPDATE JobStatuses SET Locked = 0 WHERE UID = 5");
+        expect_refused(db, "1", valid(), overflow_text(1, "2147483648"));
+    }
+    {
+        SCOPED_CONTEXT("UID limit");
+        TempDb db("cc_lock_order_uid");
+        REQUIRE(db.schema_ok());
+        seed_world(db);
+        db.must("INSERT INTO BidConditions (UID, BidUID, RefNo, Name, Type) VALUES (2147483647, 1, 1, 'High', 0)");
+        seed_status(db, 5, "-1", "Locked");
+        set_bid_status(db, 1, "5");
+        expect_refused(db, "1", valid(), std::string());
+        db.must("UPDATE JobStatuses SET Locked = 0 WHERE UID = 5");
+        expect_refused(db, "1", valid(), kNoIdentityText);
+    }
+}
+
+// The lock is the lock of the bid the uid NAMES, whatever the spelling (Python int(): blanks, a sign, leading zeros): a locked bid 1 is refused as " 1", "+1" and
+// "01" too, never written to through a spelling that a verbatim compare would miss (the lock bridge of the UI answers for the strict spelling only).
+TEST(CondCreateLock, ALockedBidIsRefusedUnderEverySpellingOfItsUid)
+{
+    TempDb db("cc_lock_spellings");
+    REQUIRE(db.schema_ok());
+    seed_world(db);
+    seed_status(db, 5, "-1", "Locked");
+    set_bid_status(db, 1, "5");
+    const std::string before = db.snapshot_all();
+    for (const char *spelling : {"1", " 1", "1 ", "+1", "01", "\t1\n"})
+    {
+        SCOPED_CONTEXT(std::string("bid uid '") + spelling + "'");
+        refusal_call(db, spelling, valid(), std::nullopt);
+    }
+    CHECK_EQ(db.snapshot_all(), before);
+    db.must("UPDATE JobStatuses SET Locked = 0 WHERE UID = 5");
+    expect_created(db, " 1", valid(), "1", 1);
+}
+
+// =====================================================================================================================
+// Added in the second independent review (not Windows ports): the end of the transaction, the type of a refusal, mutants a lazy writer survives
+// =====================================================================================================================
+
+// Windows mdb_writer.py:63-105 commits at the end of the call and raises (a refusal, nothing written) when the COMMIT fails. A COMMIT that fails is rare (a
+// deferred foreign key that is violated only at the end of the transaction is the portable way to make one): the writer must answer "" and leave the database as
+// it was, never the uid of a row that is not there. A writer that ignores the result of commit() would hand the UI a uid that does not exist. The control: once the
+// referenced row exists the same call commits and answers its uid.
+TEST(CondCreateRollback, AFailedCommitAnswersNothingAndLeavesNothingBehind)
+{
+    TempDb db("cc_commit_fails", false);
+    db.must("CREATE TABLE Bids (UID INTEGER, JobStatusUID)");
+    db.must("INSERT INTO Bids (UID) VALUES (1)");
+    db.must("CREATE TABLE Kinds (Id INTEGER PRIMARY KEY)");
+    db.must("CREATE TABLE BidConditions (UID INTEGER, BidUID INTEGER, RefNo INTEGER, Name TEXT, "
+            "Type INTEGER REFERENCES Kinds(Id) DEFERRABLE INITIALLY DEFERRED)");
+    // the INSERT itself works (a deferred key is checked at COMMIT), the COMMIT does not: type 1 has no Kinds row
+    expect_refused(db, "1", valid(), std::string());
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidConditions"), 0);
+    db.must("INSERT INTO Kinds (Id) VALUES (1)");
+    expect_created(db, "1", valid(), "1", 1, false);
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidConditions"), 1);
+}
