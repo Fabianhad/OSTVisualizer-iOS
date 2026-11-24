@@ -11,11 +11,23 @@ namespace ost_data
     {
         PageMenuState state;
 
+        const bool bid_open = !project.empty();
+        const bool page_exists = !page_uid.empty() && project.pages.find(page_uid) != project.pages.end();
+
+        // Set Scale...: only the 2D bar offers it (N-M1-05), as the first item. The Windows entry (ui_event_coordinator.py:5496-5510) does
+        // nothing without a page of the open bid or without the Feature.EDIT_PAGE_SETTINGS permission (_PLACEMENT_BLOCKED: an area placement in
+        // progress). Unlike Delete Page it does not need a second page: the scale of the only page is a valid setting.
+        if (bar == PageMenuBar::Bar2D)
+        {
+            state.set_scale.shown = true;
+            state.set_scale.enabled = bid_open && page_exists && !area_placement_in_progress;
+        }
+
         // Rename Page...: ui_event_coordinator.py:5714-5731 (a bid is open, the page resolves) plus the Feature.EDIT_PAGE_SETTINGS gate
         // (_PLACEMENT_BLOCKED: an area placement in progress). A blank or unknown uid names no page.
         ost_domain::RenameTargetState rename;
-        rename.bid_open = !project.empty();
-        rename.target_page_exists_in_project = !page_uid.empty() && project.pages.find(page_uid) != project.pages.end();
+        rename.bid_open = bid_open;
+        rename.target_page_exists_in_project = page_exists;
         rename.area_placement_in_progress = area_placement_in_progress;
         state.rename_page.shown = true;
         state.rename_page.enabled = ost_domain::can_rename_page(rename);

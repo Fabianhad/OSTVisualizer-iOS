@@ -36,14 +36,17 @@ namespace ost_data
         bool enabled = false; // the item can be tapped (never true for a hidden item)
     };
 
-    // The items of the page menu that this stream owns (Set Scale is the first item of the 2D bar and is added by its own stream).
+    // The items of the page menu, in the order the screen shows them: Set Scale..., Rename Page..., Delete Page.
     struct PageMenuState
     {
+        PageMenuItem set_scale;   // shown on the 2D bar only (N-M1-05), the first item
         PageMenuItem rename_page; // shown on both bars
         PageMenuItem delete_page; // shown on the 2D bar only (N-M1-05)
     };
 
     // The state of the menu of the page `page_uid`, computed every time the menu is shown (nothing is remembered between two calls):
+    //   set_scale:   shown on Bar2D only; enabled = a bid is open, the page is a page of the open project and no area placement is in progress
+    //                (ui_event_coordinator.py:5496-5510, _PLACEMENT_BLOCKED); a single page does not disable it;
     //   rename_page: shown; enabled = ost_domain::can_rename_page (a bid is open, the page is a page of the open project, no area
     //                placement in progress);
     //   delete_page: shown on Bar2D only; enabled = ost_data::plan_page_delete allows the page (a bid is open, the page is a page of the tree,

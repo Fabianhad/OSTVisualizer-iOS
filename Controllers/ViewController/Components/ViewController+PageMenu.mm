@@ -1,7 +1,7 @@
 // The page menu (plan 4.8, 5.5, 5.6, decision N-M1-05): a long press on a page button of the 3D bar or of the 2D bar opens a UIMenu
 // (system-anchored, so it needs no popover anchor on iPad) that acts on the PRESSED page. The decisions (which items, which of them are
 // enabled) are Core's ost_data::page_menu_state; this file only builds the widgets. The items call the actions of
-// ViewController+PageRename.mm and ViewController+PageDelete.mm, each of which asks the bid lock guard first.
+// ViewController+PageScale.mm, ViewController+PageRename.mm and ViewController+PageDelete.mm, each of which asks the bid lock guard first.
 #include "../../../Core/Data/PageMenuRules.hpp"
 #import "../ViewController_Internal.h"
 
@@ -9,16 +9,18 @@ static NSString *OSTPageMenuNS(const std::string &text) {
   return [NSString stringWithUTF8String:text.c_str()] ?: @"";
 }
 
-// One item of the menu. A disabled item stays visible and greyed out (plan 4.8); the destructive one is red.
-static UIAction *OSTPageMenuAction(NSString *title, NSString *symbolName,
-                                   BOOL enabled, BOOL destructive,
-                                   void (^handler)(void)) {
+// One item of the menu. A disabled item stays visible and greyed out (plan 4.8); the destructive one is red. `subtitle` (nil for none) is the
+// second line of the item.
+static UIAction *OSTPageMenuAction(NSString *title, NSString *subtitle,
+                                   NSString *symbolName, BOOL enabled,
+                                   BOOL destructive, void (^handler)(void)) {
   UIAction *action = [UIAction actionWithTitle:title
                                          image:[UIImage systemImageNamed:symbolName]
                                     identifier:nil
                                        handler:^(__kindof UIAction *chosen) {
                                          handler();
                                        }];
+  action.subtitle = subtitle;
   NSUInteger attributes = 0;
   if (!enabled)
     attributes |= UIMenuElementAttributesDisabled;
@@ -30,9 +32,9 @@ static UIAction *OSTPageMenuAction(NSString *title, NSString *symbolName,
 
 @implementation ViewController (PageMenu)
 
-// THE item list of the page menu: the one place that decides which items exist and in which order. The final order is
+// THE item list of the page menu: the one place that decides which items exist and in which order:
 //
-//   1. Set Scale...   (2D bar only; added by the Set Scale stream S4 at the marked point below, as the FIRST item)
+//   1. Set Scale...   (2D bar only; the subtitle is the current scale label of the pressed page)
 //   2. Rename Page... (both bars)
 //   3. Delete Page    (2D bar only, destructive, disabled with one page)
 //
@@ -49,16 +51,22 @@ static UIAction *OSTPageMenuAction(NSString *title, NSString *symbolName,
   __weak ViewController *weakSelf = self;
   NSMutableArray<UIMenuElement *> *items = [NSMutableArray array];
 
-  // ---- INSERTION POINT (stream S4): "Set Scale..." goes HERE, before Rename Page..., on the 2D bar only. ----
-
+  // "Set Scale..." acts on the PRESSED page (not the active one): the presenter takes the uid, and it asks the bid lock guard itself.
+  if (state.set_scale.shown) {
+    [items addObject:OSTPageMenuAction(
+                         @"Set Scale...", [self _setScaleSubtitleForPageUID:pageUID],
+                         @"ruler", state.set_scale.enabled, NO, ^{
+                           [weakSelf _presentSetScaleForPageUID:pageUID];
+                         })];
+  }
   if (state.rename_page.shown) {
-    [items addObject:OSTPageMenuAction(@"Rename Page...", @"pencil",
+    [items addObject:OSTPageMenuAction(@"Rename Page...", nil, @"pencil",
                                        state.rename_page.enabled, NO, ^{
                                          [weakSelf _renamePageWithUID:pageUID];
                                        })];
   }
   if (state.delete_page.shown) {
-    [items addObject:OSTPageMenuAction(@"Delete Page", @"trash",
+    [items addObject:OSTPageMenuAction(@"Delete Page", nil, @"trash",
                                        state.delete_page.enabled, YES, ^{
                                          [weakSelf _deletePageWithUID:pageUID];
                                        })];
