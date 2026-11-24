@@ -522,6 +522,14 @@ static const int kToolbar2DOnlyTag = 40000;
     return;
   if (_is2DMode)
     return;
+  // A long press that starts on a page button of either bar opens the page menu only: this whole-view recogniser has no delegate and
+  // both bars stay visible in 3D mode, so without this guard the press would also pick the takeoff under the finger or select all
+  // takeoffs of the selected condition (plan 4.8, 5.5; device check M1-14).
+  for (UIScrollView *bar in @[ _pageBar3D, _pageBar2D ]) {
+    if (!bar.hidden &&
+        CGRectContainsPoint(bar.bounds, [lp locationInView:bar]))
+      return;
+  }
 
   CGPoint pt = [lp locationInView:self.view];
   CGFloat scale = [UIScreen mainScreen].scale;
@@ -717,6 +725,7 @@ static const int kToolbar2DOnlyTag = 40000;
 }
 
 - (void)planView:(PlanView *)planView areaPlacementInProgress:(BOOL)inProgress {
+  self.areaPlacementInProgress = inProgress; // read by the page menu when it is shown (ViewController+PageMenu.mm)
   _fab.userInteractionEnabled = !inProgress;
   _fab.alpha = inProgress ? 0.3 : 1.0;
   _snapToggle.userInteractionEnabled = !inProgress;
