@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-11-21",
-  "phase": "Phases 0 to 3 done, the open blockers closed by the user decisions of 2026-11-19, job 5 (2026-11-20) aligned iOS with the fixed Windows b9902e6 and job 6 (2026-11-21) with Windows 49a2d59: all 220 parity records have a final status (172 fixed, 27 fixed-ui-unverified, 16 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 4 no-longer-divergent, 0 open; 199 ported; 173 and 26 at the end of job 5, COND-M08 moved to fixed-ui-unverified in job 6); 25 decisions of 2026-11-19 recorded (21 keep iOS, 4 code changes; 8 of the 21 and the 2 deliberate deviations were overtaken in job 5; the decision of 2026-11-16 for COND-M08 was replaced in job 6); Core host-tested (1760 tests, 1769 with Manifold; 1720 and 1729 before job 6, 1598 on 2026-11-19, 1599 since 5dc7b2b, 1632 before job 5), Objective-C wired, syntax-checked against stubs (27 of 27 files, 0 errors, 4 stub warnings) and, for the code up to e151655, compiled and linked against the real iPhoneOS 18.5 SDK on CI (runs of 2026-11-20 and 2026-11-21 UTC, every workflow step passes; the last run, 44953904172, on e151655, the code of job 6, passed on its first run; before it 44856186199 on df456a2, the code of job 5, and 44678523124 on 275cf66); the code of job 6 was uncommitted in the working tree when written and was committed afterwards (8773287, 8ef1251, bb58e0f, fc3a18e, e151655) and pushed, and it has never run on a device; job 7 (2026-11-21, documents only) recorded the owner's five decisions and the owner's device-check table, which came back with all eleven results blank (nothing recorded as passed or failed, no status changed, the merge into main not done); install, device run and device checks still to do Superseded / updated 2026-11-21 (job 8): job 8 step 0 (documents only): the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes); COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device and fixed again, so 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 4 no-longer-divergent (220; 199 ported); LP-24, LP-22, EXP-12, EXP-16 and the two device bugs (DEV-01, DEV-02) are device-checked; COND-PLACE-01 is half verified (DEV-07); the 23 fixed-ui-unverified items are carried into the next device pack (DEVICE_CHECKS.md at the repository root, to be created in job 8 on the new branch ios-feature-m1); the last CI-verified code state stays e151655",
-  "overall_status": "parity_fixes_done_host_tested_ci_built_eleven_device_checks_passed_23_items_unverified_on_device",
+  "last_updated": "2026-11-24",
+  "phase": "Phases 0 to 3 done, the open blockers closed by the user decisions of 2026-11-19, job 5 (2026-11-20) aligned iOS with the fixed Windows b9902e6 and job 6 (2026-11-21) with Windows 49a2d59: all 220 parity records have a final status (172 fixed, 27 fixed-ui-unverified, 16 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 4 no-longer-divergent, 0 open; 199 ported; 173 and 26 at the end of job 5, COND-M08 moved to fixed-ui-unverified in job 6); 25 decisions of 2026-11-19 recorded (21 keep iOS, 4 code changes; 8 of the 21 and the 2 deliberate deviations were overtaken in job 5; the decision of 2026-11-16 for COND-M08 was replaced in job 6); Core host-tested (1760 tests, 1769 with Manifold; 1720 and 1729 before job 6, 1598 on 2026-11-19, 1599 since 5dc7b2b, 1632 before job 5), Objective-C wired, syntax-checked against stubs (27 of 27 files, 0 errors, 4 stub warnings) and, for the code up to e151655, compiled and linked against the real iPhoneOS 18.5 SDK on CI (runs of 2026-11-20 and 2026-11-21 UTC, every workflow step passes; the last run, 44953904172, on e151655, the code of job 6, passed on its first run; before it 44856186199 on df456a2, the code of job 5, and 44678523124 on 275cf66); the code of job 6 was uncommitted in the working tree when written and was committed afterwards (8773287, 8ef1251, bb58e0f, fc3a18e, e151655) and pushed, and it has never run on a device; job 7 (2026-11-21, documents only) recorded the owner's five decisions and the owner's device-check table, which came back with all eleven results blank (nothing recorded as passed or failed, no status changed, the merge into main not done); install, device run and device checks still to do Superseded / updated 2026-11-21 (job 8): job 8 step 0 (documents only): the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes); COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device and fixed again, so 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 4 no-longer-divergent (220; 199 ported); LP-24, LP-22, EXP-12, EXP-16 and the two device bugs (DEV-01, DEV-02) are device-checked; COND-PLACE-01 is half verified (DEV-07); the 23 fixed-ui-unverified items are carried into the next device pack (DEVICE_CHECKS.md at the repository root, created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20]); the last CI-verified code state stays e151655 Updated 2026-11-24 (job 8, M1): ios-parity-sync was merged into main (merge commit 06d8d69, 2026-11-22; main's run 45039125909 succeeded) and milestone M1 (New Condition, condition folders, layers, Set Scale, rename page, delete page, with their foundations and the page menu) was built on branch ios-feature-m1: Core host-tested (1760 -> 1857 -> 2785 -> 2907 tests, 2916 with Manifold), five whole-milestone reviewers found no blocker, the Objective-C(++) was syntax-checked against stubs only (42 of 42 files) and has never run; the CI build of the branch is run <M1_RUN_ID>, IPA check <M1_IPA_CHECK> (filled in after the build); the 20 device checks M1-01 to M1-20 are in DEVICE_CHECKS.md; the 220 parity statuses did not change.",
+  "overall_status": "parity_fixes_done_host_tested_ci_built_eleven_device_checks_passed_23_items_unverified_on_device_m1_built_host_tested_ci_build_and_20_device_checks_pending",
   "status_vocabulary": [
     "Implemented-matches-Windows",
     "Implemented-matches-Windows-except-decisions",
@@ -10,11 +10,11 @@
     "Not implemented",
     "Obsolete"
   ],
-  "status_notes": "Implemented-diverges (Phase 1 vocabulary) is replaced by Implemented-matches-Windows-except-decisions: every parity id of a system is fixed, or kept different on purpose (wont-fix, or a recorded decision of 2026-11-16 or 2026-11-19 that keeps the iOS behaviour; the two deliberate deviations of 2026-11-19, COND-STYLE-02 and COND-ELEV-01, were replaced by following Windows in job 5). no-longer-divergent = the Windows behaviour changed to the iOS one (MSH-19; since job 5 EXP-16, DBP-04 and LP-22). UI verification is a separate flag (ui_check_ids per system, ui_unverified at top level). Item statuses: fixed, fixed-ui-unverified, wont-fix, cannot-reproduce, no-longer-divergent (item_status); blocked-needs-decision is no longer used since 2026-11-19 (count 0; of the 8 former items BRW-09, EXP-13, IMP-20 and RPV-29 are still wont-fix, DBP-04 and EXP-16 are no-longer-divergent and EXP-12 and LP-24 are fixed since job 5). Implemented-unverified (no run was possible) is kept for the Build, CI and tests system although the GitHub pipeline ran green on 2026-11-20 and 2026-11-21 UTC (the last run, 44953904172, on the code of job 6): the owner ran the IPA of run 44661853681 on a phone (the two device bugs of 2026-11-20); nothing of the code of jobs 5 and 6 has run on a device. Superseded / updated 2026-11-21 (job 6): COND-M08 is fixed-ui-unverified (its new Objective-C wiring, the disabled Unknown (N) style entry, was syntax-checked against stubs and then compiled and linked against the real SDK by CI run 44953904172; it has never run on a device). Superseded / updated 2026-11-21 (job 8): fixed-ui-unverified now means 'compiled on CI, not checked on a device' for 23 items; an item whose checks passed on the owner's iPhone is fixed with a deviceVerified record in PARITY_DIVERGENCES.json (COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01, COND-M08). The Build, CI and tests system keeps Implemented-unverified: the IPA of run 44953904172 ran on the owner's iPhone for the eleven checks DEV-01 to DEV-11 (all PASS); everything else at runtime is unchecked.",
+  "status_notes": "Implemented-diverges (Phase 1 vocabulary) is replaced by Implemented-matches-Windows-except-decisions: every parity id of a system is fixed, or kept different on purpose (wont-fix, or a recorded decision of 2026-11-16 or 2026-11-19 that keeps the iOS behaviour; the two deliberate deviations of 2026-11-19, COND-STYLE-02 and COND-ELEV-01, were replaced by following Windows in job 5). no-longer-divergent = the Windows behaviour changed to the iOS one (MSH-19; since job 5 EXP-16, DBP-04 and LP-22). UI verification is a separate flag (ui_check_ids per system, ui_unverified at top level). Item statuses: fixed, fixed-ui-unverified, wont-fix, cannot-reproduce, no-longer-divergent (item_status); blocked-needs-decision is no longer used since 2026-11-19 (count 0; of the 8 former items BRW-09, EXP-13, IMP-20 and RPV-29 are still wont-fix, DBP-04 and EXP-16 are no-longer-divergent and EXP-12 and LP-24 are fixed since job 5). Implemented-unverified (no run was possible) is kept for the Build, CI and tests system although the GitHub pipeline ran green on 2026-11-20 and 2026-11-21 UTC (the last run, 44953904172, on the code of job 6): the owner ran the IPA of run 44661853681 on a phone (the two device bugs of 2026-11-20); nothing of the code of jobs 5 and 6 has run on a device. Superseded / updated 2026-11-21 (job 6): COND-M08 is fixed-ui-unverified (its new Objective-C wiring, the disabled Unknown (N) style entry, was syntax-checked against stubs and then compiled and linked against the real SDK by CI run 44953904172; it has never run on a device). Superseded / updated 2026-11-21 (job 8): fixed-ui-unverified now means 'compiled on CI, not checked on a device' for 23 items; an item whose checks passed on the owner's iPhone is fixed with a deviceVerified record in PARITY_DIVERGENCES.json (COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01, COND-M08). The Build, CI and tests system keeps Implemented-unverified: the IPA of run 44953904172 ran on the owner's iPhone for the eleven checks DEV-01 to DEV-11 (all PASS); everything else at runtime is unchecked. Updated 2026-11-24 (job 8, M1): the eight M1 records of PARITY_DIVERGENCES.json (m1Items) are fixed-ui-unverified and are not part of the 220 parity items or of the 23 carried ids; the Build, CI and tests system keeps Implemented-unverified.",
   "verification_scope": {
     "ios_repo": "OSTVisualizer (this repository)",
-    "ios_branch": "ios-parity-sync",
-    "ios_head": "42b46c3 (HEAD when the documents were written; GitHub Actions later ran on 292c406, 5dc7b2b, 787a57d, 275cf66 (run 44678523124), df456a2 (run 44856186199) and e151655 (run 44953904172)); job 5 (2026-11-20) worked on top of the later commits (HEAD 275cf66) and was uncommitted in the working tree when it was written; it was committed afterwards (d07abe1, 31dd319, 37fb424, df456a2) Superseded / updated 2026-11-21 (job 6): job 6 (2026-11-21) worked on top of eae0894 (the docs commit of job 5; the last CI-verified code state was then df456a2, run 44856186199) and was uncommitted in the working tree when written; it was committed afterwards (8773287, 8ef1251, bb58e0f, fc3a18e, e151655) and pushed together (eae0894..e151655), and GitHub run 44953904172 on e151655 succeeded; the last CI-verified code state is e151655.",
+    "ios_branch": "ios-feature-m1 (since 2026-11-24, job 8; ios-parity-sync was merged into main as 06d8d69)",
+    "ios_head": "42b46c3 (HEAD when the documents were written; GitHub Actions later ran on 292c406, 5dc7b2b, 787a57d, 275cf66 (run 44678523124), df456a2 (run 44856186199) and e151655 (run 44953904172)); job 5 (2026-11-20) worked on top of the later commits (HEAD 275cf66) and was uncommitted in the working tree when it was written; it was committed afterwards (d07abe1, 31dd319, 37fb424, df456a2) Superseded / updated 2026-11-21 (job 6): job 6 (2026-11-21) worked on top of eae0894 (the docs commit of job 5; the last CI-verified code state was then df456a2, run 44856186199) and was uncommitted in the working tree when written; it was committed afterwards (8773287, 8ef1251, bb58e0f, fc3a18e, e151655) and pushed together (eae0894..e151655), and GitHub run 44953904172 on e151655 succeeded; the last CI-verified code state is e151655. Updated 2026-11-24 (job 8, M1): ios-parity-sync was merged into main as the merge commit 06d8d69 (pull request #1, 2026-11-22) and main's run 45039125909 (head 06d8d69, success) built it, so the last CI-verified code state of main is the code of e151655 as merged; M1 began at 06d8d69 on branch ios-feature-m1 and its code is not CI-verified at the time of writing (run <M1_RUN_ID>, IPA check <M1_IPA_CHECK>).",
     "ios_working_tree": "Uncommitted when written: the Core fixes, the Objective-C wiring, the host tests under Config/Tests, PARITY_DIVERGENCES.json, the status documents and the changes of the decisions job of 2026-11-19 (four code changes with tests). HEAD was level with origin/ios-parity-sync; nothing of this job was committed when this was written (the user commits); it was committed and pushed afterwards (7 commits, 9decbb5 to 292c406) and the two fix(build) commits 5dc7b2b and 787a57d followed, then the two device-bug fixes (34e14c9, aef35d8) and their docs commit 275cf66. Superseded / updated 2026-11-20 (job 5): the changes of job 5 (the Core and Objective-C changes listed in job_5_2026_11_20, the host tests under Config/Tests and the documents) were uncommitted in the working tree when this was written, with no commit or GitHub run; they were committed afterwards (d07abe1, 31dd319, 37fb424, df456a2) and pushed, and GitHub run 44856186199 on df456a2 succeeded. Superseded / updated 2026-11-21 (job 6): the changes of job 6 (the Core and Objective-C changes listed in job_6_2026_11_21, the host tests under Config/Tests and the documents) were uncommitted in the working tree when this was written, with no commit or GitHub run; they were committed afterwards (8773287, 8ef1251, bb58e0f, fc3a18e, e151655) and pushed, and GitHub run 44953904172 on e151655 succeeded.",
     "windows_repo": "OSTVisualizerLicense (read-only reference)",
     "windows_head": "49a2d59",
@@ -44,22 +44,24 @@
     "device_run_performed": true,
     "ci_build_defined": true,
     "ci_build_run": true,
-    "ci_build_run_note": "Runs 44654559214 (5dc7b2b), 44661853681 (787a57d) and 44678523124 (275cf66, the code of the two device-bug fixes), 2026-11-20 UTC, and run 44856186199 (df456a2, the code of job 5; 2026-11-21 UTC, 3 min 13 s, passed on the first run), passed every step. Earlier runs failed in the host unit tests: 2026-11-16 (Meshing, fused multiply-add) and 44642251350 (Geometry marker anchor tie); both fixed. Run 44856186199 saw the code of job 5: it compiles and links against the real SDK and the host tests pass 12 of 12 areas; nothing ran on a device. Superseded / updated 2026-11-21 (job 6): run 44953904172 (e151655, the code of job 6; 2026-11-21 UTC, 6 min 45 s, passed on the first run) passed every step: it compiles and links against the real SDK and the host tests pass 12 of 12 areas; nothing ran on a device; it is the last CI-verified code state (e151655). Superseded / updated 2026-11-21 (job 8): the IPA of run 44953904172 was installed and run on the owner's iPhone and DEV-01 to DEV-11 all PASS; 'nothing ran on a device' and 'has never run on a device' above are the state of jobs 5 to 7.",
+    "ci_build_run_note": "Runs 44654559214 (5dc7b2b), 44661853681 (787a57d) and 44678523124 (275cf66, the code of the two device-bug fixes), 2026-11-20 UTC, and run 44856186199 (df456a2, the code of job 5; 2026-11-21 UTC, 3 min 13 s, passed on the first run), passed every step. Earlier runs failed in the host unit tests: 2026-11-16 (Meshing, fused multiply-add) and 44642251350 (Geometry marker anchor tie); both fixed. Run 44856186199 saw the code of job 5: it compiles and links against the real SDK and the host tests pass 12 of 12 areas; nothing ran on a device. Superseded / updated 2026-11-21 (job 6): run 44953904172 (e151655, the code of job 6; 2026-11-21 UTC, 6 min 45 s, passed on the first run) passed every step: it compiles and links against the real SDK and the host tests pass 12 of 12 areas; nothing ran on a device; it is the last CI-verified code state (e151655). Superseded / updated 2026-11-21 (job 8): the IPA of run 44953904172 was installed and run on the owner's iPhone and DEV-01 to DEV-11 all PASS; 'nothing ran on a device' and 'has never run on a device' above are the state of jobs 5 to 7. Updated 2026-11-24 (job 8, M1): run 45039125909 on main (event push, head 06d8d69, the merge commit; created 2026-11-22 15:35:06 UTC, the build-ipa job finished 15:40:37 UTC) succeeded. The IPA of run 45039125909 was downloaded and checked with the IPA verifier script (nothing from it was run; re-verified on 2026-11-24 on the saved artifact, all checks passed): bundle id com.fabian.ostvisualizer, MinimumOSVersion 16.0, thin arm64 Mach-O with minos 16.0.0, ad-hoc ldid-style signature, entitlements get-task-allowed only (no memory entitlements), 5 archive members; -Os rests on the CI-logged build settings (it cannot be read from a binary). The M1 branch is built by run <M1_RUN_ID> and its IPA check is <M1_IPA_CHECK> (both filled in after the build).",
     "host_test_harness": true,
     "host_harness_selftests": 10,
-    "ios_behavior_tests": 1750,
+    "ios_behavior_tests": 2897,
     "ios_behavior_tests_before_job": 0,
     "ios_behavior_tests_note": "1760 host tests in 12 areas = 10 harness self-tests + 1750 iOS behaviour tests; 1769 with -DOST_TEST_BOOLEAN=ON (job 6, 2026-11-21). Before job 6: 1720 (1729 with the boolean option; 1710 behaviour tests); job 6 changed the suite by a net +40 (+40; 43 new tests, 3 removed), all in Conditions (211 -> 251). Earlier history (job 5, 2026-11-20): 1720 host tests in 12 areas = 10 harness self-tests + 1710 iOS behaviour tests; 1729 with -DOST_TEST_BOOLEAN=ON (job 5, 2026-11-20). Before job 5: 1632 (1640 with the boolean option; 1622 behaviour tests); job 5 changed the suite by a net +88 (+89). History: 1598 and 1606 on 2026-11-19; 1599 and 1607 since 5dc7b2b (Geometry 172); the two device-bug fixes of 2026-11-20 added 33 (Settings +27, Meshing +6). They cover the platform-independent Core only. Before the decisions job of 2026-11-19 the suite held 1576 (1584 with the boolean option); that job added 22 tests (Conditions +16, Settings +6).",
     "objc_syntax_check": {
-      "files": 27,
-      "ok": 27,
+      "files": 42,
+      "ok": 42,
       "failed": 0,
       "errors": 0,
       "warnings": 4,
       "what_it_is": "clang -fsyntax-only (ARC, C++17, build include paths and defines) of every platform .m/.mm against hand-written stub Foundation/UIKit/QuartzCore/CoreGraphics headers that are not in the repo",
       "what_it_is_not": "a build against the real Apple SDK; it says nothing about ARC runtime behaviour, layout or UI",
       "after_job_5": "27 of 27 files, 0 errors, 4 warnings (the same 4 stub warnings) on the working tree with the job-5 wiring",
-      "after_job_6": "27 of 27 files, 0 errors, 4 warnings (the same 4 stub warnings) on the working tree with the job-6 wiring"
+      "after_job_6": "27 of 27 files, 0 errors, 4 warnings (the same 4 stub warnings) on the working tree with the job-6 wiring",
+      "files_before_m1": 27,
+      "after_m1": "42 of 42 platform files, 0 errors, 4 warnings (the same 4 stub warnings) on the tree with the M1 wiring (the files grew from 27 to 42: seven ImportService+ categories, ViewController+BidLock.mm, ConditionFoldersViewController.mm, PageScaleViewController.mm and five ViewController+ category files); the undeclared-selector scan finds exactly the baseline 6 (_elevTypeChanged:, _handleConditionsToggle, _handleLayerToggle, _handleExport, _handlePlaceTap:, _handlePlacePan:)"
     },
     "notes": "Host tests and syntax checks on the authoring machine, where Xcode, xcodebuild, XcodeGen, ldid, macOS, simulator and device are unavailable; GitHub Actions added the AppleClang arm64 host run, the real-SDK build, fake-signing and IPA packaging (2026-11-20 UTC, see not_verified.github). Runtime behaviour on iOS, device performance and real-file fixture parity are unverified; build reproducibility is observed once (the executables of the first two green CI runs are byte-identical; the executable of run 44678523124 differs because it contains the device-bug fixes, and that of run 44856186199 differs again because it contains the code of job 5). Superseded / updated 2026-11-21 (job 6): the executable of run 44953904172 differs again because it contains the code of job 6 (5,140,192 bytes against 5,120,016); the Objective-C wiring of job 6 was built by GitHub in that run.",
     "host_tests_before_2026_11_19": {
@@ -105,7 +107,26 @@
       "note": "net figures: Conditions +14 (CondElev02_ClosingInchMark), +14 (CondAlloc01_NewNumbers 3, CondAlloc01_DuplicateFailed 1, CondAlloc01_DuplicateLimit 10), +15 -3 (CondM08_UnknownStyle 15 added, the three CondM08_UnsupportedType tests removed)"
     },
     "device_run_performed_before_job_8": false,
-    "device_run_performed_note": "By the owner, not by the authoring job (job 8, 2026-11-21): the IPA of run 44953904172 (head e151655) was installed and run on the owner's iPhone and the device checks DEV-01 to DEV-11 all PASS; no per-check notes were given. Before job 8 the value was false (the owner had run the IPA of run 44661853681 earlier and found the two device bugs of 2026-11-20)."
+    "device_run_performed_note": "By the owner, not by the authoring job (job 8, 2026-11-21): the IPA of run 44953904172 (head e151655) was installed and run on the owner's iPhone and the device checks DEV-01 to DEV-11 all PASS; no per-check notes were given. Before job 8 the value was false (the owner had run the IPA of run 44661853681 earlier and found the two device bugs of 2026-11-20).",
+    "ios_branch_before_m1": "ios-parity-sync",
+    "ios_behavior_tests_before_m1": 1750,
+    "ios_behavior_tests_note_m1": "Updated 2026-11-24 (job 8, M1): 2897 behaviour tests + 10 harness self-tests = 2907 (1750 + 10 = 1760 until M1).",
+    "device_run_performed_note_m1": "Updated 2026-11-24 (job 8, M1): nothing of M1 has run on a device; the device checks M1-01 to M1-20 are pending.",
+    "host_tests_before_m1": {
+      "total": 1760,
+      "with_boolean": 1769
+    },
+    "host_tests_added_m1": {
+      "total": 1147,
+      "with_boolean": 1147,
+      "by_step": {
+        "S0 foundations": 97,
+        "six Core / store features": 928,
+        "Core rules of the Objective-C screens": 122
+      },
+      "note": "1760 -> 1857 -> 2785 -> 2907; by area Conditions +297, Formatting +75, Geometry +92, Parsers +27, Persistence +635, Settings +21; the other areas unchanged"
+    },
+    "windows_head_m1": "49a2d59 (unchanged; read-only, nothing in the Windows repository was changed)"
   },
   "evidence_levels": {
     "host-run": "iOS Core C++ compiled and tested on the host (MSVC, and clang with fused multiply-add) against expected values from the Windows tests or from running the Windows Python/native modules read-only",
@@ -173,17 +194,23 @@
       "phase": "8: the owner's device checks (job 8, step 0)",
       "when": "2026-11-21",
       "delivered": "Documents only (no code, test or behaviour change): the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes). COND-ELEV-01 (DEV-04, DEV-10), COND-STYLE-02 (DEV-03), DLG-FINITE-01 (DEV-05, DEV-11) and COND-M08 (DEV-09) became 'verified on device' and moved from fixed-ui-unverified to fixed (deviceVerified, statusBeforeDeviceCheck); LP-24 and LP-22 (DEV-06) and EXP-12 and EXP-16 (DEV-08) keep their status and carry deviceVerified; the two device bugs of 2026-11-20 (DEV-01, fix aef35d8; DEV-02, fix 34e14c9) are verified on device; COND-PLACE-01 stays fixed-ui-unverified (DEV-07 covers the Image-layer half only).",
-      "state": "176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 4 no-longer-divergent, 1 cannot-reproduce (220); the 23 are carried into the next device pack (DEVICE_CHECKS.md, to be created in job 8 on the new branch ios-feature-m1); the merge into main was requested by the owner (job 8) and is recorded after it happens; tests unchanged (1760, 1769 with Manifold)"
+      "state": "176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 4 no-longer-divergent, 1 cannot-reproduce (220); the 23 are carried into the next device pack (DEVICE_CHECKS.md, created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20]); the merge into main was requested by the owner (job 8) and is recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md]; tests unchanged (1760, 1769 with Manifold)"
+    },
+    {
+      "phase": "9: milestone M1, authoring basics (job 8)",
+      "when": "2026-11-24 (branch ios-feature-m1, began at 06d8d69, the merge commit of ios-parity-sync into main)",
+      "delivered": "Step 0: ios-parity-sync merged into main (06d8d69, pull request #1, 2026-11-22) after the owner's device results; main's run 45039125909 succeeded and its IPA was checked. M1 (NEW_FEATURES_PLAN.md, committed as 1e90985, the fifth commit of the branch, after the first four S0 commits 090a996, 46b4e61, 79dd5e7, 54ff58e): foundations (S0) = bid lock guard (Core rule, store reader inside every writer, one UI bridge), UID limit helper 2147483647, shared text-limit helpers, popover anchors of the seven Edit Condition pickers, skeleton headers, marker blocks, test helpers, DeviceTestPack (ten .osp fixtures); New Condition = ConditionCreate rules, insert_condition and allocate_condition_identities, ImportService+ConditionCreate, create mode of the Edit Condition form, '+' and long-press entries; condition folders = folder rules and iterative tree, four writers (create, rename, delete, move to folder), ImportService+ConditionFolders, Folders manager screen, Move to Folder picker; layers = LayerEdit rules, five writers plus the 11-table in-use read and the reload, ImportService+Layers, Layers sheet editing ('+', swipe, long-press menu); Set Scale = page scale rules, transform, legend scanner, all-or-nothing writer save_page_scales, memory twin, ImportService+PageScale, Set Scale form, undo capture and replay of the page scale; rename page = PageRules, rename_page, ProjectData::apply_page_name, ImportService+PageRename, Rename Page alert; delete page = PageDeletion rules, delete_pages and pages_with_delete_content, ImportService+PageDelete, Delete Page confirmation, reload selecting the next page; page menu = one UIMenu on the page buttons (2D bar: Set Scale..., Rename Page..., Delete Page; 3D bar: Rename Page...), the area-placement flag, the 3D long-press guard. Host tests 1760 -> 1857 (S0) -> 2785 (six Core features merged) -> 2907 (final tip; 2916 with Manifold). Whole-milestone review: five independent whole-milestone reviewers (conditions stream; Set Scale stream and undo history; data path of the six writers; UIKit / ARC / threading of layers and pages; cross-file integrity): no blocker and no crash path found; 22 findings, one first reported as major and re-assessed as minor (the New Condition swipe-down guard did not cover the state right after typing); nine fixes were made in six commits (the eight findings of the review: a6dc7f9 the New Condition form notices typing and refuses a NUL, 3b01dc1 folder context-menu alerts deferred and one Folders screen per tap, 1f6bfaf Rename Layer selection and Set Scale Cancel, fb2f9bd stale comments, 17b3a1a the six layer store functions return a failure instead of throwing; and a ninth, 87cdf8c, the folder name alerts select their text with selectedTextRange instead of selectAll:, found by the independent recheck of the fixes). The recheck ACCEPTED the fixes: no blocker and no major; its three minor residuals are the folder alerts' selectAll: (fixed in 87cdf8c: no alert in Controllers or Services calls selectAll: any more), the missing committed test of the function-try-blocks of the six layer store functions (recorded, see the allocation-failure probe that is not committed) and +[UIAction actionWithHandler:], which no file compiled against the real SDK before M1 (the CI build decides); the others are recorded in PORTING_BLOCKERS.md and in the m1Items records of PARITY_DIVERGENCES.json.",
+      "state": "the Core rules and the store functions are host-tested; the Objective-C(++) was syntax-checked against stubs only (42 of 42 files) and has never run; the CI build of the branch is run <M1_RUN_ID>, IPA check <M1_IPA_CHECK> (filled in after the build); 20 device checks M1-01 to M1-20 pending in DEVICE_CHECKS.md; the 220 parity statuses are unchanged (176 fixed, 23 fixed-ui-unverified); the eight M1 records are in PARITY_DIVERGENCES.json m1Items"
     },
     {
       "phase": "Independent review",
       "when": "throughout",
-      "delivered": "Every fix cluster was followed by a separate reviewing agent that re-ran the tests on MSVC and the clang+FMA build, wrote its own differential drivers against the Windows Python/native modules, built mutation variants of the changed Core code to check the new tests catch them, and sent findings back for rework. A final global verification and wiring audit re-read all 220 records and 108 wiring entries. The Windows repo was checked clean before and after each wave. The four code changes of 2026-11-19 were reviewed the same way, each with a mutation check: COND-STYLE-02 (the reviewer closed one test gap), COND-ELEV-01, DLG-FINITE-01 and UND-09 (confirmed fixed). Job 5 (2026-11-20): four independent reviewers read the changes against Windows b9902e6 (0 blockers; 2 majors found and fixed, a missing pipeline-level winding test and a dead end of the floating mode button; minors listed in PORTING_LOG.md; mutation checks of the final tree: 174 mutants in a clean re-check, see not_verified.job_5.mutation_recheck). Job 6 (2026-11-21): five independent read-only reviewers (the elevation rule, the allocator, COND-M08 Core, COND-M08 Objective-C wiring, requirements coverage and tree hygiene) found 0 behaviour defects; their findings were fixed as tests and comments; the fixers mutation-checked their items (49 mutants run, 48 killed, 1 equivalent) and three independent testers then ran 100 mutants on the final tree (elevation rule 41, condition-number guard 30, COND-M08 29): 91 killed after three test gaps were closed by assertions in existing tests (no test added, totals unchanged), 7 equivalent, 2 not killable (see not_verified.job_6.mutation_checks).",
+      "delivered": "Every fix cluster was followed by a separate reviewing agent that re-ran the tests on MSVC and the clang+FMA build, wrote its own differential drivers against the Windows Python/native modules, built mutation variants of the changed Core code to check the new tests catch them, and sent findings back for rework. A final global verification and wiring audit re-read all 220 records and 108 wiring entries. The Windows repo was checked clean before and after each wave. The four code changes of 2026-11-19 were reviewed the same way, each with a mutation check: COND-STYLE-02 (the reviewer closed one test gap), COND-ELEV-01, DLG-FINITE-01 and UND-09 (confirmed fixed). Job 5 (2026-11-20): four independent reviewers read the changes against Windows b9902e6 (0 blockers; 2 majors found and fixed, a missing pipeline-level winding test and a dead end of the floating mode button; minors listed in PORTING_LOG.md; mutation checks of the final tree: 174 mutants in a clean re-check, see not_verified.job_5.mutation_recheck). Job 6 (2026-11-21): five independent read-only reviewers (the elevation rule, the allocator, COND-M08 Core, COND-M08 Objective-C wiring, requirements coverage and tree hygiene) found 0 behaviour defects; their findings were fixed as tests and comments; the fixers mutation-checked their items (49 mutants run, 48 killed, 1 equivalent) and three independent testers then ran 100 mutants on the final tree (elevation rule 41, condition-number guard 30, COND-M08 29): 91 killed after three test gaps were closed by assertions in existing tests (no test added, totals unchanged), 7 equivalent, 2 not killable (see not_verified.job_6.mutation_checks). M1 (2026-11-24): every Core feature and every UI chain was reviewed by a separate agent and mutation-checked on scratch copies, then five independent whole-milestone reviewers (conditions stream; Set Scale stream and undo history; data path of the six writers; UIKit / ARC / threading of layers and pages; cross-file integrity): no blocker and no crash path found; 22 findings, one first reported as major and re-assessed as minor (the New Condition swipe-down guard did not cover the state right after typing); nine fixes were made in six commits (the eight findings of the review: a6dc7f9 the New Condition form notices typing and refuses a NUL, 3b01dc1 folder context-menu alerts deferred and one Folders screen per tap, 1f6bfaf Rename Layer selection and Set Scale Cancel, fb2f9bd stale comments, 17b3a1a the six layer store functions return a failure instead of throwing; and a ninth, 87cdf8c, the folder name alerts select their text with selectedTextRange instead of selectAll:, found by the independent recheck of the fixes). The recheck ACCEPTED the fixes: no blocker and no major; its three minor residuals are the folder alerts' selectAll: (fixed in 87cdf8c: no alert in Controllers or Services calls selectAll: any more), the missing committed test of the function-try-blocks of the six layer store functions (recorded, see the allocation-failure probe that is not committed) and +[UIAction actionWithHandler:], which no file compiled against the real SDK before M1 (the CI build decides); the others are recorded in PORTING_BLOCKERS.md and in the m1Items records of PARITY_DIVERGENCES.json.",
       "state": "Review is by agents; no human code review and, in the authoring jobs, no device test (the owner's DEV-01 to DEV-11 of job 8 all PASS)."
     }
   ],
   "summary": {
-    "overall": "Import, browse, view, edit and export exist in source and the existing features were brought in line with the Windows app: all 220 parity records have a final status and the open decisions were closed on 2026-11-19 (21 keep iOS, 4 code changes). The Core is host-tested; the Objective-C layer is wired, was syntax-checked against stubs and has since been compiled and linked against the real SDK on CI (the whole workflow passes, 2026-11-20 UTC; the run then, 44678523124, on 275cf66; since job 5 the last run is 44856186199 on df456a2); the install, any run on a device and every device check are still to do. Superseded / updated 2026-11-20 (job 5): job 5 aligned iOS with the fixed Windows b9902e6: 173 fixed, 26 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent; Core host-tested with 1720 tests (1729 with Manifold); the new Objective-C wiring of job 5 was syntax-checked against stubs and has been compiled and linked against the real SDK on CI (run 44856186199 on df456a2, success; the host tests pass 12 of 12 areas); it has never run on a device. Superseded / updated 2026-11-21 (job 6): job 6 aligned iOS with three Windows fixes of 49a2d59 (the elevation closing-inch-mark rule, COND-M08 decided as 'keep the stored type, disabled Unknown (N) entry', the condition-number allocator guard for new conditions): COND-M08 moved to fixed-ui-unverified, so 172 fixed, 27 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent; Core host-tested with 1760 tests (1769 with Manifold); the new Objective-C wiring of job 6 was syntax-checked against stubs and has been compiled and linked against the real SDK on CI (run 44953904172 on e151655, success, now the last run; the host tests pass 12 of 12 areas); it has never run on a device. Superseded / updated 2026-11-21 (job 7): documents only; no status changed (172 fixed, 27 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent); the owner's five decisions are recorded (job_7_2026_11_21) and the owner's device-check table came back blank, so nothing is recorded as passed or failed, no item is \"verified on device\" and the merge into main was not done. Superseded / updated 2026-11-21 (job 8): documents only; the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes); COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device and fixed again: 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent; the 23 remaining fixed-ui-unverified items are carried into the next device pack; the earlier statements that the owner's table came back blank, that nothing is verified on device and that the code has never run on a device are the state of jobs 5 to 7 (job_7_2026_11_21 keeps them as history); the merge into main was requested by the owner (job 8) and is recorded after it happens (job_8_2026_11_21).",
+    "overall": "Import, browse, view, edit and export exist in source and the existing features were brought in line with the Windows app: all 220 parity records have a final status and the open decisions were closed on 2026-11-19 (21 keep iOS, 4 code changes). The Core is host-tested; the Objective-C layer is wired, was syntax-checked against stubs and has since been compiled and linked against the real SDK on CI (the whole workflow passes, 2026-11-20 UTC; the run then, 44678523124, on 275cf66; since job 5 the last run is 44856186199 on df456a2); the install, any run on a device and every device check are still to do. Superseded / updated 2026-11-20 (job 5): job 5 aligned iOS with the fixed Windows b9902e6: 173 fixed, 26 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent; Core host-tested with 1720 tests (1729 with Manifold); the new Objective-C wiring of job 5 was syntax-checked against stubs and has been compiled and linked against the real SDK on CI (run 44856186199 on df456a2, success; the host tests pass 12 of 12 areas); it has never run on a device. Superseded / updated 2026-11-21 (job 6): job 6 aligned iOS with three Windows fixes of 49a2d59 (the elevation closing-inch-mark rule, COND-M08 decided as 'keep the stored type, disabled Unknown (N) entry', the condition-number allocator guard for new conditions): COND-M08 moved to fixed-ui-unverified, so 172 fixed, 27 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent; Core host-tested with 1760 tests (1769 with Manifold); the new Objective-C wiring of job 6 was syntax-checked against stubs and has been compiled and linked against the real SDK on CI (run 44953904172 on e151655, success, now the last run; the host tests pass 12 of 12 areas); it has never run on a device. Superseded / updated 2026-11-21 (job 7): documents only; no status changed (172 fixed, 27 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent); the owner's five decisions are recorded (job_7_2026_11_21) and the owner's device-check table came back blank, so nothing is recorded as passed or failed, no item is \"verified on device\" and the merge into main was not done. Superseded / updated 2026-11-21 (job 8): documents only; the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes); COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device and fixed again: 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 1 cannot-reproduce, 4 no-longer-divergent; the 23 remaining fixed-ui-unverified items are carried into the next device pack; the earlier statements that the owner's table came back blank, that nothing is verified on device and that the code has never run on a device are the state of jobs 5 to 7 (job_7_2026_11_21 keeps them as history); the merge into main was requested by the owner (job 8) and is recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md] (job_8_2026_11_21). Updated 2026-11-24 (job 8, M1): milestone M1 (six authoring features) was built on branch ios-feature-m1 after ios-parity-sync was merged into main (06d8d69); the Core is host-tested (2907 tests, 2916 with Manifold) and the Objective-C(++) was syntax-checked against stubs only and has never run; the CI build of the branch is run <M1_RUN_ID>, IPA check <M1_IPA_CHECK>; the 20 device checks M1-01 to M1-20 are pending (DEVICE_CHECKS.md); the 220 parity statuses did not change.",
     "divergences": {
       "total": 220,
       "original": 216,
@@ -307,12 +334,13 @@
     "primary_remaining_work": [
       "install and launch of the fake-signed IPA on a device (CI built, fake-signed and packaged it; structure and hashes were checked locally, acceptance by the installer is not known) [Updated 2026-11-21 (job 8): the IPA of run 44953904172 installed and ran on the owner's iPhone and DEV-01 to DEV-11 all PASS; whether the memory entitlements were applied afterwards was not reported.]",
       "the warnings of the real-SDK build in first-party code (6 -Wundeclared-selector, 3 protocol warnings, 2 Info.plist warnings; none is an error; the Info.plist keys are the owner decision; B-010)",
-      "device checks: the 27 fixed-ui-unverified ids (DLG-FINITE-01 since job 5, COND-M08 since job 6), DEV-01 and DEV-02 (the two device-bug fixes of 2026-11-20), the six device checks of job 5 (DEV-03 to DEV-08) and the three of job 6 (DEV-09 to DEV-11; all eleven are in ui_unverified.device_checks and in PORTING_BLOCKERS.md) and the app in general [Updated 2026-11-21 (job 8): DEV-01 to DEV-11 are all PASS; COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device; 23 fixed-ui-unverified items remain and are carried into the next device pack (DEVICE_CHECKS.md at the repository root, to be created in job 8 on the new branch ios-feature-m1).]",
+      "device checks: the 27 fixed-ui-unverified ids (DLG-FINITE-01 since job 5, COND-M08 since job 6), DEV-01 and DEV-02 (the two device-bug fixes of 2026-11-20), the six device checks of job 5 (DEV-03 to DEV-08) and the three of job 6 (DEV-09 to DEV-11; all eleven are in ui_unverified.device_checks and in PORTING_BLOCKERS.md) and the app in general [Updated 2026-11-21 (job 8): DEV-01 to DEV-11 are all PASS; COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device; 23 fixed-ui-unverified items remain and are carried into the next device pack (DEVICE_CHECKS.md at the repository root, created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20]).]",
       "the 10 owner notes of job 5 (needs_my_decision.owner_notes_2026_11_20; notes a, b and c ask something of the owner (b is the one open question, LP-24), d to j are information; 27 entries, 26 open and 1 informational) and the possible Windows defects that remain after b9902e6 (decisions_2026_11_19.possible_windows_defects, field classification_2026_11_20; the 3 questions of 2026-11-19 are answered) Superseded / updated 2026-11-21 (job 6): notes a, e and g are resolved and five notes are new (needs_my_decision.owner_notes_2026_11_21, k to o): 32 entries, 3 resolved, 2 information only (j and o), 27 open; of the owner notes only b, c and n (add the 105 optional fixture rows?) ask the owner something. Superseded / updated 2026-11-21 (job 7): owner note k is closed (decided by the owner: not ported; a possible Windows defect, silent data loss): 32 entries, 4 resolved (a, e, g, k), 2 information only (j and o), 26 open; the device checks DEV-01 to DEV-11 are still all open (the owner's table came back blank). Updated 2026-11-21 (job 8): the owner reported DEV-01 to DEV-11 all PASS, so the blank table and 'still all open' are history (job_8_2026_11_21); the owner notes are unchanged (32 entries, 4 resolved, 2 informational, 26 open).",
       "real .ost/.osp files for comparison with Windows (none in either repository)",
       "OST/OSP export (B-009) and PDF annotation export (B-004), if the MVP needs them",
       "verified on GitHub (done): run 44856186199 of Build IPA on df456a2 (success) compiled and linked the code of job 5 against the real SDK and passed the host tests, 12 of 12 areas; what remains is its behaviour at runtime (the device checks above: the code has never run on a device) [Updated 2026-11-21 (job 8): DEV-01 to DEV-11 passed on the owner's iPhone, so the code behind them was seen running.]",
-      "verified on GitHub (done): run 44953904172 of Build IPA on e151655 (success) compiled and linked the code of job 6 against the real SDK and passed the host tests, 12 of 12 areas; what remains is its behaviour at runtime (DEV-09 to DEV-11: the code has never run on a device) [Updated 2026-11-21 (job 8): DEV-09 to DEV-11 passed on the owner's iPhone (IPA of run 44953904172).]"
+      "verified on GitHub (done): run 44953904172 of Build IPA on e151655 (success) compiled and linked the code of job 6 against the real SDK and passed the host tests, 12 of 12 areas; what remains is its behaviour at runtime (DEV-09 to DEV-11: the code has never run on a device) [Updated 2026-11-21 (job 8): DEV-09 to DEV-11 passed on the owner's iPhone (IPA of run 44953904172).]",
+      "Updated 2026-11-24 (job 8, M1): the CI build of ios-feature-m1 (run <M1_RUN_ID>, IPA check <M1_IPA_CHECK>) and the owner's device checks M1-01 to M1-20 plus the 23 carried fixed-ui-unverified ids (DEVICE_CHECKS.md); no merge of ios-feature-m1 into main until every check is recorded PASS."
     ],
     "additional_risks": [
       "CI compiles only the Release configuration for iphoneos: the Debug settings were only read back and no iOS Simulator slice was built",
@@ -321,7 +349,8 @@
       "Nyxian entitlements and fake-sign entitlements unvalidated on a device (the CI artifact was checked for structure and hashes only) [Updated 2026-11-21 (job 8): the fake-signed IPA of run 44953904172 installed and ran on the owner's iPhone (DEV-01 to DEV-11 all PASS; how it was installed and signed was not reported); the Nyxian entitlements and the iRAM+ memory entitlements are still unvalidated.]",
       "the CI host tests use the Manifold stub: real Manifold on AppleClang is not exercised by them",
       "the Objective-C wiring of job 5 (COND-PLACE-01 guards and floating-button refusal, the DLG-FINITE-01 alert, LP-24 Hide All through Core, the elevation placeholder, condition_changes_for_save) is syntax-checked against stubs and compiles against the real SDK on CI (run 44856186199) but has never run; its behaviour is host-tested only where the decision lives in Core [Updated 2026-11-21 (job 8): the wiring behind DEV-03 to DEV-08 was seen running on the owner's iPhone (all PASS); the rest of the wiring has not been checked on a device.]",
-      "the Objective-C wiring of job 6 (the disabled Unknown (N) style entry and the Area-like rows of COND-M08, the Duplicate overflow alert) is syntax-checked against stubs and compiles against the real SDK on CI (run 44953904172), but it has never run; every picker of the Edit Condition screen is an action sheet without a popover anchor and the project targets iPad (a pre-existing risk: tapping Style on an iPad would throw; run DEV-09 on an iPhone) [Updated 2026-11-21 (job 8): the wiring behind DEV-09 to DEV-11 was seen running on the owner's iPhone (all PASS).]"
+      "the Objective-C wiring of job 6 (the disabled Unknown (N) style entry and the Area-like rows of COND-M08, the Duplicate overflow alert) is syntax-checked against stubs and compiles against the real SDK on CI (run 44953904172), but it has never run; every picker of the Edit Condition screen is an action sheet without a popover anchor and the project targets iPad (a pre-existing risk: tapping Style on an iPad would throw; run DEV-09 on an iPhone) [Updated 2026-11-21 (job 8): the wiring behind DEV-09 to DEV-11 was seen running on the owner's iPhone (all PASS).] [Updated 2026-11-24 (job 8, M1): S0 (54ff58e) added a popoverPresentationController anchor to each of the seven pickers; the iPad behaviour is device check M1-01, not run.]",
+      "Updated 2026-11-24 (job 8, M1): the Objective-C(++) of M1 (the screens, the seven bridges and the controller wiring) has never been compiled against the real SDK or run; the UIKit assumptions that only a device settles are listed in PORTING_BLOCKERS.md (M1) and in the deviceOnlyOpenPoints of the m1Items records."
     ],
     "decisions_2026_11_19": {
       "recorded": 25,
@@ -1491,10 +1520,10 @@
     ]
   },
   "tests": {
-    "total": 1760,
-    "total_with_boolean": 1769,
+    "total": 2907,
+    "total_with_boolean": 2916,
     "harness_selftests": 10,
-    "ios_behavior_tests": 1750,
+    "ios_behavior_tests": 2897,
     "ios_behavior_tests_before_job": 0,
     "areas": {
       "Browser": {
@@ -1502,20 +1531,20 @@
         "tests_with_boolean": 67
       },
       "Conditions": {
-        "tests": 251,
-        "tests_with_boolean": 251
+        "tests": 548,
+        "tests_with_boolean": 548
       },
       "Export": {
         "tests": 108,
         "tests_with_boolean": 114
       },
       "Formatting": {
-        "tests": 74,
-        "tests_with_boolean": 74
+        "tests": 149,
+        "tests_with_boolean": 149
       },
       "Geometry": {
-        "tests": 173,
-        "tests_with_boolean": 173
+        "tests": 265,
+        "tests_with_boolean": 265
       },
       "Harness": {
         "tests": 10,
@@ -1530,53 +1559,46 @@
         "tests_with_boolean": 110
       },
       "Parsers": {
-        "tests": 120,
-        "tests_with_boolean": 120
+        "tests": 147,
+        "tests_with_boolean": 147
       },
       "Persistence": {
-        "tests": 308,
-        "tests_with_boolean": 308
+        "tests": 943,
+        "tests_with_boolean": 943
       },
       "Quantities": {
         "tests": 134,
         "tests_with_boolean": 134
       },
       "Settings": {
-        "tests": 101,
-        "tests_with_boolean": 101
+        "tests": 122,
+        "tests_with_boolean": 122
       }
     },
     "runs": [
       {
         "compiler": "MSVC (Debug, Ninja)",
         "boolean": false,
-        "tests": 1760,
-        "passed": 1760,
+        "tests": 2907,
+        "passed": 2907,
         "failed": 0
       },
       {
         "compiler": "MSVC (Debug, Ninja)",
         "boolean": true,
-        "tests": 1769,
-        "passed": 1769,
+        "tests": 2916,
+        "passed": 2916,
         "failed": 0
       },
       {
         "compiler": "clang 22 via zig (x86-64 with FMA3, -Os, -ffp-contract=on, Debug flags like CI)",
         "boolean": false,
-        "tests": 1760,
-        "passed": 1760,
-        "failed": 0
-      },
-      {
-        "compiler": "clang 22 via zig (x86-64 with FMA3, -Os, -ffp-contract=on, Debug flags like CI)",
-        "boolean": true,
-        "tests": 1769,
-        "passed": 1769,
+        "tests": 2907,
+        "passed": 2907,
         "failed": 0
       }
     ],
-    "run_date": "2026-11-21",
+    "run_date": "2026-11-24",
     "since_commit_5dc7b2b": {
       "total": 1599,
       "total_with_boolean": 1607,
@@ -1710,24 +1732,184 @@
         "CondElev01_Elevation.TheTextGivesZAndNanIsRefused (10'6 is refused now)"
       ],
       "detail": "net per area (before -> now): Conditions 211 -> 251; every other area unchanged. New file: Conditions/test_condition_elevation_foot_mark.cpp. Counted from the TEST( macros in Config/Tests (1770 macros including the 10 Manifold-only tests; with Manifold one Meshing test is skipped, hence 1769); they agree with the runs."
+    },
+    "host_tests_before_m1": {
+      "total": 1760,
+      "with_boolean": 1769
+    },
+    "tests_added_m1": {
+      "total": 1147,
+      "with_boolean": 1147,
+      "by_step": {
+        "S0 foundations": 97,
+        "six Core / store features": 928,
+        "Core rules of the Objective-C screens": 122
+      },
+      "note": "1760 -> 1857 -> 2785 -> 2907; by area Conditions +297, Formatting +75, Geometry +92, Parsers +27, Persistence +635, Settings +21; the other areas unchanged",
+      "by_area": {
+        "Conditions": 297,
+        "Formatting": 75,
+        "Geometry": 92,
+        "Parsers": 27,
+        "Persistence": 635,
+        "Settings": 21
+      },
+      "milestones": {
+        "s0_baseline": 1857,
+        "core_features_merged_6207367": 2785,
+        "final_tip": 2907,
+        "final_tip_with_boolean": 2916
+      },
+      "per_feature_core_chains": {
+        "New Condition": 121,
+        "condition folders": 145,
+        "layers": 208,
+        "rename page": 93,
+        "delete page": 119,
+        "Set Scale": 242
+      },
+      "per_ui_chain": {
+        "conditions UI": 31,
+        "Layers sheet": 19,
+        "page menu, Rename Page, Delete Page": 34,
+        "Set Scale UI": 31
+      },
+      "integrator": "+7 (page_menu_state gains set_scale, test_page_menu_set_scale.cpp, commit 3367239)"
+    },
+    "runs_job_6_2026_11_21": [
+      {
+        "compiler": "MSVC (Debug, Ninja)",
+        "boolean": false,
+        "tests": 1760,
+        "passed": 1760,
+        "failed": 0
+      },
+      {
+        "compiler": "MSVC (Debug, Ninja)",
+        "boolean": true,
+        "tests": 1769,
+        "passed": 1769,
+        "failed": 0
+      },
+      {
+        "compiler": "clang 22 via zig (x86-64 with FMA3, -Os, -ffp-contract=on, Debug flags like CI)",
+        "boolean": false,
+        "tests": 1760,
+        "passed": 1760,
+        "failed": 0
+      },
+      {
+        "compiler": "clang 22 via zig (x86-64 with FMA3, -Os, -ffp-contract=on, Debug flags like CI)",
+        "boolean": true,
+        "tests": 1769,
+        "passed": 1769,
+        "failed": 0
+      }
+    ],
+    "run_note_m1": "the three runs are the final full runs of M1 on 17b3a1a (2026-11-24; the fixes of the whole-milestone review changed no count); the branch head is 87cdf8c, which changed only Controllers/ConditionFoldersViewController.mm (Objective-C; no host test covers it), so no count can change there; check_objc (42 of 42 platform files OK, 4 baseline stub warnings) and the undeclared-selector scan (exactly the baseline 6) were re-run on 87cdf8c and are unchanged; the Manifold variant was run on MSVC only; 0 warnings in the tests; the Manifold-only tests are local only (the CI host tests run without Manifold)",
+    "areas_at_milestones": {
+      "Browser": {
+        "before_m1": 67,
+        "s0_baseline": 67,
+        "core_features_merged": 67,
+        "final": 67,
+        "final_with_boolean": 67
+      },
+      "Conditions": {
+        "before_m1": 251,
+        "s0_baseline": 251,
+        "core_features_merged": 517,
+        "final": 548,
+        "final_with_boolean": 548
+      },
+      "Export": {
+        "before_m1": 108,
+        "s0_baseline": 108,
+        "core_features_merged": 108,
+        "final": 108,
+        "final_with_boolean": 114
+      },
+      "Formatting": {
+        "before_m1": 74,
+        "s0_baseline": 74,
+        "core_features_merged": 130,
+        "final": 149,
+        "final_with_boolean": 149
+      },
+      "Geometry": {
+        "before_m1": 173,
+        "s0_baseline": 173,
+        "core_features_merged": 265,
+        "final": 265,
+        "final_with_boolean": 265
+      },
+      "Harness": {
+        "before_m1": 10,
+        "s0_baseline": 10,
+        "core_features_merged": 10,
+        "final": 10,
+        "final_with_boolean": 10
+      },
+      "Import": {
+        "before_m1": 307,
+        "s0_baseline": 307,
+        "core_features_merged": 307,
+        "final": 307,
+        "final_with_boolean": 307
+      },
+      "Meshing": {
+        "before_m1": 107,
+        "s0_baseline": 107,
+        "core_features_merged": 107,
+        "final": 107,
+        "final_with_boolean": 110
+      },
+      "Parsers": {
+        "before_m1": 120,
+        "s0_baseline": 147,
+        "core_features_merged": 147,
+        "final": 147,
+        "final_with_boolean": 147
+      },
+      "Persistence": {
+        "before_m1": 308,
+        "s0_baseline": 378,
+        "core_features_merged": 883,
+        "final": 943,
+        "final_with_boolean": 943
+      },
+      "Quantities": {
+        "before_m1": 134,
+        "s0_baseline": 134,
+        "core_features_merged": 134,
+        "final": 134,
+        "final_with_boolean": 134
+      },
+      "Settings": {
+        "before_m1": 101,
+        "s0_baseline": 101,
+        "core_features_merged": 110,
+        "final": 122,
+        "final_with_boolean": 122
+      }
     }
   },
   "verification": [
     {
       "check": "Host unit tests, MSVC (Debug, Ninja), all 12 areas",
-      "result": "1760 of 1760 pass (1769 of 1769 with -DOST_TEST_BOOLEAN=ON); 1720 and 1729 on 2026-11-20, 1598 and 1606 on 2026-11-19",
+      "result": "1760 of 1760 pass (1769 of 1769 with -DOST_TEST_BOOLEAN=ON); 1720 and 1729 on 2026-11-20, 1598 and 1606 on 2026-11-19 Updated 2026-11-24 (job 8, M1): 2907 of 2907 (2916 of 2916 with -DOST_TEST_BOOLEAN=ON) at the final M1 tip; 1857 after S0, 2785 after the six Core features.",
       "proves": "Core C++ logic against expected values from the Windows tests / oracle runs",
       "does_not_prove": "arm64, AppleClang, the real .mm layer"
     },
     {
       "check": "Host unit tests, clang 22 via zig (x86-64 with FMA3, -Os, -ffp-contract=on, Debug flags like CI)",
-      "result": "1760 of 1760 pass (1769 of 1769 with -DOST_TEST_BOOLEAN=ON); 1720 and 1729 on 2026-11-20, 1598 and 1606 on 2026-11-19",
+      "result": "1760 of 1760 pass (1769 of 1769 with -DOST_TEST_BOOLEAN=ON); 1720 and 1729 on 2026-11-20, 1598 and 1606 on 2026-11-19 Updated 2026-11-24 (job 8, M1): 2907 of 2907 at the final M1 tip (the Manifold variant was run on MSVC only: 2916 of 2916).",
       "proves": "numeric results are stable under fused multiply-add (cause of the CI failure of 2026-11-16)",
       "does_not_prove": "AppleClang on arm64 (this only approximates it; CI has since run AppleClang arm64, and this x86-64 proxy did not predict the marker-anchor failure, whose cause is inferred to be a libm last-bit difference)"
     },
     {
       "check": "Objective-C syntax check: -fsyntax-only of every platform .m/.mm (ARC, C++17, same include paths and defines as the build) against hand-written stub Foundation/UIKit/QuartzCore/CoreGraphics headers",
-      "result": "27 of 27 files, 0 errors, 4 warnings (baseline protocol warnings in EditConditionViewController); the same result after the Objective-C wiring of job 5 (27 of 27 files, 0 errors, 4 stub warnings); the same result after the Objective-C wiring of job 6 (27 of 27 files, 0 errors, 4 stub warnings)",
+      "result": "27 of 27 files, 0 errors, 4 warnings (baseline protocol warnings in EditConditionViewController); the same result after the Objective-C wiring of job 5 (27 of 27 files, 0 errors, 4 stub warnings); the same result after the Objective-C wiring of job 6 (27 of 27 files, 0 errors, 4 stub warnings) Updated 2026-11-24 (job 8, M1): 42 of 42 files, 0 errors, 4 stub warnings with the M1 wiring; the selector scan finds exactly the baseline 6 undeclared selectors.",
       "proves": "typos, wrong Core call signatures, missing includes and selectors (against the stubs); it found 4 compile errors already present at HEAD (Core-call signature drift in the drag, view controller and plan view code), now fixed",
       "does_not_prove": "anything about the real Apple SDK, ARC runtime behaviour, layout or UI; the stubs and the checker are not in the repo; the target is macOS (TARGET_OS_IPHONE is 0), the sources contain no such conditionals"
     },
@@ -1748,6 +1930,12 @@
       "result": "3448 rows, 0 differences (job 6, 2026-11-21)",
       "proves": "the shared datetime rule of Windows bf6b8fc / 49a2d59 gives the same N / D answer as the stored fixture, so the iOS import (checked against the same fixture) still matches",
       "does_not_prove": "the 105 optional extra rows (offered, not added to the fixture); the Windows importer on a real .ost file"
+    },
+    {
+      "check": "M1 (job 8, 2026-11-24): mutation checks, allocation-failure probe and review",
+      "result": "mutation checks on scratch copies per feature (New Condition 114 plus 51 mutants, folders 65, layers 69 plus 12 by the reviewer, rename 39, delete page 45 plus 30 by the reviewer, Set Scale 106; every survivor equivalent or closed by a new test); an allocation-failure probe of the six layer store functions (a global operator new that fails the n-th allocation, zig clang; a scratch copy, not committed): after the fix no exception escaped and the database was byte-identical after every injected failure; independent review of every Core feature and every UI chain, then the whole-milestone review of five reviewers",
+      "proves": "the new host tests catch the mutants of the rules, the writers and the form logic; the six layer store functions never throw; no blocker or crash path was found by reading",
+      "does_not_prove": "anything on a device or a simulator: the Objective-C(++) of M1 has never run (ARC at runtime, UIKit behaviour, gestures, keyboard, layout); a build against the real SDK: at the time of writing the branch had not been built by CI (the build run is <M1_RUN_ID>, its IPA check is <M1_IPA_CHECK>, both filled in after the build); the hand-written stubs of check_objc against the real Apple signatures (they were extended for M1: UIControl addAction:forControlEvents:, UIContextualAction, UISwipeActionsConfiguration, UIDeferredMenuElement, UITextInput selection, UIAdaptivePresentationControllerDelegate, UITableView editing); Windows acceptance of the M1 rows (OI-M1-1): the iOS database is SQLite, so it cannot be checked before the M3 round trip; the Windows app has not opened the DeviceTestPack files; the Manifold-only tests on AppleClang (the CI host tests run without Manifold)"
     }
   ],
   "not_verified": {
@@ -1798,7 +1986,7 @@
       "iRAM+ still recognises the app after a reinstall",
       "UI chrome when linked against the iPhoneOS 18.5 SDK instead of Nyxian's device SDK 26.4",
       "RPV-29 (normal flip in the shaders, kept by decision of 2026-11-19): the shaders cannot be regenerated or checked without shaderc and a Metal device",
-      "job 8 (2026-11-21): the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes); the 23 fixed-ui-unverified items (GEO-06, LP-16, RPV-17, RPV-31, RPV-32, RPV-M07, RPV-16, UND-10, UND-03, UND-07, UND-09, QTY-15, COND-PLACE-01, COND-UPD-03, COND-LAYER-01, COND-TRIM-01, UI-M01, BRW-02, BRW-08, BRW-16, DBP-31, POS-M01, EXP-21) are carried into the next device pack (DEVICE_CHECKS.md at the repository root, to be created in job 8 on the new branch ios-feature-m1)"
+      "job 8 (2026-11-21): the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes); the 23 fixed-ui-unverified items (GEO-06, LP-16, RPV-17, RPV-31, RPV-32, RPV-M07, RPV-16, UND-10, UND-03, UND-07, UND-09, QTY-15, COND-PLACE-01, COND-UPD-03, COND-LAYER-01, COND-TRIM-01, UI-M01, BRW-02, BRW-08, BRW-16, DBP-31, POS-M01, EXP-21) are carried into the next device pack (DEVICE_CHECKS.md at the repository root, created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20])"
     ],
     "job_5": {
       "to_be_verified_on_github": "verified on GitHub (the key keeps its earlier name): run 44856186199 of Build IPA (success; head df456a2, the four commits of job 5 d07abe1, 31dd319, 37fb424, df456a2; created 2026-11-21 02:29:37 UTC, 3 min 13 s) has seen the code of job 5: the host tests passed on CI (AppleClang arm64, Manifold stub; 12 of 12 areas) and xcodebuild compiled and linked the app against the real iPhoneOS 18.5 SDK (BUILD SUCCEEDED; the first-party warnings are the same set as in run 44678523124, nothing added); the earlier statement that no run had seen this code (made while it was uncommitted in the working tree and the last run was 44678523124 on 275cf66) is superseded; the host tests also passed locally (1720 on MSVC and clang, 1729 with Manifold); this does not show that the new Objective-C(++) code is correct at runtime, only that it compiles and links with the Core that the host tests cover; nothing ran on a device or a simulator when this was written (updated 2026-11-21 (job 8): DEV-03 to DEV-08 all PASS on the owner's iPhone with the IPA of run 44953904172, which contains this code); the key new_objc_wiring_syntax_checked_only lists the wiring files: they were syntax-checked against the stubs and are now also compiled by that run",
@@ -1829,10 +2017,10 @@
         "Controllers/ViewController/Components/ViewController+Conditions.mm (the text goes into the existing 'Duplicate Error' alert, built from condition_duplicate_failed_issue)"
       ],
       "not_verified_wiring_details": "that a disabled UIAlertAction is greyed and cannot be tapped in an action sheet on iOS 16 and later (API contract, not seen); that nothing marks the current style inside the sheet (the selected entry is only the text of the Style row, a UI idiom difference from the Windows combo box); that the row counts and the built rows agree at runtime and that a reused cell shows the right colours; that the long Duplicate text wraps readably on a phone; the abs() that Windows applies to a negative stored rise or run on a notes-only edit of an Area-like condition (the .mm parse with absolute:YES, which no host test can pin) [Updated 2026-11-21 (job 8): DEV-09 to DEV-11 all PASS on the owner's iPhone, so the wiring of COND-M08 and of the Duplicate alert was seen running; the points of this list that the three checks do not look at stay unverified.]",
-      "ipad_popover": "pre-existing, device only: every picker of the Edit Condition screen is a UIAlertController action sheet without a popover anchor and the project targets iPad (TARGETED_DEVICE_FAMILY 1,2): tapping Style on an iPad would throw (read by a reviewer, not run on an iPad; DEV-09 was run on the owner's iPhone and passed in job 8, the iPad behaviour was not checked); the reused Style cell may also keep a grey value text when a condition without takeoffs follows one with takeoffs (cosmetic)",
+      "ipad_popover": "pre-existing, device only: every picker of the Edit Condition screen is a UIAlertController action sheet without a popover anchor and the project targets iPad (TARGETED_DEVICE_FAMILY 1,2): tapping Style on an iPad would throw (read by a reviewer, not run on an iPad; DEV-09 was run on the owner's iPhone and passed in job 8, the iPad behaviour was not checked) [Updated 2026-11-24 (job 8, M1): S0 (54ff58e) added a popoverPresentationController anchor to each of the seven pickers; the iPad behaviour is device check M1-01, not run.]; the reused Style cell may also keep a grey value text when a condition without takeoffs follows one with takeoffs (cosmetic)",
       "type_7_elsewhere": "how the Conditions list, quantities, 2D and 3D treat a type-7 condition was only read: a reviewer audited every use of the condition type in Core, Controllers, Services, PlanView and Rendering and found no crash site (an unknown type builds no mesh or outline); a Type stored above INT_MAX reads truncated by sqlite3_column_int (out of range, not tested)",
       "windows_facts_not_verified": [
-        "the Windows tests cited were read, not run (the Windows real-Access tests need Access; neither they nor the New Condition, paste, copy-to-another-bid and Renumber Conditions paths have an iOS counterpart)",
+        "the Windows tests cited were read, not run (the Windows real-Access tests need Access; neither they nor the paste, copy-to-another-bid and Renumber Conditions paths have an iOS counterpart; New Condition has one since M1 (2026-11-24), not run against Windows)",
         "the Windows values behind the iOS tests come from running Windows functions in memory read-only (python -B -I, nothing written in the Windows tree) and from a headless run of the real Windows dialog by a reviewer",
         "whether the SQL-Server paths of Windows guard the allocator was not checked (PWD-2)",
         "older iOS files may already hold -2147483648 (a wrapped duplicate) or 2147483648 (an update shift): the guard does not repair them (Windows has no repair either) and a stored value above INT_MAX still reads as negative on load (ProjectStore+Load.cpp, column_int)"
@@ -1844,6 +2032,31 @@
       "manifold": "the 10 Manifold-only tests ran locally with -DOST_TEST_BOOLEAN=ON (1769 of 1769) and are not part of the CI host tests (stub), also not in run 44953904172",
       "mutation_checks": "run by the three fixers, in scratch copies or as temporary edits of the tree restored byte-exact with a sha256 check; 49 mutants run, 48 killed, 1 equivalent. Elevation rule: 26 mutants of ConditionFormRules.cpp (M01 to M26), 25 killed and 1 equivalent (the rule fed the unstripped text; identical on 579,195 short texts over a 14-character alphabet); the mutant 'class without A-Z' survived the first 13 tests and a 14th test closed it. Allocator: 9 mutants run and killed (<= against <, singular/plural swapped, guard dropped, column_int64 against column_int, first row instead of MAX, column check dropped, error not cleared, error not set, guard before the ownership check) and 1 equivalent by reasoning, not run (bind_int64 against bind_int). COND-M08: 14 mutants of Core, all killed in the end (two survived the first tests and were killed after a stored backout = true was added to one test and the new test EditingTheAreaControlsOfAnUnknownTypeSavesLikeAnArea was written). The fix-up pass after the review added 4 mutants in a scratch copy (restored and verified): removing both overflow guards of the elevation parse (feet_digits_to_inches refusing infinity and parse_elevation_z refusing a non-finite value) is killed by 3 tests, among them the reworked rows of CondElev02_ClosingInchMark.ForeignMarksAndMarksWithoutReadableFeetStayRefused; each guard alone is hidden by the other (the first alone survives, 251 of 251 green; the second alone is killed only by CondElev01_Validation.AnInfiniteElevationIsRefused), so the rows pin the combined refusal; a metric-only error in condition_changes_for_save is killed by the new metric iteration of CondM08_UnknownStyle.ANotesOnlySaveWritesOnlyTheNotesColumn and by 3 Core tests (with the old imperial-only shape the SQLite test would not have seen it): 3 killed, 1 survived because of the redundancy. The independent mutation re-check of the final tree (made after the review's fix-up pass): three independent testers mutated the final production code in scratch copies (byte-write mutate and restore; the Conditions area, filtered or full), 100 mutants including 2 controls (the fixers' lists above, 49 mutants, are not part of the 100): elevation rule 41 mutants (37 killed, 4 equivalent), condition-number guard 30 (24 killed, 3 judged equivalent, 3 survived), COND-M08 29 (27 killed, 1 equivalent, 1 survived). Three real gaps that the fixers' lists had missed were closed by assertions inside existing tests (no test was added, the totals did not change): the refusal raised only after the INSERT has run (a third block 'a failing INSERT at the limit' in CondAlloc01_DuplicateLimit.AnUnknownOrForeignConditionAtTheLimitIsTheGenericFailure), count == 1 against count < 2 (judged equivalent by the tester, but it differs for a count of zero: a count-of-zero line in CondAlloc01_NewNumbers.TheMessageIsTheWindowsTextWithSingularAndPlural) and a stored type far outside 0..3 treated as a type change on the save path (the stored types 4, 99, INT_MAX and INT_MIN in the loop of CondM08_UnknownStyle.ANotesOnlyEditOfAConditionWithManyStoredValuesWritesOnlyTheNotes). After the closures 91 of the 100 mutants are killed, 7 are equivalent and 2 cannot be killed (a control that weakens the all-tables snapshot and survives by design, and the error branch of a failing MAX read, which is not testable). The Objective-C(++) wiring cannot be mutation-tested on the host. The full record, with the mutant labels, is in the entry '2026-11-21 - Job 6' of PORTING_LOG.md.",
       "device_checks_added": "DEV-09 to DEV-11 (ui_unverified.device_checks)"
+    },
+    "m1": {
+      "date": "2026-11-24",
+      "summary": "Everything about the Objective-C(++) of M1 at runtime; the CI build of the branch; the stubs against the real SDK; Windows acceptance of the M1 rows.",
+      "verified": [
+        "tests first for every feature, each run red for the right reason where the code did not exist yet; oracle values from the real Windows functions run read-only (python -B -I)",
+        "host tests 1760 -> 1857 (S0) -> 2785 (six Core / store features merged, 6207367) -> 2907 (final tip) on MSVC (Debug) and on the clang build with fused multiply-add; 2916 with Manifold on MSVC; 0 warnings in the tests",
+        "mutation checks on scratch copies per feature (New Condition 114 plus 51 mutants, folders 65, layers 69 plus 12 by the reviewer, rename 39, delete page 45 plus 30 by the reviewer, Set Scale 106; every survivor equivalent or closed by a new test)",
+        "an allocation-failure probe of the six layer store functions (a global operator new that fails the n-th allocation, zig clang; a scratch copy, not committed): after the fix no exception escaped and the database was byte-identical after every injected failure",
+        "independent review of every Core feature and every UI chain, then the whole-milestone review of five reviewers",
+        "check_objc (syntax check against hand-written stubs): 42 of 42 platform files OK, 0 errors, 4 baseline stub warnings; the selector scan finds exactly the baseline 6 undeclared selectors (both re-run on 87cdf8c, the head, after the ninth fix; the host-test runs were made on 17b3a1a); git diff --check clean; every changed text blob LF (the ten binary .osp fixtures excepted)",
+        "plan 6.3 greps on the touched files: every UIAlertControllerStyleActionSheet is anchored, no NSUserDefaults / UIPasteboard / sqlite in the screens, no business rule in the Objective-C"
+      ],
+      "not_verified": [
+        "anything on a device or a simulator: the Objective-C(++) of M1 has never run (ARC at runtime, UIKit behaviour, gestures, keyboard, layout)",
+        "a build against the real SDK: at the time of writing the branch had not been built by CI (the build run is <M1_RUN_ID>, its IPA check is <M1_IPA_CHECK>, both filled in after the build)",
+        "the hand-written stubs of check_objc against the real Apple signatures (they were extended for M1: UIControl addAction:forControlEvents:, UIContextualAction, UISwipeActionsConfiguration, UIDeferredMenuElement, UITextInput selection, UIAdaptivePresentationControllerDelegate, UITableView editing)",
+        "Windows acceptance of the M1 rows (OI-M1-1): the iOS database is SQLite, so it cannot be checked before the M3 round trip; the Windows app has not opened the DeviceTestPack files",
+        "the Manifold-only tests on AppleClang (the CI host tests run without Manifold)"
+      ],
+      "build": {
+        "run": "<M1_RUN_ID>",
+        "ipa_check": "<M1_IPA_CHECK>"
+      },
+      "device_only_open_points": "PORTING_BLOCKERS.md section 'M1 (2026-11-24): what only a device, CI or the owner can settle' and the deviceOnlyOpenPoints of each record in PARITY_DIVERGENCES.json m1Items"
     }
   },
   "systems": [
@@ -2849,9 +3062,10 @@
     {
       "name": "Page settings: set scale, rename/delete page, plan organizer, image adjust (rotate, flip, invert, bitonal), overlay drawing and show mode, page view state",
       "group": "page-settings",
-      "status": "Not implemented",
+      "status": "Partly implemented (M1)",
       "search_result": "No page write exists (0 UPDATE BidPages); overlay fields are loaded but never drawn.",
-      "reference": "LP-16, PARITY_MAP H"
+      "reference": "LP-16, PARITY_MAP H",
+      "m1_update": "Updated 2026-11-24 (job 8, M1): Set Scale, Rename Page and Delete Page are built (M1-SET-SCALE, M1-RENAME-PAGE, M1-DELETE-PAGE, M1-PAGE-MENU); the plan organizer, image adjust, overlay drawing and show mode and the page view state are still not implemented; the search result above is the state before M1"
     },
     {
       "name": "TIFF page images",
@@ -2863,16 +3077,18 @@
     {
       "name": "Layer create, rename, delete, reorder, default layers",
       "group": "editing",
-      "status": "Not implemented",
+      "status": "Partly implemented (M1)",
       "search_result": "The only BidLayers writes are the Show update, template seeding and the bid-delete cascade.",
-      "reference": "PARITY_MAP H"
+      "reference": "PARITY_MAP H",
+      "m1_update": "Updated 2026-11-24 (job 8, M1): layer create, rename, delete and reorder are built (M1-LAYERS); default (template) layers maintenance is still not implemented; the search result above is the state before M1"
     },
     {
       "name": "Condition create, condition-folder CRUD, condition copy/cut/paste across bids, renumber, reassign takeoffs, assign to area",
       "group": "editing",
-      "status": "Not implemented",
+      "status": "Partly implemented (M1)",
       "search_result": "0 hits for reassign or insert_condition and no renumber function (the one `renumbered` hit is a comment on the RefNo shift in EditConditionViewController.mm); iOS has edit, duplicate, delete and RefNo shift only.",
-      "reference": "PARITY_MAP H"
+      "reference": "PARITY_MAP H",
+      "m1_update": "Updated 2026-11-24 (job 8, M1): New Condition and condition-folder create / rename / delete / move are built (M1-NEWCOND, M1-FOLDERS); copy / cut / paste across bids, renumber, reassign takeoffs and assign to area are still not implemented; the search result above is the state before M1"
     },
     {
       "name": "Takeoff editing tools: backout mode, paste backout, cut/copy/paste/duplicate takeoffs, rotate/flip takeoffs, slope handle, set curved segment and control points, marquee select, snap to PDF lines/takeoffs/right angles, PDF text selection, zoom tool",
@@ -2886,7 +3102,8 @@
       "group": "business",
       "status": "Not implemented",
       "search_result": "No cover-sheet or Summary-tab code (the only hits are the browser struct BidSummary and the CoverSheetSel* column names in OstSchema.cpp); areas are not surfaced by decision (DBP-M05).",
-      "reference": "PARITY_MAP H (business)"
+      "reference": "PARITY_MAP H (business)",
+      "m1_update": "Updated 2026-11-24 (job 8, M1): the read of JobStatuses.Locked for the bid lock guard of the M1 writers exists (ost_store::bid_is_locked); the job-status feature itself is not implemented"
     },
     {
       "name": "AI takeoff (analysis, proposals, review, assumptions) and MCP helpers",
@@ -2917,7 +3134,7 @@
       "reference": "PARITY_MAP H (other)"
     }
   ],
-  "not_implemented_note": "Three of the 87 Windows-only features of PARITY_MAP.md section H are now implemented (metric units with dimension display and quantity formatting, quantity rounding with attachment aggregation, count condition shape meshes) and the PDF page index half of 'multi-page PDF page index and TIFF raster pages' is done, so 84 remain.",
+  "not_implemented_note": "Three of the 87 Windows-only features of PARITY_MAP.md section H are now implemented (metric units with dimension display and quantity formatting, quantity rounding with attachment aggregation, count condition shape meshes) and the PDF page index half of 'multi-page PDF page index and TIFF raster pages' is done, so 84 remain. Updated 2026-11-24 (job 8, M1): the count of 84 was not re-derived for M1; the Windows features that M1 built are listed in m1_2026_11_24.built and in the entries marked 'Partly implemented (M1)' above.",
   "platform_only_not_for_ios": [
     "Microsoft Access .mdb access, Compact/Repair (Replaced by SQLite plus direct .ost/.osp import)",
     "Realtime sync with the OST desktop app and OST-active edit blocking",
@@ -2959,7 +3176,7 @@
     ],
     "ci_build_defined": true,
     "ci_build_run": true,
-    "ci_build_run_note": "Runs 44654559214 (5dc7b2b), 44661853681 (787a57d) and 44678523124 (275cf66), 2026-11-20 UTC, and 44856186199 (df456a2, the code of job 5), 2026-11-21 UTC, passed every step. Earlier runs failed in the host unit tests (2026-11-16 Meshing, 44642251350 Geometry) and were fixed. Superseded / updated 2026-11-20 (job 5): run 44856186199 saw the code of job 5 (it compiles against the real SDK and the host tests pass 12 of 12 areas); it has never run on a device. Superseded / updated 2026-11-21 (job 6): run 44953904172 (e151655, the code of job 6; 2026-11-21 UTC) passed every step: it compiles and links against the real SDK and the host tests pass 12 of 12 areas; it has never run on a device. Superseded / updated 2026-11-21 (job 8): the IPA of run 44953904172 was installed and run on the owner's iPhone and DEV-01 to DEV-11 all PASS ('it has never run on a device' above is the state of jobs 5 to 7).",
+    "ci_build_run_note": "Runs 44654559214 (5dc7b2b), 44661853681 (787a57d) and 44678523124 (275cf66), 2026-11-20 UTC, and 44856186199 (df456a2, the code of job 5), 2026-11-21 UTC, passed every step. Earlier runs failed in the host unit tests (2026-11-16 Meshing, 44642251350 Geometry) and were fixed. Superseded / updated 2026-11-20 (job 5): run 44856186199 saw the code of job 5 (it compiles against the real SDK and the host tests pass 12 of 12 areas); it has never run on a device. Superseded / updated 2026-11-21 (job 6): run 44953904172 (e151655, the code of job 6; 2026-11-21 UTC) passed every step: it compiles and links against the real SDK and the host tests pass 12 of 12 areas; it has never run on a device. Superseded / updated 2026-11-21 (job 8): the IPA of run 44953904172 was installed and run on the owner's iPhone and DEV-01 to DEV-11 all PASS ('it has never run on a device' above is the state of jobs 5 to 7). Updated 2026-11-24 (job 8, M1): run 45039125909 on main (head 06d8d69, the merge commit of ios-parity-sync) succeeded; the M1 branch is built by run <M1_RUN_ID> and its IPA check is <M1_IPA_CHECK> (both filled in after the build).",
     "host_test_harness": {
       "path": "Config/Tests",
       "description": "Config/Tests (CMake, C++17): builds Core/*.cpp, sqlite3.c, pugixml.cpp and Rendering/MeshLoader.cpp as ost_core, with a header-only harness (TestHarness.hpp, TestMain.cpp). Area folders Config/Tests/<Area>/test_*.cpp are picked up by CMake glob. Boolean ops are a throwing stub unless -DOST_TEST_BOOLEAN=ON; zlib is downloaded on Windows; non-MSVC compilers get -Os on top of the Debug flags. Run as CI does: cmake -S Config/Tests -B build/tests, cmake --build, ctest.",
@@ -2978,14 +3195,15 @@
         "Settings"
       ],
       "harness_selftests": 10,
-      "ios_behavior_tests": 1750,
+      "ios_behavior_tests": 2897,
       "ios_behavior_tests_before_job": 0,
-      "total_tests": 1760,
-      "total_tests_with_boolean": 1769,
-      "total_tests_note": "Counts of job 6 (2026-11-21); 1720 and 1729 as of job 5 (2026-11-20), 1598 and 1606 on 2026-11-19, 1599 and 1607 since 5dc7b2b, 1632 and 1640 before job 5; see tests.",
+      "total_tests": 2907,
+      "total_tests_with_boolean": 2916,
+      "total_tests_note": "Counts of job 6 (2026-11-21); 1720 and 1729 as of job 5 (2026-11-20), 1598 and 1606 on 2026-11-19, 1599 and 1607 since 5dc7b2b, 1632 and 1640 before job 5; see tests. Updated 2026-11-24 (job 8, M1): 2907 and 2916 at the final M1 tip (1857 after S0, 2785 after the six Core features); 1760 and 1769 until M1.",
       "fixtures": "Config/Tests/Fixtures holds 12 files: 10 oracle tables recorded from the Windows side and 2 cabinets (makecab_mszip.cab, makecab_two_folders.cab). The repo contains no real .ost or .osp project; the import tests build their XML and packages in code.",
       "result": "MSVC and clang+FMA: 1760 of 1760 (1769 of 1769 with -DOST_TEST_BOOLEAN=ON), the final full job-6 runs of 2026-11-21 on the finished tree (the earlier runs of the combined tree before the independent review gave the same numbers; 1720 and 1729 in the job-5 runs of 2026-11-20). On CI (AppleClang 17 arm64, Manifold stub) ctest passed 100% of 12 areas in runs 44654559214, 44661853681 and 44678523124 (all on code before job 5; the suite held 1599 tests in the first two runs and 1632 at 275cf66) and in run 44856186199 on df456a2 (the code of job 5; 1720 tests locally, the 10 Manifold-only tests of the 1729 are not part of the CI step); CI does not print a count. Job 6: ctest also passed 100% of 12 areas in run 44953904172 on e151655 (the code of job 6; 1760 tests locally, the Manifold-only tests of the 1769 are not part of the CI step).",
-      "parity_measurements": "Phase 1 compared the iOS Core C++ (MSVC host build) with the Windows Python/native modules using throw-away harnesses outside the repo; the committed tests now carry the expected values."
+      "parity_measurements": "Phase 1 compared the iOS Core C++ (MSVC host build) with the Windows Python/native modules using throw-away harnesses outside the repo; the committed tests now carry the expected values.",
+      "result_m1": "MSVC and clang+FMA: 2907 of 2907 (2916 of 2916 with -DOST_TEST_BOOLEAN=ON on MSVC), the final full M1 runs of 2026-11-24, 0 warnings in the tests"
     },
     "dependencies": [
       "Libs/Manifold/lib/libmanifold.a is tracked (minos 16.0, read from the Mach-O load commands in Phase 0); arm64 and minos are checked by CI steps.",
@@ -3133,7 +3351,7 @@
       },
       {
         "id": "m",
-        "note": "iOS-side notes of job 6 (nothing was changed for them): (1) the seven UIAlertControllerStyleActionSheet pickers of EditConditionViewController+Pickers.mm have no popover anchor and the project targets iPad (TARGETED_DEVICE_FAMILY 1,2): tapping Style or any picker on an iPad would throw; pre-existing, device only, unverified; run DEV-09 on an iPhone; (2) the reused Style cell may keep a grey detail text when a condition without takeoffs follows one with takeoffs (pre-existing, cosmetic); (3) _applyStyleChangeTo: has no guard against a non-real target, unreachable while the Unknown (N) action is disabled (Windows has the same single protection); (4) how the Conditions list, the quantities, 2D and 3D treat a type-7 condition was only read: no crash site was found; (5) a Type stored above INT_MAX reads truncated by sqlite3_column_int (out of range, not tested).",
+        "note": "iOS-side notes of job 6 (nothing was changed for them): (1) the seven UIAlertControllerStyleActionSheet pickers of EditConditionViewController+Pickers.mm have no popover anchor and the project targets iPad (TARGETED_DEVICE_FAMILY 1,2): tapping Style or any picker on an iPad would throw; pre-existing, device only, unverified; run DEV-09 on an iPhone [Updated 2026-11-24 (job 8, M1): S0 (54ff58e) added a popoverPresentationController anchor to each of the seven pickers; the iPad behaviour is device check M1-01, not run.]; (2) the reused Style cell may keep a grey detail text when a condition without takeoffs follows one with takeoffs (pre-existing, cosmetic); (3) _applyStyleChangeTo: has no guard against a non-real target, unreachable while the Unknown (N) action is disabled (Windows has the same single protection); (4) how the Conditions list, the quantities, 2D and 3D treat a type-7 condition was only read: no crash site was found; (5) a Type stored above INT_MAX reads truncated by sqlite3_column_int (out of range, not tested).",
         "updated_2026_11_21_job_8": "Updated 2026-11-21 (job 8): DEV-09 was run on the owner's iPhone (IPA of run 44953904172) and passed; the iPad behaviour was not checked; the note stays open."
       },
       {
@@ -4355,7 +4573,7 @@
         ],
         "windows_commit": "49a2d59",
         "line": "PWD-1 (low): renumber_conditions raises ConditionNumberOverflowError inside a try whose except Exception re-raises only when _record_caught_mutation_error is true (:802-808; on the Access path that is a pyodbc.Error inside a transaction only, infrastructure/mdb/mdb_writer.py:216-219, while the SQL-Server writer returns true in every case, infrastructure/sql/writer.py:1199-1203, and so re-raises: that path was not checked further), so on the Access path it is logged and False is returned; the handler shows the generic Failed to renumber conditions and the new renumber text is never shown (no iOS counterpart); PWD-2 (info): only the local Access path carries user_message, the SQL-Server queue paths were not checked; PWD-3 (info): the docstring of ConditionNumberOverflowError (update_condition_dto.py:10) still says A renumber would shift a condition number past MAX_CONDITION_NUMBER although the error is now also raised for new conditions and for the temporaries; PWD-4 (info, existing): a plain failed Duplicate without a message shows nothing on Windows (test_a_failed_plain_duplicate_does_not_warn, tests/presentation/handlers/test_condition_action_handler.py:8540), iOS keeps its Duplicate Error alert (decided by the owner 2026-11-21 (job 7): the title stays, the message text of the overflow alert is identical to Windows)",
-        "ios_now": "nothing to port (iOS has no Renumber Conditions and no New Condition); the Duplicate guard is DLG-FINITE-01"
+        "ios_now": "nothing to port (iOS has no Renumber Conditions; it had no New Condition at job 6, since M1 (2026-11-24) it has one, guarded like Duplicate); the Duplicate guard is DLG-FINITE-01"
       }
     ]
   },
@@ -4385,7 +4603,7 @@
       "RPV-32",
       "UND-10"
     ],
-    "meaning": "Core part host-tested; the UIKit/CoreGraphics part is wired in the .mm files, was syntax-checked against hand-written stubs and has since been compiled and linked against the real SDK on CI (no errors; the code up to e151655: run 44678523124 up to 275cf66, run 44856186199 with the Objective-C wiring of job 5, run 44953904172 with the Objective-C wiring of job 6). Never seen running. The device checks come on top of the 27 ids; a DEV row is not a status. DEV-03 (COND-STYLE-02), DEV-04 (COND-ELEV-01), DEV-05 (DLG-FINITE-01), DEV-07 (COND-PLACE-01), DEV-09 (COND-M08), DEV-10 (COND-ELEV-01) and DEV-11 (DLG-FINITE-01) belong to ids that are fixed-ui-unverified. DEV-06 (LP-24 fixed, LP-22 no-longer-divergent) and DEV-08 (EXP-12 fixed, EXP-16 no-longer-divergent) cover items that stay fixed or no-longer-divergent, because what they decide lives in Core and is host-tested (the store filter, the plan, ProjectData, the export text); only DLG-FINITE-01 moved to fixed-ui-unverified in job 5, because its alert path is new Objective-C. The Objective-C wiring of LP-24 (_setAllLayersVisible:, _visibilityOfListedLayer:) is as unverified as that of DLG-FINITE-01 (owner note i): the rule is applied unevenly as a bookkeeping choice, and moving LP-24 to fixed-ui-unverified would make the counts 171 fixed and 28 fixed-ui-unverified (172 and 27 when this was written in job 5, before COND-M08 moved in job 6). DEV-01 and DEV-02 check the two device-bug fixes of 2026-11-20 (PORTING_LOG.md); DEV-03 to DEV-08 check job 5, whose wiring compiled and linked on CI in run 44856186199; nothing ran on a device. DEV-09 to DEV-11 check job 6, whose Objective-C(++) wiring compiled and linked on CI in run 44953904172; nothing ran on a device. Updated 2026-11-21 (job 7): the owner returned the device-check table with all eleven results blank (DEV-01 to DEV-11): nothing is recorded as passed or failed, all eleven stay open and no id became \"verified on device\". Superseded / updated 2026-11-21 (job 8): the list has 23 ids; COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device and fixed (ids_before_job_8 keeps the list of 27); the device checks DEV-01 to DEV-11 all PASSED (the owner, 2026-11-21, owner's iPhone, IPA of run 44953904172), so 'nothing ran on a device' above is the state of jobs 5 to 7; COND-PLACE-01 is half verified (DEV-07, Image-layer half only) and stays in the list; the 23 are carried into the next device pack (DEVICE_CHECKS.md at the repository root, to be created in job 8 on the new branch ios-feature-m1). Counts the rows mention (27, 171 / 28) are the figures of jobs 5 to 7.",
+    "meaning": "Core part host-tested; the UIKit/CoreGraphics part is wired in the .mm files, was syntax-checked against hand-written stubs and has since been compiled and linked against the real SDK on CI (no errors; the code up to e151655: run 44678523124 up to 275cf66, run 44856186199 with the Objective-C wiring of job 5, run 44953904172 with the Objective-C wiring of job 6). Never seen running. The device checks come on top of the 27 ids; a DEV row is not a status. DEV-03 (COND-STYLE-02), DEV-04 (COND-ELEV-01), DEV-05 (DLG-FINITE-01), DEV-07 (COND-PLACE-01), DEV-09 (COND-M08), DEV-10 (COND-ELEV-01) and DEV-11 (DLG-FINITE-01) belong to ids that are fixed-ui-unverified. DEV-06 (LP-24 fixed, LP-22 no-longer-divergent) and DEV-08 (EXP-12 fixed, EXP-16 no-longer-divergent) cover items that stay fixed or no-longer-divergent, because what they decide lives in Core and is host-tested (the store filter, the plan, ProjectData, the export text); only DLG-FINITE-01 moved to fixed-ui-unverified in job 5, because its alert path is new Objective-C. The Objective-C wiring of LP-24 (_setAllLayersVisible:, _visibilityOfListedLayer:) is as unverified as that of DLG-FINITE-01 (owner note i): the rule is applied unevenly as a bookkeeping choice, and moving LP-24 to fixed-ui-unverified would make the counts 171 fixed and 28 fixed-ui-unverified (172 and 27 when this was written in job 5, before COND-M08 moved in job 6). DEV-01 and DEV-02 check the two device-bug fixes of 2026-11-20 (PORTING_LOG.md); DEV-03 to DEV-08 check job 5, whose wiring compiled and linked on CI in run 44856186199; nothing ran on a device. DEV-09 to DEV-11 check job 6, whose Objective-C(++) wiring compiled and linked on CI in run 44953904172; nothing ran on a device. Updated 2026-11-21 (job 7): the owner returned the device-check table with all eleven results blank (DEV-01 to DEV-11): nothing is recorded as passed or failed, all eleven stay open and no id became \"verified on device\". Superseded / updated 2026-11-21 (job 8): the list has 23 ids; COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device and fixed (ids_before_job_8 keeps the list of 27); the device checks DEV-01 to DEV-11 all PASSED (the owner, 2026-11-21, owner's iPhone, IPA of run 44953904172), so 'nothing ran on a device' above is the state of jobs 5 to 7; COND-PLACE-01 is half verified (DEV-07, Image-layer half only) and stays in the list; the 23 are carried into the next device pack (DEVICE_CHECKS.md at the repository root, created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20]). Counts the rows mention (27, 171 / 28) are the figures of jobs 5 to 7. Updated 2026-11-24 (job 8, M1): the eight M1 records (PARITY_DIVERGENCES.json m1Items) are fixed-ui-unverified too, are not among these 23 ids and are checked by the rows M1-01 to M1-20 (m1_device_checks); the 23 ids are carried into the same file, DEVICE_CHECKS.md.",
     "device_checks": [
       {
         "ids": "GEO-06, LP-16",
@@ -4483,7 +4701,7 @@
       },
       {
         "ids": "DEV-09 (COND-M08, job 6)",
-        "check": "A bid whose condition has a stored Type outside 0-3 (for example 7, and -1; how the file reaches the device was not checked): Edit Condition opens without a crash; the Style row reads \"Unknown (7)\" (\"Unknown (-1)\"); the rows are Area-like (Dimensions Thickness / Rise / Run; Appearance without Shape; the Advanced rows of an Area); tap Style: Linear, Area, Count, Attachment and a greyed, untappable \"Unknown (N)\" after Attachment (run it on an iPhone: the iPad has no popover anchor); a notes-only Save writes only the notes (compare the Type column and every other column of the row on a desktop copy of the database); picking a real style saves that type with its defaults; Previous / Next from a condition that still has an unknown type (a second one, if the first was changed above) to a known one removes the entry and back to an unknown one shows it; with takeoffs the Style row is greyed and the type is kept; Cancel right after opening does not ask \"Unsaved Changes\"",
+        "check": "A bid whose condition has a stored Type outside 0-3 (for example 7, and -1; how the file reaches the device was not checked): Edit Condition opens without a crash; the Style row reads \"Unknown (7)\" (\"Unknown (-1)\"); the rows are Area-like (Dimensions Thickness / Rise / Run; Appearance without Shape; the Advanced rows of an Area); tap Style: Linear, Area, Count, Attachment and a greyed, untappable \"Unknown (N)\" after Attachment (iPad: see M1-01; at the time of job 6 the iPad had no popover anchor and this was an iPhone check [Updated 2026-11-24 (job 8, M1): S0 (54ff58e) added a popoverPresentationController anchor to each of the seven pickers; the iPad behaviour is device check M1-01, not run.]); a notes-only Save writes only the notes (compare the Type column and every other column of the row on a desktop copy of the database); picking a real style saves that type with its defaults; Previous / Next from a condition that still has an unknown type (a second one, if the first was changed above) to a known one removes the entry and back to an unknown one shows it; with takeoffs the Style row is greyed and the type is kept; Cancel right after opening does not ask \"Unsaved Changes\"",
         "result_2026_11_21_job_8": "PASS (owner, 2026-11-21, owner's iPhone, IPA of run 44953904172; no notes); COND-M08 is verified on device and fixed"
       },
       {
@@ -4503,7 +4721,7 @@
       },
       {
         "ids": "DEV-01 to DEV-11 (the owner's table, job 8)",
-        "check": "2026-11-21 (job 8): the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes). Verified on device (every check that covers the item is PASS): COND-ELEV-01 (DEV-04 and DEV-10), DLG-FINITE-01 (DEV-05 and DEV-11), COND-M08 (DEV-09) and COND-STYLE-02 (DEV-03); they move from fixed-ui-unverified to fixed (`statusBeforeDeviceCheck` keeps the earlier value in `PARITY_DIVERGENCES.json`). Covered by a passed check, status unchanged: LP-24 and LP-22 (DEV-06; LP-24 fixed, LP-22 no-longer-divergent) and EXP-12 and EXP-16 (DEV-08; EXP-12 fixed, EXP-16 no-longer-divergent). The two device bugs of 2026-11-20 (no item id) are verified on device 2026-11-21 (PASS): DEV-01 (transparent meshes, fix `aef35d8`) and DEV-02 (Delete selection, fix `34e14c9`). COND-PLACE-01 stays fixed-ui-unverified: DEV-07 PASSED for the Image-layer half only; the other half (hide a layer while placing: the mode goes to View, the FAB place button is off, the row is greyed; show it again: placement resumes; hide, pick another tool, show: nothing resumes) is the non-DEV row of the device-check table, was not among the eleven checks and is carried into the next device pack. Counts: 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 4 no-longer-divergent (= 220; 199 items ported, unchanged; dispositions unchanged: fix 199, wont-fix 16, no-longer-divergent 4, cannot-reproduce 1); tests 1760 (1769 with Manifold) unchanged. Carried into the next device pack: the 23 items that stay fixed-ui-unverified, namely GEO-06, LP-16, RPV-17, RPV-31, RPV-32, RPV-M07, RPV-16, UND-10, UND-03, UND-07, UND-09, QTY-15, COND-PLACE-01, COND-UPD-03, COND-LAYER-01, COND-TRIM-01, UI-M01, BRW-02, BRW-08, BRW-16, DBP-31, POS-M01, EXP-21 (COND-PLACE-01 is among them because DEV-07 covered only its Image-layer half); the next device pack is `DEVICE_CHECKS.md` at the repository root (to be created in job 8 on the new branch `ios-feature-m1`). Owner notes are unchanged (32 entries: 4 resolved, 2 informational, 26 open); DEV-10 passing also covers the observation of note l (a stored name such as `Footing @T 5'6` opens with `5'6` in the field and any other edit of it is refused until the elevation is fixed or cleared): observed on device, PASS; note l stays open (the Windows behaviour is the owner's call). The merge of `ios-parity-sync` into `main` was requested by the owner (job 8) and is recorded after it happens; this documents-only commit carries `[skip ci]` and the last CI-verified code state stays `e151655` (run 44953904172)."
+        "check": "2026-11-21 (job 8): the owner ran the IPA of GitHub run 44953904172 (head e151655) on an iPhone and recorded the device checks DEV-01 to DEV-11 all PASS (11 of 11, no per-check notes). Verified on device (every check that covers the item is PASS): COND-ELEV-01 (DEV-04 and DEV-10), DLG-FINITE-01 (DEV-05 and DEV-11), COND-M08 (DEV-09) and COND-STYLE-02 (DEV-03); they move from fixed-ui-unverified to fixed (`statusBeforeDeviceCheck` keeps the earlier value in `PARITY_DIVERGENCES.json`). Covered by a passed check, status unchanged: LP-24 and LP-22 (DEV-06; LP-24 fixed, LP-22 no-longer-divergent) and EXP-12 and EXP-16 (DEV-08; EXP-12 fixed, EXP-16 no-longer-divergent). The two device bugs of 2026-11-20 (no item id) are verified on device 2026-11-21 (PASS): DEV-01 (transparent meshes, fix `aef35d8`) and DEV-02 (Delete selection, fix `34e14c9`). COND-PLACE-01 stays fixed-ui-unverified: DEV-07 PASSED for the Image-layer half only; the other half (hide a layer while placing: the mode goes to View, the FAB place button is off, the row is greyed; show it again: placement resumes; hide, pick another tool, show: nothing resumes) is the non-DEV row of the device-check table, was not among the eleven checks and is carried into the next device pack. Counts: 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 0 blocked-needs-decision, 1 cannot-reproduce, 4 no-longer-divergent (= 220; 199 items ported, unchanged; dispositions unchanged: fix 199, wont-fix 16, no-longer-divergent 4, cannot-reproduce 1); tests 1760 (1769 with Manifold) unchanged. Carried into the next device pack: the 23 items that stay fixed-ui-unverified, namely GEO-06, LP-16, RPV-17, RPV-31, RPV-32, RPV-M07, RPV-16, UND-10, UND-03, UND-07, UND-09, QTY-15, COND-PLACE-01, COND-UPD-03, COND-LAYER-01, COND-TRIM-01, UI-M01, BRW-02, BRW-08, BRW-16, DBP-31, POS-M01, EXP-21 (COND-PLACE-01 is among them because DEV-07 covered only its Image-layer half); the next device pack is `DEVICE_CHECKS.md` at the repository root (created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20]). Owner notes are unchanged (32 entries: 4 resolved, 2 informational, 26 open); DEV-10 passing also covers the observation of note l (a stored name such as `Footing @T 5'6` opens with `5'6` in the field and any other edit of it is refused until the elevation is fixed or cleared): observed on device, PASS; note l stays open (the Windows behaviour is the owner's call). The merge of `ios-parity-sync` into `main` was requested by the owner (job 8) and is recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md]; this documents-only commit carries `[skip ci]` and the last CI-verified code state stays `e151655` (run 44953904172)."
       }
     ],
     "ids_before_job_8": [
@@ -4534,7 +4752,90 @@
       "UND-10",
       "DLG-FINITE-01",
       "COND-M08"
-    ]
+    ],
+    "m1_device_checks": [
+      {
+        "id": "M1-01",
+        "check": "iPad only: open every Edit Condition picker (Style, Layer, Type, ...): a popover, no crash"
+      },
+      {
+        "id": "M1-02",
+        "check": "New Condition: '+' opens the form; defaults of Linear / Area / Count / Attachment; Cond. No. shows 'Next number: N' (= highest + 1)"
+      },
+      {
+        "id": "M1-03",
+        "check": "Save creates exactly one condition (double tap), the row is selected and revealed, no placement starts"
+      },
+      {
+        "id": "M1-04",
+        "check": "New Condition from a long press in a folder lands in that folder; from the root lands at the root"
+      },
+      {
+        "id": "M1-05",
+        "check": "New Condition in a metric bid starts with metric values; an imperial bid with imperial values"
+      },
+      {
+        "id": "M1-06",
+        "check": "Cancel of an untouched form closes silently; Cancel of an edited form asks to discard; a 256-character name is refused"
+      },
+      {
+        "id": "M1-07",
+        "check": "LOCKED bid: '+', Folders actions, Layers '+', Rename / Delete / Set Scale all answer 'This bid is locked.' and change nothing"
+      },
+      {
+        "id": "M1-08",
+        "check": "Folders: New Folder alert, rename, 'Duplicate Folder' for a sibling name, blank / unchanged silent, 51-character name refused"
+      },
+      {
+        "id": "M1-09",
+        "check": "Folders: delete an empty folder; a folder holding a condition (or a sub-folder that does) is refused with the Windows text; deleting a parent moves sub-folders to the top level and the confirmation says so"
+      },
+      {
+        "id": "M1-10",
+        "check": "Move to Folder from the condition long-press sheet, including '(No folder)'; the list reloads, nothing else redraws"
+      },
+      {
+        "id": "M1-11",
+        "check": "Layers: New Layer ('+' and 'New Layer Below'), rename, duplicate alert, 'Comments' refused, 51-character name refused, Move Up / Down, tap still toggles visibility"
+      },
+      {
+        "id": "M1-12",
+        "check": "Layers: delete an unused layer; a layer used by a condition is refused with the Windows text; a created layer appears in the Edit Condition layer picker at once"
+      },
+      {
+        "id": "M1-13",
+        "check": "iPad only: Layers: alerts and menus only, no crash"
+      },
+      {
+        "id": "M1-14",
+        "check": "Rename Page: long-press a page button; blank -> 'Validation Error'; success updates the bar and the 2D / 3D chips keep the active-mode colour, selection and zoom stay; very long name; during an area placement the menu items are disabled and after it they are enabled again; in the 3D view a long press on a page button of the 3D bar AND of the 2D bar opens only the page menu (the guard of _handle3DLongPress:)"
+      },
+      {
+        "id": "M1-15",
+        "check": "Delete Page: confirmation (Cancel default); delete a page with takeoffs; the next page is selected and the 2D / 3D chips keep the active-mode colour; undo history is empty; the last page cannot be deleted"
+      },
+      {
+        "id": "M1-16",
+        "check": "Set Scale: presets per style, custom pair, invalid text and a decimal comma refused with the Windows text, Save changes quantities but not sheet positions, zoom kept"
+      },
+      {
+        "id": "M1-17",
+        "check": "Set Scale 'apply to all pages': the confirmation appears; undo after a Set Scale replays rescaled positions (move a takeoff, change the scale, undo; delete a takeoff, change the scale, undo the delete); the capture goes through the two new optional delegate methods, which no host test reaches"
+      },
+      {
+        "id": "M1-18",
+        "check": "After each write: close and reopen the bid, kill and relaunch the app: everything is persisted"
+      },
+      {
+        "id": "M1-19",
+        "check": "New Condition and Folders on iPad (iPad only): the form opens as a centred sheet; the '+' and 'Folders' buttons, the folder alerts and the long-press sheet open anchored, no crash"
+      },
+      {
+        "id": "M1-20",
+        "check": "Save of an untouched New Condition form shows 'Condition name cannot be empty.' and creates nothing"
+      }
+    ],
+    "m1_device_checks_file": "DEVICE_CHECKS.md (repository root, created in job 8 on branch ios-feature-m1; the DeviceTestPack folder holds the fixtures)"
   },
   "active_blockers": [
     {
@@ -4765,7 +5066,7 @@
         "RPV-32",
         "UND-10"
       ],
-      "current_state": "27 ids (25 until job 5, 26 until job 6; DLG-FINITE-01 added in job 5, COND-M08 in job 6); what to check on a device is in ui_unverified.device_checks (DEV-03 to DEV-08 are new in job 5, DEV-09 to DEV-11 in job 6). Updated 2026-11-21 (job 8): 23 ids (COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 were verified on the owner's iPhone, DEV-01 to DEV-11 all PASS, and are fixed; parity_ids_before_job_8 keeps the list of 27); the 23 are carried into the next device pack (DEVICE_CHECKS.md, to be created in job 8 on the new branch ios-feature-m1).",
+      "current_state": "27 ids (25 until job 5, 26 until job 6; DLG-FINITE-01 added in job 5, COND-M08 in job 6); what to check on a device is in ui_unverified.device_checks (DEV-03 to DEV-08 are new in job 5, DEV-09 to DEV-11 in job 6). Updated 2026-11-21 (job 8): 23 ids (COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 were verified on the owner's iPhone, DEV-01 to DEV-11 all PASS, and are fixed; parity_ids_before_job_8 keeps the list of 27); the 23 are carried into the next device pack (DEVICE_CHECKS.md, created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20]).",
       "parity_ids_before_job_8": [
         "GEO-06",
         "QTY-15",
@@ -4862,7 +5163,7 @@
     "PDF background scaling, rotation, multi-page files and extracted OSP paths on a device.",
     "Export on device: share sheet, large outputs, write failures; the HTML viewer needs network (unpkg.com).",
     "Entitlements and signing: Config/Entitlements.plist (Nyxian keys) and the minimal fake-sign set in Config/Entitlements.fakesign.plist, with the installer actually used; iRAM+ after a reinstall.",
-    "iPad layout (popovers are configured in ConditionsViewController, DatabaseViewController, ViewController and the export sheets, but not for the pickers of the Edit Condition screen: tapping Style there would throw on an iPad; read, not seen running)."
+    "iPad layout (popovers are configured in ConditionsViewController, DatabaseViewController, ViewController and the export sheets, but not for the pickers of the Edit Condition screen: tapping Style there would throw on an iPad; read, not seen running) [Updated 2026-11-24 (job 8, M1): S0 (54ff58e) added a popoverPresentationController anchor to each of the seven pickers; the iPad behaviour is device check M1-01, not run.]"
   ],
   "obsolete_historical": [
     "'Metal is not available / software rasterizer is production': obsolete (bgfx on Metal).",
@@ -5079,7 +5380,7 @@
     "ios_already_matched_and_pinned": [
       "IMP-20 (1) (shared datetime rule)"
     ],
-    "other_ios_allocation_paths": "update_condition -> shift_conflicting_ref_nos and its in-memory twins (guarded in job 5), parse_condition_number (user input, capped), import_insert_raw_row (copies the stored RefNo, allocates nothing), shift_condition_ref_nos (no production caller, no guard, creates no new number: left unchanged); iOS has no New Condition, paste or copy to another bid, Duplicate-and-Reassign, multi-condition duplicate or Renumber Conditions, so the temporaries rule has no iOS counterpart",
+    "other_ios_allocation_paths": "update_condition -> shift_conflicting_ref_nos and its in-memory twins (guarded in job 5), parse_condition_number (user input, capped), import_insert_raw_row (copies the stored RefNo, allocates nothing), shift_condition_ref_nos (no production caller, no guard, creates no new number: left unchanged); iOS had no New Condition when this was written (since M1 (2026-11-24) it has one: insert_condition allocates condition numbers like duplicate_condition) and still has no paste or copy to another bid, Duplicate-and-Reassign, multi-condition duplicate or Renumber Conditions, so the temporaries rule has no iOS counterpart",
     "status_transitions": {
       "fixed -> fixed-ui-unverified": [
         "COND-M08"
@@ -5233,7 +5534,7 @@
       "branch_head_before_job_7": "736b221",
       "pull_request_opened": false,
       "facts": "Merge preconditions, as facts (no merge was done): the working tree was clean; the head `e151655` of the green GitHub run 44953904172 holds all the code (`e151655` itself is a docs commit; the latest commit that changed code is `fc3a18e`) and no code changed after it (`736b221` and the commit of this job are documents only, `[skip ci]`); `main` (`4a1302d`) is an ancestor of `ios-parity-sync` (28 commits ahead of `main` at `736b221`), so a merge commit would be possible; the last full local host runs (1760 / 1769 tests, MSVC and clang) were made on the code of `e151655`, which has not changed. Not met: the eleven device-check results are blank. So `main` is untouched at `4a1302d`, the branch `ios-parity-sync` is not merged and no pull request was opened.",
-      "superseded_2026_11_21_job_8": "Superseded / updated 2026-11-21 (job 8): the precondition that was not met (the eleven results blank) is met; the merge into main was requested by the owner (job 8) and is recorded after it happens."
+      "superseded_2026_11_21_job_8": "Superseded / updated 2026-11-21 (job 8): the precondition that was not met (the eleven results blank) is met; the merge into main was requested by the owner (job 8) and is recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md]."
     },
     "status_counts": {
       "fixed": 172,
@@ -5351,7 +5652,7 @@
         "POS-M01",
         "EXP-21"
       ],
-      "file": "DEVICE_CHECKS.md (repository root; to be created in job 8 on the new branch ios-feature-m1)"
+      "file": "DEVICE_CHECKS.md (repository root; created in job 8 on the branch ios-feature-m1 [Updated 2026-11-24 (job 8, M1): the file exists and holds the 23 ids and the rows M1-01 to M1-20])"
     },
     "status_counts": {
       "fixed": 176,
@@ -5377,7 +5678,243 @@
     },
     "tests": "1760 tests (1769 with the Manifold boolean tests), unchanged",
     "owner_notes": "unchanged: 32 entries, 4 resolved, 2 informational, 26 open; DEV-10 observed on device PASS for note l, which stays open",
-    "merge": "merge into main requested by the owner (job 8), recorded after it happens",
+    "merge": "merge into main requested by the owner (job 8), recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md]",
     "ci": "documents-only commit ([skip ci]); the last CI-verified code state stays e151655 (run 44953904172, success)"
+  },
+  "overall_status_before_m1": "parity_fixes_done_host_tested_ci_built_eleven_device_checks_passed_23_items_unverified_on_device",
+  "m1_2026_11_24": {
+    "date": "2026-11-24",
+    "job": "job 8, milestone M1",
+    "branch": "ios-feature-m1 (began at 06d8d69)",
+    "plan": "NEW_FEATURES_PLAN.md (committed as 1e90985, the fifth commit of the branch, after the first four S0 commits 090a996, 46b4e61, 79dd5e7, 54ff58e)",
+    "step0_merge": {
+      "facts": "ios-parity-sync was merged into main after the owner's device results (DEV-01 to DEV-11 all PASS with the IPA of run 44953904172) as the merge commit 06d8d69 (Merge pull request #1 from <owner>/ios-parity-sync, 2026-11-22; parents 4a1302d, the previous head of main, and a5dcdf0, the head of ios-parity-sync). GitHub run 45039125909 on main (event push, head 06d8d69) succeeded (created 2026-11-22 15:35:06 UTC, the build-ipa job finished 15:40:37 UTC).",
+      "ipa_check_of_main_run": "The IPA of run 45039125909 was downloaded and checked with the IPA verifier script (nothing from it was run; re-verified on 2026-11-24 on the saved artifact, all checks passed): bundle id com.fabian.ostvisualizer, MinimumOSVersion 16.0, thin arm64 Mach-O with minos 16.0.0, ad-hoc ldid-style signature, entitlements get-task-allowed only (no memory entitlements), 5 archive members; -Os rests on the CI-logged build settings (it cannot be read from a binary).",
+      "merge_commit": "06d8d69",
+      "main_run": "45039125909"
+    },
+    "built": [
+      {
+        "feature": "foundations (S0)",
+        "what": "bid lock guard (Core rule, store reader inside every writer, one UI bridge), UID limit helper 2147483647, shared text-limit helpers, popover anchors of the seven Edit Condition pickers, skeleton headers, marker blocks, test helpers, DeviceTestPack (ten .osp fixtures)"
+      },
+      {
+        "feature": "New Condition",
+        "what": "ConditionCreate rules, insert_condition and allocate_condition_identities, ImportService+ConditionCreate, create mode of the Edit Condition form, '+' and long-press entries"
+      },
+      {
+        "feature": "condition folders",
+        "what": "folder rules and iterative tree, four writers (create, rename, delete, move to folder), ImportService+ConditionFolders, Folders manager screen, Move to Folder picker"
+      },
+      {
+        "feature": "layers",
+        "what": "LayerEdit rules, five writers plus the 11-table in-use read and the reload, ImportService+Layers, Layers sheet editing ('+', swipe, long-press menu)"
+      },
+      {
+        "feature": "Set Scale",
+        "what": "page scale rules, transform, legend scanner, all-or-nothing writer save_page_scales, memory twin, ImportService+PageScale, Set Scale form, undo capture and replay of the page scale"
+      },
+      {
+        "feature": "rename page",
+        "what": "PageRules, rename_page, ProjectData::apply_page_name, ImportService+PageRename, Rename Page alert"
+      },
+      {
+        "feature": "delete page",
+        "what": "PageDeletion rules, delete_pages and pages_with_delete_content, ImportService+PageDelete, Delete Page confirmation, reload selecting the next page"
+      },
+      {
+        "feature": "page menu",
+        "what": "one UIMenu on the page buttons (2D bar: Set Scale..., Rename Page..., Delete Page; 3D bar: Rename Page...), the area-placement flag, the 3D long-press guard"
+      }
+    ],
+    "records": "PARITY_DIVERGENCES.json m1Items: M1-FND, M1-NEWCOND, M1-FOLDERS, M1-LAYERS, M1-RENAME-PAGE, M1-DELETE-PAGE, M1-SET-SCALE, M1-PAGE-MENU (103 deviation entries with Windows file:line, what Windows does, what iOS does, status and why)",
+    "status_counts": {
+      "fixed": 176,
+      "fixed-ui-unverified": 23,
+      "wont-fix": 16,
+      "blocked-needs-decision": 0,
+      "cannot-reproduce": 1,
+      "no-longer-divergent": 4,
+      "total": 220,
+      "note": "unchanged; the eight M1 records are outside these counts"
+    },
+    "tests": {
+      "s0_baseline": 1857,
+      "core_features_merged": 2785,
+      "final_tip": 2907,
+      "final_tip_with_boolean": 2916,
+      "from": 1760,
+      "per_feature_core_chains": {
+        "New Condition": 121,
+        "condition folders": 145,
+        "layers": 208,
+        "rename page": 93,
+        "delete page": 119,
+        "Set Scale": 242
+      },
+      "per_ui_chain": {
+        "conditions UI": 31,
+        "Layers sheet": 19,
+        "page menu, Rename Page, Delete Page": 34,
+        "Set Scale UI": 31
+      },
+      "integrator": 7,
+      "areas": {
+        "Browser": {
+          "before_m1": 67,
+          "s0": 67,
+          "core_merged": 67,
+          "final": 67,
+          "final_with_boolean": 67
+        },
+        "Conditions": {
+          "before_m1": 251,
+          "s0": 251,
+          "core_merged": 517,
+          "final": 548,
+          "final_with_boolean": 548
+        },
+        "Export": {
+          "before_m1": 108,
+          "s0": 108,
+          "core_merged": 108,
+          "final": 108,
+          "final_with_boolean": 114
+        },
+        "Formatting": {
+          "before_m1": 74,
+          "s0": 74,
+          "core_merged": 130,
+          "final": 149,
+          "final_with_boolean": 149
+        },
+        "Geometry": {
+          "before_m1": 173,
+          "s0": 173,
+          "core_merged": 265,
+          "final": 265,
+          "final_with_boolean": 265
+        },
+        "Harness": {
+          "before_m1": 10,
+          "s0": 10,
+          "core_merged": 10,
+          "final": 10,
+          "final_with_boolean": 10
+        },
+        "Import": {
+          "before_m1": 307,
+          "s0": 307,
+          "core_merged": 307,
+          "final": 307,
+          "final_with_boolean": 307
+        },
+        "Meshing": {
+          "before_m1": 107,
+          "s0": 107,
+          "core_merged": 107,
+          "final": 107,
+          "final_with_boolean": 110
+        },
+        "Parsers": {
+          "before_m1": 120,
+          "s0": 147,
+          "core_merged": 147,
+          "final": 147,
+          "final_with_boolean": 147
+        },
+        "Persistence": {
+          "before_m1": 308,
+          "s0": 378,
+          "core_merged": 883,
+          "final": 943,
+          "final_with_boolean": 943
+        },
+        "Quantities": {
+          "before_m1": 134,
+          "s0": 134,
+          "core_merged": 134,
+          "final": 134,
+          "final_with_boolean": 134
+        },
+        "Settings": {
+          "before_m1": 101,
+          "s0": 101,
+          "core_merged": 110,
+          "final": 122,
+          "final_with_boolean": 122
+        }
+      }
+    },
+    "verification_done": [
+      "tests first for every feature, each run red for the right reason where the code did not exist yet; oracle values from the real Windows functions run read-only (python -B -I)",
+      "host tests 1760 -> 1857 (S0) -> 2785 (six Core / store features merged, 6207367) -> 2907 (final tip) on MSVC (Debug) and on the clang build with fused multiply-add; 2916 with Manifold on MSVC; 0 warnings in the tests",
+      "mutation checks on scratch copies per feature (New Condition 114 plus 51 mutants, folders 65, layers 69 plus 12 by the reviewer, rename 39, delete page 45 plus 30 by the reviewer, Set Scale 106; every survivor equivalent or closed by a new test)",
+      "an allocation-failure probe of the six layer store functions (a global operator new that fails the n-th allocation, zig clang; a scratch copy, not committed): after the fix no exception escaped and the database was byte-identical after every injected failure",
+      "independent review of every Core feature and every UI chain, then the whole-milestone review of five reviewers",
+      "check_objc (syntax check against hand-written stubs): 42 of 42 platform files OK, 0 errors, 4 baseline stub warnings; the selector scan finds exactly the baseline 6 undeclared selectors (both re-run on 87cdf8c, the head, after the ninth fix; the host-test runs were made on 17b3a1a); git diff --check clean; every changed text blob LF (the ten binary .osp fixtures excepted)",
+      "plan 6.3 greps on the touched files: every UIAlertControllerStyleActionSheet is anchored, no NSUserDefaults / UIPasteboard / sqlite in the screens, no business rule in the Objective-C"
+    ],
+    "verification_not_done": [
+      "anything on a device or a simulator: the Objective-C(++) of M1 has never run (ARC at runtime, UIKit behaviour, gestures, keyboard, layout)",
+      "a build against the real SDK: at the time of writing the branch had not been built by CI (the build run is <M1_RUN_ID>, its IPA check is <M1_IPA_CHECK>, both filled in after the build)",
+      "the hand-written stubs of check_objc against the real Apple signatures (they were extended for M1: UIControl addAction:forControlEvents:, UIContextualAction, UISwipeActionsConfiguration, UIDeferredMenuElement, UITextInput selection, UIAdaptivePresentationControllerDelegate, UITableView editing)",
+      "Windows acceptance of the M1 rows (OI-M1-1): the iOS database is SQLite, so it cannot be checked before the M3 round trip; the Windows app has not opened the DeviceTestPack files",
+      "the Manifold-only tests on AppleClang (the CI host tests run without Manifold)"
+    ],
+    "review": "five independent whole-milestone reviewers (conditions stream; Set Scale stream and undo history; data path of the six writers; UIKit / ARC / threading of layers and pages; cross-file integrity): no blocker and no crash path found; 22 findings, one first reported as major and re-assessed as minor (the New Condition swipe-down guard did not cover the state right after typing); nine fixes were made in six commits (the eight findings of the review: a6dc7f9 the New Condition form notices typing and refuses a NUL, 3b01dc1 folder context-menu alerts deferred and one Folders screen per tap, 1f6bfaf Rename Layer selection and Set Scale Cancel, fb2f9bd stale comments, 17b3a1a the six layer store functions return a failure instead of throwing; and a ninth, 87cdf8c, the folder name alerts select their text with selectedTextRange instead of selectAll:, found by the independent recheck of the fixes). The recheck ACCEPTED the fixes: no blocker and no major; its three minor residuals are the folder alerts' selectAll: (fixed in 87cdf8c: no alert in Controllers or Services calls selectAll: any more), the missing committed test of the function-try-blocks of the six layer store functions (recorded, see the allocation-failure probe that is not committed) and +[UIAction actionWithHandler:], which no file compiled against the real SDK before M1 (the CI build decides); the others are recorded in PORTING_BLOCKERS.md and in the m1Items records of PARITY_DIVERGENCES.json",
+    "build": {
+      "run": "<M1_RUN_ID>",
+      "ipa_check": "<M1_IPA_CHECK>",
+      "note": "filled in by the owner after the build"
+    },
+    "device_checks": {
+      "file": "DEVICE_CHECKS.md",
+      "ids": "M1-01 to M1-20",
+      "pending": 20,
+      "results": "none yet",
+      "carried_fixed_ui_unverified_ids": [
+        "GEO-06",
+        "LP-16",
+        "RPV-17",
+        "RPV-31",
+        "RPV-32",
+        "RPV-M07",
+        "RPV-16",
+        "UND-10",
+        "UND-03",
+        "UND-07",
+        "UND-09",
+        "QTY-15",
+        "COND-PLACE-01",
+        "COND-UPD-03",
+        "COND-LAYER-01",
+        "COND-TRIM-01",
+        "UI-M01",
+        "BRW-02",
+        "BRW-08",
+        "BRW-16",
+        "DBP-31",
+        "POS-M01",
+        "EXP-21"
+      ]
+    },
+    "owner_notes": "unchanged (32 entries: 4 resolved, 2 informational, 26 open)",
+    "documents_updated": [
+      "PORTING_LOG.md",
+      "PORTING_STATUS.md",
+      "PORTING_STATUS.json",
+      "PORTING_BLOCKERS.md",
+      "PARITY_MAP.md",
+      "PARITY_DIVERGENCES.json",
+      "BUILD.md",
+      "NEW_FEATURES_PLAN.md (section 9a and the as-built notes)",
+      "PORTING_PLAN.md (update markers)",
+      "PORTING_MAP.md (update markers, section 6 and section 12 rows, section 14 note)",
+      "Config/Tests/README.md",
+      "Config/Tests/Conditions/test_condition_duplicate.cpp (a comment only)",
+      "DeviceTestPack/README.md (the column of checks each fixture serves)",
+      "DEVICE_CHECKS.md (new)"
+    ]
   }
 }
