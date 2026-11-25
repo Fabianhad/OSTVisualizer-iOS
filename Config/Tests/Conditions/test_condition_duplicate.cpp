@@ -241,8 +241,8 @@ TEST(ConditionDuplicate, AFailedInsertLeavesNothingBehind)
 // condition_operations.py _allocate_condition_identities :48-62 (ConditionNumberOverflowError), called by duplicate_conditions :109-113
 // AFTER the ownership check (:103-105) and BEFORE any insert. The strings and the numbers are the output of that function run in memory
 // with a stub cursor (the f-string of the refusal is condition_operations.py :57-62), the structure of the fixture is the Windows ConditionNumberAllocationLimitTests
-// (test_condition_operations.py :1344: bid 1 = rows 10 and 11, bid 2 = row 20). iOS duplicates ONE condition per call (the only allocator
-// of condition numbers; there is no New Condition, no paste, no copy to another bid, no renumber): Windows' "two duplicates at
+// (test_condition_operations.py :1344: bid 1 = rows 10 and 11, bid 2 = row 20). iOS duplicates ONE condition per call (condition numbers are allocated by
+// duplicate_condition and, since M1, by insert_condition (New Condition), one condition per call; there is no paste, no copy to another bid, no renumber): Windows' "two duplicates at
 // 2147483646 fail" is pinned in Core (test_condition_form.cpp, refuse_new_condition_numbers(2147483646, 2)) and here as a second duplicate.
 // ---------------------------------------------------------------------------------------------------------------------
 
