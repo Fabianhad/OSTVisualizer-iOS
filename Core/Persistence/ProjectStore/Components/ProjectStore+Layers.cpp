@@ -8,7 +8,10 @@
 // The write pattern of plan 4.4: every writer is ONE transaction (BEGIN IMMEDIATE ... COMMIT) in this order: parse the uids, the bid
 // exists, the rows belong to the OPEN bid and are editable, the bid lock (on the same connection), the name / value rules (re-run here on
 // the rows read inside the transaction), the 32-bit limits, the writes, commit. ANY failed statement is a rollback and a negative result;
-// nothing throws.
+// nothing throws: every function below is a function-try-block, so an exception (std::bad_alloc, std::length_error) that passes through the
+// body ends the call with the same negative result a failed statement gives. The locals of the body (the connection and its statements) are
+// destroyed before the handler runs, and closing the connection rolls an open transaction back, so a throw never leaves one open or half a
+// write behind.
 #include "../ProjectStore_Internal.hpp"
 #include "../../../Domain/LayerEdit.hpp"
 
@@ -164,6 +167,7 @@ namespace ost_store
                              const std::string &name,
                              long long after_sequence,
                              std::string *error)
+    try
     {
         if (error)
             error->clear();
@@ -274,12 +278,20 @@ namespace ost_store
             return "";
         return std::to_string(new_uid);
     }
+    catch (...)
+    {
+        // a failed write that has nothing to tell the user: no text, nothing written (the connection of the body is closed, which rolled back)
+        if (error)
+            error->clear();
+        return "";
+    }
 
     bool rename_layer(const std::string &db_path,
                       const std::string &bid_uid,
                       const std::string &layer_uid,
                       const std::string &name,
                       std::string *error)
+    try
     {
         if (error)
             error->clear();
@@ -348,10 +360,18 @@ namespace ost_store
             return fail();
         return db.commit();
     }
+    catch (...)
+    {
+        // the same result as a failed statement: false, no text, nothing written
+        if (error)
+            error->clear();
+        return false;
+    }
 
     bool delete_layers(const std::string &db_path,
                        const std::string &bid_uid,
                        const std::vector<std::string> &layer_uids)
+    try
     {
         long long bid = 0;
         if (!integrity::parse_uid(bid_uid, bid))
@@ -455,11 +475,16 @@ namespace ost_store
         }
         return db.commit();
     }
+    catch (...)
+    {
+        return false; // nothing deleted (the connection of the body is closed, which rolled back)
+    }
 
     bool swap_layer_sequence(const std::string &db_path,
                              const std::string &bid_uid,
                              const std::string &uid_a,
                              const std::string &uid_b)
+    try
     {
         long long bid = 0;
         long long a = 0;
@@ -518,10 +543,15 @@ namespace ost_store
         }
         return db.commit();
     }
+    catch (...)
+    {
+        return false; // nothing moved (the connection of the body is closed, which rolled back)
+    }
 
     bool read_layer_uids_in_use(const std::string &db_path,
                                 const std::string &bid_uid,
                                 std::set<std::string> &used)
+    try
     {
         long long bid = 0;
         if (!integrity::parse_uid(bid_uid, bid))
@@ -564,12 +594,17 @@ namespace ost_store
         used = std::move(found);
         return done(true);
     }
+    catch (...)
+    {
+        return false; // a failed read: the caller refuses the delete (LY-2); `used` is not meaningful after a false
+    }
 
     bool reload_layers(const std::string &db_path,
                        const std::string &bid_uid,
                        std::unordered_map<std::string, ost_domain::Layer> &own_layers,
                        std::vector<ost_domain::BidLayer> &merged_layers,
                        std::string *error)
+    try
     {
         if (error)
             error->clear();
@@ -622,6 +657,23 @@ namespace ost_store
         own_layers = std::move(own);
         merged_layers = std::move(merged);
         return true;
+    }
+    catch (...)
+    {
+        // a failed read like any other: false, the reason in `error`, both outputs as they were (they are replaced by two moves, which do not
+        // throw, as the last step of the body). Assigning the text can itself throw, and nothing may escape: then the text stays empty.
+        if (error)
+        {
+            try
+            {
+                *error = "Cannot reload the layers: the read failed unexpectedly.";
+            }
+            catch (...)
+            {
+                error->clear();
+            }
+        }
+        return false;
     }
 
 }
