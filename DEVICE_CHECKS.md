@@ -2,7 +2,7 @@
 
 This is the page to hold while you test the M1 build on a phone: what to tap and what must happen, one row per check. The first section is the M1 list (new in this milestone). The second is the 23 older checks that are still open. The last is a list of things that look wrong but are known.
 
-**Build under test:** IPA of GitHub run <M1_RUN_ID>; checked: <M1_IPA_CHECK>
+**Build under test:** IPA of GitHub run 45528720676 (head 2eae9ed); checked: all checks of the IPA verifier passed (bundle id, iOS 16.0, arm64, ldid signature with get-task-allowed only, no memory entitlements); built with -Os
 
 **How to use it**
 1. Import every file of `DeviceTestPack/` first (AirDrop, or Files > tap the file > Open in OST Visualizer, or the Import button of the Projects screen, one file at a time). Each file is one bid and shows up unfiled (under `Unassigned Projects`) as `M1-0x ...`. `DeviceTestPack/README.md` says what each file holds.
