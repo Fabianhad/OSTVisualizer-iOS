@@ -339,10 +339,17 @@ const NSInteger kMaxIndentLevel = 8;
 
 #pragma mark - UITextFieldDelegate
 
-// The name alerts open with their text selected: typing replaces "New Folder" or the old name.
+// The name alerts open with their text selected: typing replaces "New Folder" or the old name. The range is set directly, as in the page
+// rename and the layer rename alerts: selectAll: can also bring up the Cut / Copy / Paste menu over the alert.
 - (void)textFieldDidBeginEditing:(UITextField *)textField {
+  __weak UITextField *weakField = textField;
   dispatch_async(dispatch_get_main_queue(), ^{
-    [textField selectAll:nil];
+    UITextField *strongField = weakField;
+    if (!strongField)
+      return;
+    strongField.selectedTextRange =
+        [strongField textRangeFromPosition:strongField.beginningOfDocument
+                                toPosition:strongField.endOfDocument];
   });
 }
 
