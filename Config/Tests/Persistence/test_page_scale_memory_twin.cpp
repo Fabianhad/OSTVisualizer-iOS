@@ -340,13 +340,39 @@ TEST(SetScale_MemoryTwin, TakeoffPositionsAreRoundedLikeTheStoredText)
 {
     World world;
     world.pages["p1"] = make_page("p1", 1.0, 100.0);
-    world.takeoffs = {make_takeoff("t1", "p1", {1234.567, 2345.678}), make_takeoff("t2", "p1", {0.0625, -0.0004, 1e22})};
+    world.takeoffs = {make_takeoff("t1", "p1", {1234.567, 2345.678}), make_takeoff("t2", "p1", {0.0625, -0.004, 1e22})};
     CHECK_EQ(apply(world, {"p1"}, 1.0, 30.0), vector<string>({"p1"}));
     CHECK_EQ(world.takeoffs[0].position, ost_domain::parse_position("370.37;703.703"));
     CHECK_EQ(world.takeoffs[0].position[0], 370.37);
     CHECK_EQ(world.takeoffs[0].position[1], 703.703);
-    // 0.0625 x 0.3 = 0.01875 -> 0.019, -0.0004 x 0.3 -> "-0" (the sign survives), 1e22 x 0.3 = 3e21 in full digits: the Windows text of serialization.encode_position (python -B -I)
-    CHECK_EQ(world.takeoffs[1].position, ost_domain::parse_position("0.019;-0;3000000000000000000000"));
+    // 0.0625 x 0.3 = 0.01875 -> 0.019, -0.004 x 0.3 = -0.0012 -> "-0.001" (the sign survives; -0.0004 x 0.3 would be "-0" and is refused, see below), 1e22 x 0.3 = 3e21 in full digits:
+    // the Windows text of serialization.encode_position (python -B -I)
+    CHECK_EQ(world.takeoffs[1].position, ost_domain::parse_position("0.019;-0.001;3000000000000000000000"));
+}
+
+// Windows 0a24294 (page_operations.py:227-233 require_storable_scaled_values; the store has the same rule, test_page_scale_store_safety.cpp
+// ACoordinateStoredAsZeroAtThreeDecimalsRefusesTheChange): a takeoff coordinate that is not 0 and would be stored as 0 at three decimals refuses the whole change in memory too,
+// and nothing is touched (pages of the batch included). 0.0005 is written "0.001" (a hair above the Python tie).
+TEST(SetScale_MemoryTwin, ACoordinateStoredAsZeroAtThreeDecimalsRefusesTheChangeAndNothingChanges)
+{
+    for (const vector<double> &position : {vector<double>({1000.0, 1000.0, 2000.0, 0.0004}), vector<double>({0.0, 5.0}), vector<double>({-0.4, 5.0})})
+    {
+        World world;
+        world.pages["p1"] = make_page("p1", 1.0, 1.0);
+        world.pages["p2"] = make_page("p2", 1.0, 1.0, "10,20,30,40", 4.0, 6.0);
+        world.takeoffs = {make_takeoff("t1", "p1", {10.0, 20.0}), make_takeoff("t2", "p2", position)};
+        const string before = describe(world);
+        const double sf2 = position[0] == 0.0 ? 1e-5 : 1e-3; // 5 x 1e-5 and 0.4 x 1e-3 are stored as 0; the 1000 row only has its small last value refused
+        SCOPED_CONTEXT("sf2 " + ost_test::detail::exact_float(sf2) + " first value " + ost_test::detail::exact_float(position[0]));
+        CHECK_EQ(apply(world, {"p1", "p2"}, 1.0, sf2), vector<string>());
+        CHECK_EQ(describe(world), before);
+    }
+    World world;
+    world.pages["p1"] = make_page("p1", 1.0, 1.0);
+    world.takeoffs = {make_takeoff("t1", "p1", {0.001, 5.0, 0.0, 7.0}), make_takeoff("t2", "p1", {0.4, 0.4})};
+    CHECK_EQ(apply(world, {"p1"}, 1.0, 0.5), vector<string>({"p1"}));
+    CHECK_EQ(world.takeoffs[0].position, ost_domain::parse_position("0.001;2.5;0;3.5"));
+    CHECK_EQ(world.takeoffs[1].position, ost_domain::parse_position("0.2;0.2"));
 }
 
 // ---- the agreement test: memory == reload -----------------------------------------------------------------------------------------------------------
@@ -369,10 +395,10 @@ namespace
             int bid;
             const char *position;
         } rows[] = {{801, 30, 100, 10, "1234.567;2345.678\n"},
-                    {802, 31, 100, 10, "0.0625;0.1875;0.3125;0.4375"},
+                    {802, 31, 100, 10, "6.25;18.75;31.25;43.75"},
                     {803, 30, 100, 10, "123456.789;987654.321;7;8;9;10;11"},
                     {804, 30, 101, 10, "3.14159;2.71828"},
-                    {805, 31, 101, 10, "-0.0004;0.0004;1e5;1e-5"},
+                    {805, 31, 101, 10, "-40.4;4.04;1e5;1e1"},
                     {806, 30, 100, 10, "not-numeric"},
                     {807, 30, 100, 10, ""}};
         for (const auto &row : rows)

@@ -10,6 +10,7 @@
 
 #include "Data/ProjectData.hpp"
 #include "Domain/PageScaleRules.hpp"
+#include "Domain/PositionParser.hpp"
 
 #include <functional>
 #include <limits>
@@ -351,24 +352,68 @@ TEST(SetScale_FormSession, ZeroScalesOpenAsOneAndNaNStaysNaN)
     CHECK_STR_EQ(nan.custom2, "12");
 }
 
-// SS-5 (deliberate, register): the custom fields are filled with FULL precision (".15g"), not f"{v:g}". A page that is (1, 12.0000001) shows "12.0000001", so ticking
-// only "Apply to all pages" and saving writes that value back and does not rescale the page by the truncation error (Windows: "12", a change of 8e-9).
-TEST(SetScale_FormSession, TheCustomFieldsAreFilledWithFullPrecision_Hardening)
+// set_scale_dialog.py:415-418 _format_number (Windows 0a24294; the old f"{v:g}" lost digits: 1234567 showed 1.23457e+06): the custom fields show the shortest round-trip text of the
+// stored value, Python repr(float(v)) without a trailing ".0". A page that is (1, 12.0000001) shows "12.0000001", so ticking only "Apply to all pages" and saving writes that value
+// back exactly and does not rescale the page by a truncation error. (test_set_scale_dialog.py::test_custom_fields_show_the_stored_value_at_full_precision: float(text) == value.)
+TEST(SetScale_FormSession, TheCustomFieldsShowTheShortestRoundTripText)
+{
+    const struct
+    {
+        double sf2;
+        const char *shown;
+    } rows[] = {{1234567.0, "1234567"},  {48.0, "48"},
+                {12.0000001, "12.0000001"}, {0.1, "0.1"},
+                {1e20, "1e+20"},         {1.0 / 3.0, "0.3333333333333333"},
+                {123456.789012345, "123456.789012345"}, {0.1 + 0.2, "0.30000000000000004"},
+                {1e15, "1000000000000000"}, {1e16, "1e+16"},
+                {0.000000123456789, "1.23456789e-07"}, {0.125, "0.125"}};
+    for (const auto &row : rows)
+    {
+        SCOPED_CONTEXT("sf2 " + ost_test::detail::exact_float(row.sf2));
+        const ScaleFormState state = ScaleFormSession(1.0, row.sf2).initial();
+        CHECK_STR_EQ(state.custom2, row.shown);
+        double back = 0.0;
+        REQUIRE(parse_python_float(state.custom2, back));
+        CHECK_EQ(back, row.sf2); // the text reads back as the identical double
+    }
+    CHECK_STR_EQ(ScaleFormSession(0.1 + 0.2, 1.0).initial().custom1, "0.30000000000000004");
+    CHECK_STR_EQ(ScaleFormSession(1.0, 1.0).initial().custom2, "1");
+}
+
+// The old SS-5 hardening cases, now with the round-trip text: ticking only "Apply to all pages" re-saves the stored pair.
+TEST(SetScale_FormSession, TickingOnlyApplyToAllResavesTheStoredPair)
 {
     const ScaleFormSession session(1.0, 12.0000001);
     ScaleFormState state = session.initial();
     CHECK(state.mode == ScaleInputMode::Custom);
     CHECK_STR_EQ(state.custom1, "1");
     CHECK_STR_EQ(state.custom2, "12.0000001");
-    CHECK_STR_EQ(ScaleFormSession(0.1 + 0.2, 1.0).initial().custom1, "0.3");
-    CHECK_STR_EQ(ScaleFormSession(0.000000123456789, 1.0).initial().custom1, "1.23456789e-07");
     state.apply_to_all = true; // the only change
     ScaleSettings settings;
     CHECK_FALSE(validate(state, &settings).refused);
     CHECK_EQ(settings.scale_factor1, 1.0);
-    CHECK_NEAR(settings.scale_factor2, 12.0000001, 1e-13);
+    CHECK_EQ(settings.scale_factor2, 12.0000001); // exactly the stored double
     CHECK(settings.scale_factor2 != 12.0);
     CHECK(settings.apply_to_all_pages);
+    // (1, 1/3): the text "0.3333333333333333" reads back as the same double, so the re-saved pair is bit for bit the stored one
+    ScaleFormState third = ScaleFormSession(1.0, 1.0 / 3.0).initial();
+    third.apply_to_all = true;
+    CHECK_FALSE(validate(third, &settings).refused);
+    CHECK_EQ(settings.scale_factor2, 1.0 / 3.0);
+}
+
+// Windows 0a24294 (set_scale_dialog.py:351-372, shared/texts.py:1056-1060, test_set_scale_apply.py::test_a_scale_the_page_content_cannot_take_shows_why_and_keeps_the_page): a
+// refusal because the takeoffs and annotations cannot be stored at the new scale (a value not finite, or a takeoff coordinate that would be stored as 0) shows {"Save Failed",
+// "The scale was not changed because the takeoffs and annotations on the page cannot be stored at that scale."}; every other failure keeps "Failed to save page scale.".
+TEST(SetScale_FormApply, AScaleThePageContentCannotTakeShowsWhy)
+{
+    const FormIssue range = scale_save_failed_issue(true);
+    CHECK_STR_EQ(range.title, "Save Failed");
+    CHECK_STR_EQ(range.message, "The scale was not changed because the takeoffs and annotations on the page cannot be stored at that scale.");
+    const FormIssue generic = scale_save_failed_issue(false);
+    CHECK_STR_EQ(generic.title, "Save Failed");
+    CHECK_STR_EQ(generic.message, "Failed to save page scale.");
+    CHECK_STR_EQ(kScaleRangeRefusedMessage, range.message);
 }
 
 // ---- the style change (set_scale_dialog.py:167-189) ------------------------------------------------------------------------------------------

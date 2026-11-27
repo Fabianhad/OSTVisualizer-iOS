@@ -14,6 +14,7 @@
 
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,20 @@ namespace
                                                "BidCallOuts",   "BidAnnotationRects",  "BidAnnotationOvals", "BidAnnotationPolygons", "BidAnnotationClouds",
                                                "BidAnnoInk",    "BidNamedViews",       "BidHotLinks"};
 
+    // The oracle rows were recorded from Windows BEFORE 0a24294: in the three-decimal tables a row whose expected text holds a "0" / "-0" for a coordinate that was not 0 is now
+    // REFUSED by Windows (require_storable_scaled_values: before != 0 and round(after, 3) == 0). Whether a recorded row is such a row.
+    bool windows_now_refuses(const string &table, const string &stored, const string &expected)
+    {
+        if (table != "BidTakeoffs" && table != "BidComments" && table != "BidTypGroupViews")
+            return false;
+        const vector<double> before = parse_position(stored);
+        const vector<double> after = parse_position(expected);
+        for (size_t i = 0; i < before.size() && i < after.size(); ++i)
+            if (before[i] != 0.0 && after[i] == 0.0)
+                return true;
+        return false;
+    }
+
     // The rescaled text of a row that must be rescaled (REQUIRE: the row was accepted).
     string rescaled(const string &table, const string &stored, double factor)
     {
@@ -64,6 +79,7 @@ namespace
 TEST(SetScale_PositionText, EveryOracleRowGivesTheWindowsText)
 {
     int rows = 0;
+    int refused = 0;
     for (const scale_oracle::PositionRow &row : scale_oracle::kPositionRows)
     {
         SCOPED_CONTEXT(string(row.table) + " '" + row.stored + "' x " + ost_test::detail::exact_float(row.factor));
@@ -72,6 +88,12 @@ TEST(SetScale_PositionText, EveryOracleRowGivesTheWindowsText)
             CHECK_STR_EQ(kind_name(got.kind), "Empty");
         else if (row.kind == 1)
             CHECK_STR_EQ(kind_name(got.kind), "NotNumeric");
+        else if (windows_now_refuses(row.table, row.stored, row.expected))
+        {
+            ++refused;
+            CHECK_STR_EQ(kind_name(got.kind), "Underflow"); // the recorded Windows text stored a non-zero coordinate as 0: Windows now refuses the change
+            CHECK_STR_EQ(got.text, "");
+        }
         else
         {
             CHECK_STR_EQ(kind_name(got.kind), "Rescaled");
@@ -82,6 +104,7 @@ TEST(SetScale_PositionText, EveryOracleRowGivesTheWindowsText)
     // The table is not silently empty or shortened: 3 three-decimal tables x 33 cases + 13 annotation tables x 20 cases = 359 rows. (Review fix: the guard was 600, a miscount
     // of the 639 LINES of the generated header; every row passed, the guard itself could never be met.)
     CHECK(rows >= 359);
+    CHECK(refused >= 3); // the rows the new Windows rule refuses are not silently dropped ("-0.0004;0.0004" x 1, "1e-7;2" x 1000, ...)
 }
 
 // ---- ported Windows tests (tests/infrastructure/mdb/components/test_page_operations.py) ------------------------------------------------
@@ -251,8 +274,8 @@ TEST(SetScale_PositionTextSafety, ANonFiniteStoredOrScaledCoordinateIsRefused)
     CHECK_STR_EQ(kind_name(rescale_position_text("BidTakeoffs", "1e307;1", 10.0).kind), "Rescaled");
 }
 
-// A non-zero coordinate that underflows to exactly 0.0 by the multiplication refuses the change (data destroyed); a zero coordinate stays zero; a value that only
-// ROUNDS to 0 at three decimals is not an underflow (Windows writes "0" / "-0" for it: the oracle rows).
+// A non-zero coordinate that underflows to exactly 0.0 by the multiplication refuses the change (data destroyed); a zero coordinate stays zero. (A value that only ROUNDS to 0
+// at three decimals is refused too in the three-decimal tables since Windows 0a24294: TheThreeDecimalTablesRefuseAValueThatWouldBeStoredAsZero below.)
 TEST(SetScale_PositionTextSafety, ANonZeroCoordinateThatUnderflowsToZeroIsRefused)
 {
     for (const char *table : {"BidTakeoffs", "BidTexts", "BidAnnotationPolygons"})
@@ -261,9 +284,41 @@ TEST(SetScale_PositionTextSafety, ANonZeroCoordinateThatUnderflowsToZeroIsRefuse
         CHECK_STR_EQ(kind_name(rescale_position_text(table, "5e-324;1", 0.5).kind), "Underflow");
         CHECK_STR_EQ(kind_name(rescale_position_text(table, "1;1e-300", 1e-300).kind), "Underflow");
         CHECK_STR_EQ(kind_name(rescale_position_text(table, "0;0", 0.5).kind), "Rescaled");
-        CHECK_STR_EQ(kind_name(rescale_position_text(table, "0.0004;5", 1.0).kind), "Rescaled"); // rounds to 0 at three decimals: written, not refused
     }
-    CHECK_STR_EQ(rescaled("BidTakeoffs", "0.0004;5", 1.0), "0;5\n");
+}
+
+// require_storable_scaled_values (legend_position.py:10-20, page_operations.py:227-233): in the three-decimal tables (BidTakeoffs, BidComments, BidTypGroupViews: every table
+// that is not one of the 13 annotation tables and not the legend) a coordinate that is not 0 before and whose three-decimal text would be 0 ("0" or "-0": round(after, 3) == 0)
+// refuses the change; Python rounds the exact binary value half-even, so 0.0005 (a hair above the tie) stays "0.001" and 0.0004 becomes 0. The 13 annotation tables write
+// the exact value and are not held to it. (test_page_write_guards.py::PageScaleRangeAccessTests: 'Position 1000;1000;2000;1000' x 1e-9 refused, x 2 -> 2000;2000;4000;2000.)
+TEST(SetScale_PositionTextSafety, TheThreeDecimalTablesRefuseAValueThatWouldBeStoredAsZero)
+{
+    for (const char *table : {"BidTakeoffs", "BidComments", "BidTypGroupViews"})
+    {
+        SCOPED_CONTEXT(string("table ") + table);
+        CHECK_STR_EQ(describe(rescale_position_text(table, "1000;1000;2000;1000", 1e-9)), "Underflow ''"); // 1000 x 1e-9 = 1e-6
+        CHECK_STR_EQ(kind_name(rescale_position_text(table, "0.4;0.4", 0.001).kind), "Underflow");         // 0.0004
+        CHECK_STR_EQ(kind_name(rescale_position_text(table, "-0.4;5", 0.001).kind), "Underflow");          // -0.0004 is "-0"
+        CHECK_STR_EQ(kind_name(rescale_position_text(table, "0;5", 1e-5).kind), "Underflow");              // the zero stays 0, the 5 becomes 5e-5
+        CHECK_STR_EQ(kind_name(rescale_position_text(table, "0.0008;5", 0.5).kind), "Underflow");          // 0.0004
+        CHECK_STR_EQ(rescaled(table, "0.4;0.4", 0.002), "0.001;0.001\n");                                   // 0.0008 -> 0.001
+        CHECK_STR_EQ(rescaled(table, "0.6;100", 0.001), "0.001;0.1\n");                                     // 0.0006 -> 0.001
+        CHECK_STR_EQ(rescaled(table, "0.001;5", 0.5), "0.001;2.5\n");                                       // 0.0005 is a hair above the tie: "0.001"
+        CHECK_STR_EQ(rescaled(table, "0.4;0.4", 0.01), "0.004;0.004\n");
+        CHECK_STR_EQ(rescaled(table, "1000;1000;2000;1000", 2.0), "2000;2000;4000;2000\n");
+        CHECK_STR_EQ(rescaled(table, "0;0", 1e-9), "0;0\n"); // a stored 0 stays 0 and is allowed
+    }
+    // the 13 annotation tables write the exact value (full repr) and are held to the finite and exactly-zero rules only
+    for (const char *table : kAnnotationTables)
+    {
+        SCOPED_CONTEXT(string("table ") + table);
+        CHECK_STR_EQ(kind_name(rescale_position_text(table, "1000;1000;2000;1000", 1e-9).kind), "Rescaled");
+        CHECK_STR_EQ(kind_name(rescale_position_text(table, "0.4;0.4;0.4;0.4", 0.001).kind), "Rescaled");
+    }
+    // the legend is a separate text path (rescale_legend_xml) and has no such rule either
+    // undo / redo of a takeoff move (rescale_entry_positions) stays lenient: Windows replays it without the guard
+    const std::optional<std::vector<double>> replay = rescale_entry_positions({0.4, 0.4}, PageScale{1.0, 96.0}, PageScale{1.0, 0.096});
+    CHECK(replay.has_value());
 }
 
 // The factor must be finite and > 0: 0, a negative value, NaN and an infinity are BadFactor, and nothing is parsed (a non-numeric row is BadFactor too, not skipped).

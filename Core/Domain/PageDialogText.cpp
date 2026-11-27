@@ -6,8 +6,8 @@ namespace ost_domain
 {
     DialogText page_rename_prompt_text(const std::string &stored_name)
     {
-        // rename_page_dialog.py:55-100: the dialog is titled "Rename Page" and its read-only row "Old Name:" shows the stored name.
-        return {"Rename Page", "Old Name: " + stored_name};
+        // rename_page_dialog.py:55-100: the dialog is titled "Rename Page" and its read-only row "Old name:" shows the stored name.
+        return {"Rename Page", "Old name: " + stored_name};
     }
 
     DialogText page_delete_reload_failed_text(const std::string &reason)

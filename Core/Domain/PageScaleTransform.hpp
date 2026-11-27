@@ -22,7 +22,9 @@
 //                                               not finite and > 0 (rescale_entry_positions does).
 // Deliberate differences from Windows (register SS-2, SS-10, SS-13), each pinned by a test that says so:
 //   - a factor, a coordinate or a result that is not finite, and a non-zero coordinate that underflows to 0.0, REFUSE the change instead of writing "inf" /
-//     "nan" text or destroying the value (Windows has no overflow guard for positions: serialization.py:18-28);
+//     "nan" text or destroying the value. Windows refuses them too since 0a24294 (require_storable_scaled_values, PageScaleRangeError): a result that is not finite
+//     everywhere, and in the takeoff-like tables (written with three decimals) a non-zero coordinate whose three-decimal text is "0" ("-0"; Python round(x, 3) == 0).
+//     iOS is STRICTER for the 13 annotation tables, the legend and the overlay rectangle: an exactly-zero underflow refuses there too (Windows: finiteness only);
 //   - the legend XML is rewritten IN PLACE (only the dX / dY values change, the rest of the text is kept byte for byte, UTF-8) instead of being
 //     re-serialised through xml.etree (latin-1, `<Legend ... />`): the seven Windows legend oracles that expect the xml.etree spelling are adapted.
 //
@@ -138,7 +140,8 @@ namespace ost_domain
         NotNumeric, // parse_position gives nothing (a bad token, only blanks): the row is LEFT as it is and Windows warns (SS-13, parity)
         Rescaled,   // `text` is the new stored text
         NotFinite,  // a stored or a scaled coordinate is NaN / infinite: the whole change is refused (SS-2, hardening)
-        Underflow,  // a non-zero coordinate became exactly 0.0 by the multiplication: the whole change is refused (SS-2, hardening)
+        Underflow,  // a non-zero coordinate became exactly 0.0 by the multiplication, or (BidTakeoffs, BidComments, BidTypGroupViews: the tables written with three
+                    // decimals) a non-zero coordinate whose three-decimal text is "0" / "-0": the whole change is refused (SS-2; Windows 0a24294 for the second case)
         BadFactor   // the factor is not finite or not > 0 (the store never passes one: it refuses the change first)
     };
     struct PositionRescale

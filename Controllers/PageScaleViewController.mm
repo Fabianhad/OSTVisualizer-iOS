@@ -136,7 +136,7 @@ static const CGFloat kKeyboardRoom = 300.0;
     titleForHeaderInSection:(NSInteger)section {
   switch (section) {
   case PageScaleSectionStyle:
-    return @"Scale Style";
+    return @"Scale style:";
   case PageScaleSectionScale:
     return @"Scale";
   default:
@@ -203,7 +203,7 @@ static const CGFloat kKeyboardRoom = 300.0;
   return cell;
 }
 
-// "Pre-defined scale" and the presets of the style. The radio is the checkmark; the preset is a pull-down menu on the right (a UIMenu is anchored by the
+// "Predefined scale" and the presets of the style. The radio is the checkmark; the preset is a pull-down menu on the right (a UIMenu is anchored by the
 // system, no popover anchor is needed), the row marked in it is the preset of the state.
 - (UITableViewCell *)_predefinedCell {
   UITableViewCell *cell =
@@ -214,7 +214,7 @@ static const CGFloat kKeyboardRoom = 300.0;
                            : UITableViewCellAccessoryNone;
 
   UILabel *title = [[UILabel alloc] init];
-  title.text = @"Pre-defined scale";
+  title.text = @"Predefined scale";
   [title setContentHuggingPriority:UILayoutPriorityDefaultLow
                            forAxis:UILayoutConstraintAxisHorizontal];
 
@@ -531,8 +531,11 @@ static const CGFloat kKeyboardRoom = 300.0;
     break;
   case ost_domain::ScaleApplyResult::SaveFailed:
     // "This bid is locked." has been shown by the delegate; every other refusal is the Windows "Save Failed" alert
-    if (delegateResult != PageScaleSaveResultLocked && issue)
+    if (delegateResult != PageScaleSaveResultLocked && issue) {
+      if (delegateResult == PageScaleSaveResultUnstorable)
+        issue = ost_domain::scale_save_failed_issue(true);
       [self _presentIssue:*issue focusField:0];
+    }
     break;
   }
 }

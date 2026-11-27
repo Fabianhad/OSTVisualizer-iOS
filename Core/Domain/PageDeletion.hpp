@@ -45,9 +45,9 @@ namespace ost_domain
 
     // The confirmation of a delete (title "Delete Verification"; iOS always asks, plan N-M1-23, texts N-M1-03). `display_name` is put into
     // the quotes as it is.
-    //   has_content: "The Page '<name>' contains takeoffs, annotations, comments, named views or hot links. Deleting this page will remove
-    //                 the page and everything on it from this bid.\n\nDeleting a Page cannot be undone, are you sure you want to delete this Page?"
-    //   empty page:  "Delete the Page '<name>'?\n\nDeleting a Page cannot be undone."
+    //   has_content: "The page \"<name>\" contains takeoffs, annotations, comments, Named Views or hotlinks. Deleting this page will remove
+    //                 the page and everything on it from this bid.\n\nDeleting a page cannot be undone. Are you sure you want to delete this page?"
+    //   empty page:  "Delete the page \"<name>\"?\n\nDeleting a page cannot be undone."
     // (Windows messagebox.py:55-60 promises the removal "in the Base Bid, and any Alternates or Change Orders" and names only some of the
     // content: register DP-3.)
     DialogText page_delete_confirmation(const std::string &display_name, bool has_content);

@@ -31,10 +31,20 @@ namespace ost_domain
             std::vector<double> values;
         };
 
+        // Whether the three-decimal text of `value` is "0" or "-0": Python round(value, 3) == 0 (half-even on the exact binary value, so 0.0005 stays "0.001" and 0.0004 is 0).
+        bool stored_as_zero_at_three_decimals(double value)
+        {
+            const std::string text = format_fixed_trimmed(value, 3);
+            return text == "0" || text == "-0";
+        }
+
         // Every value times `factor`, except the preserved ones (the rotation slot of an annotation, kept exactly). A stored value that is not finite (preserved or not), a scaled value
         // that is not finite and a non-zero value that underflows to exactly 0.0 refuse (SS-2). `preserved(i)` says whether index i keeps its value.
+        // `three_decimals` (the takeoff-like tables, which are WRITTEN with three decimals): a non-zero value whose three-decimal text is "0" refuses too, since the stored coordinate
+        // would be 0 (Windows 0a24294 require_storable_scaled_values, legend_position.py:10-20: `before != 0 and round(after, 3) == 0`; the 13 annotation tables, the overlay rectangle
+        // and the undo replay are not held to it there).
         template <typename Preserved>
-        ScaledValues scale_checked(const std::vector<double> &original, double factor, Preserved preserved)
+        ScaledValues scale_checked(const std::vector<double> &original, double factor, Preserved preserved, bool three_decimals)
         {
             ScaledValues result;
             for (const double value : original)
@@ -60,7 +70,7 @@ namespace ost_domain
                     result.values.clear();
                     return result;
                 }
-                if (original[i] != 0.0 && scaled == 0.0)
+                if (original[i] != 0.0 && (scaled == 0.0 || (three_decimals && stored_as_zero_at_three_decimals(scaled))))
                 {
                     result.kind = PositionRescaleKind::Underflow;
                     result.values.clear();
@@ -183,7 +193,8 @@ namespace ost_domain
             return std::nullopt;
         if (std::fabs(factor - 1.0) <= kScaleEpsilon)
             return positions;
-        ScaledValues scaled = scale_checked(positions, factor, [](std::size_t) { return false; });
+        // Undo / redo replay is lenient about the three decimals (Windows replays a recorded move without the Set Scale guard).
+        ScaledValues scaled = scale_checked(positions, factor, [](std::size_t) { return false; }, false);
         if (scaled.kind != PositionRescaleKind::Rescaled)
             return std::nullopt;
         return scaled.values;
@@ -239,7 +250,8 @@ namespace ost_domain
                                                       if (!rotation)
                                                           return false;
                                                       return keep_to_end ? i >= *rotation : i == *rotation;
-                                                  });
+                                                  },
+                                                  !kind); // every table that is not one of the 13 annotation tables is written with three decimals
         if (scaled.kind != PositionRescaleKind::Rescaled)
         {
             result.kind = scaled.kind;
@@ -367,7 +379,8 @@ namespace ost_domain
             const auto found = plan_of.find(takeoff.page_uid);
             if (found == plan_of.end() || !plans[found->second].rewrite)
                 continue;
-            const ScaledValues scaled = scale_checked(takeoff.position, plans[found->second].factor, [](std::size_t) { return false; });
+            // The memory twin of the store: the takeoff is held to the same three-decimal rule (memory == reload).
+            const ScaledValues scaled = scale_checked(takeoff.position, plans[found->second].factor, [](std::size_t) { return false; }, true);
             if (scaled.kind != PositionRescaleKind::Rescaled)
                 return {};
             // What a reload reads: the three-decimal text, parsed back.

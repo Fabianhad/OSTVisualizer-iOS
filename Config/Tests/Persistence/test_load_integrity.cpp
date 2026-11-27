@@ -271,7 +271,7 @@ TEST(Dbp31_LoadIntegrity, AHoleOnAnotherPageThanItsParentFailsTheOpen)
     seed_world(db);
     add_takeoff(db, 7, "30", "10", "0", "'0;0;1;1'");
     add_takeoff(db, 8, "30", "11", "7", "'0;0;1;1'");
-    check_failed(db, "A Takeoff and its parent must belong to the same Page.");
+    check_failed(db, "A takeoff and its parent must belong to the same page.");
 }
 
 // Port of ...::test_bid_load_accepts_valid_multi_level_takeoff_parent_chain.

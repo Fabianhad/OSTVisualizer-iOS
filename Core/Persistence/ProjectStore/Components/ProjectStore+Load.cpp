@@ -851,7 +851,7 @@ namespace ost_store
                     continue;
                 auto parent = page_by_uid.find(row.takeoff.parent_uid);
                 if (parent != page_by_uid.end() && page_by_uid[row.takeoff.uid] != parent->second)
-                    return fail("A Takeoff and its parent must belong to the same Page.");
+                    return fail("A takeoff and its parent must belong to the same page.");
             }
 
             // find_takeoff_parent_cycle_uids over the holes: the smallest uid of the cycles is named

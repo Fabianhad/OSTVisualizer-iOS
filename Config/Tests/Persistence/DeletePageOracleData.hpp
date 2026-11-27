@@ -380,8 +380,9 @@ namespace ost_delpage_oracle
     inline constexpr const char *kMsgMalformed0 = "BidPages contains malformed UID 0; authoritative bid-owned UIDs must be positive integers.";
     inline constexpr const char *kMsgMalformedMinus5 = "BidPages contains malformed UID -5; authoritative bid-owned UIDs must be positive integers.";
     inline constexpr const char *kMsgInvalidX = "Invalid BidPages UID: 'x'";
-    inline constexpr const char *kMsgMixedBids = "BidPages mutation targets do not belong to one authoritative Bid.";
-    inline constexpr const char *kMsgNullBid = "BidPages mutation targets do not belong to one authoritative Bid.";
+    // kMsgMixedBids / kMsgNullBid were edited by hand to the Windows d26893c text (shared/texts.py:927-930, lowercase "bid").
+    inline constexpr const char *kMsgMixedBids = "BidPages mutation targets do not belong to one authoritative bid.";
+    inline constexpr const char *kMsgNullBid = "BidPages mutation targets do not belong to one authoritative bid.";
     inline constexpr const char *kMsgOrphanBid99 = "Bids has no row for UID 99; the requested authoritative owner does not exist.";
     inline constexpr const char *kMsgDuplicatePage7 = "BidPages contains duplicate UID 7; authoritative bid-owned UIDs must be unique.";
     inline constexpr const char *kMsgDuplicateComment7 = "BidComments contains duplicate UID 7; authoritative bid-owned UIDs must be unique.";

@@ -54,12 +54,12 @@ namespace ost_domain
         DialogText text;
         text.title = "Delete Verification";
         if (has_content)
-            text.message = "The Page '" + display_name +
-                           "' contains takeoffs, annotations, comments, named views or hot links. Deleting this page will remove the page "
+            text.message = "The page \"" + display_name +
+                           "\" contains takeoffs, annotations, comments, Named Views or hotlinks. Deleting this page will remove the page "
                            "and everything on it from this bid.\n\n"
-                           "Deleting a Page cannot be undone, are you sure you want to delete this Page?";
+                           "Deleting a page cannot be undone. Are you sure you want to delete this page?";
         else
-            text.message = "Delete the Page '" + display_name + "'?\n\nDeleting a Page cannot be undone.";
+            text.message = "Delete the page \"" + display_name + "\"?\n\nDeleting a page cannot be undone.";
         return text;
     }
 

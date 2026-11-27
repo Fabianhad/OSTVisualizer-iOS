@@ -4,7 +4,7 @@
 // Windows sources (HEAD 49a2d59):
 //   ost_visualizer/presentation/coordinators/ui_event_coordinator.py:5922-5926   the scan names the page OR the loaded model has takeoffs for it
 //   ost_visualizer/presentation/coordinators/ui_event_coordinator.py:5714-5731   open_rename_page_dialog (a page with an empty name can be renamed)
-//   ost_visualizer/presentation/dialogs/rename_page_dialog.py:55-100             the read-only "Old Name" row shows the raw stored name
+//   ost_visualizer/presentation/dialogs/rename_page_dialog.py:55-100             the read-only "Old name:" row shows the raw stored name
 #include "TestHarness.hpp"
 
 #include "Data/PageMenuRules.hpp"
@@ -65,7 +65,7 @@ TEST(PageMenuRulesReview, APageWithAnEmptyName_CanBeRenamed_AndTheDeleteItemFoll
     CHECK(two_d.rename_page.enabled);
     CHECK(two_d.delete_page.enabled);
     CHECK(ost_data::page_menu_state(project, "2", PageMenuBar::Bar3D, false).rename_page.enabled);
-    CHECK_STR_EQ(ost_domain::page_rename_prompt_text(project.pages.at("2").name).message, "Old Name: ");
+    CHECK_STR_EQ(ost_domain::page_rename_prompt_text(project.pages.at("2").name).message, "Old name: ");
 }
 
 // The state is a pure function of its four inputs: asking twice gives the same answer, the 2D answer for Rename equals the 3D answer

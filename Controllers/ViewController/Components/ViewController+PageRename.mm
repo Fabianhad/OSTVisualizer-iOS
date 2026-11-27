@@ -1,5 +1,5 @@
 // Rename Page (plan 5.5, decisions N-M1-05, N-M1-24): the action of the page menu item "Rename Page...". An alert with one text field
-// (Windows: a modal dialog with the read-only "Old Name" and the editable "New Name"). The rules are Core's: the open guard
+// (Windows: a modal dialog with the read-only "Old name:" and the editable "New name:"). The rules are Core's: the open guard
 // ost_data::page_menu_state / ost_domain::can_rename_page, the name rule ost_domain::decide_page_rename (strip, blank, length, NUL,
 // unchanged), the texts. The write is the bridge +[ImportService renamePageWithUID:inBid:toName:error:]; the name is applied in memory
 // only after it said YES. A rename touches nothing else: no mesh regeneration, no plan reload, no selection change, no undo entry.
@@ -69,8 +69,8 @@ static void OSTPageRenameRestoreOffset(UIScrollView *bar, CGPoint offset) {
   [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
     nameField = field;
     field.text = draft;
-    // The "New Name:" label of the Windows dialog (the old name is in the message).
-    field.placeholder = @"New Name";
+    // The "New name:" label of the Windows dialog (the old name is in the message).
+    field.placeholder = @"New name";
     // Sheet names such as "A-101": no capital letters, no corrections, no smart quotes or dashes.
     field.autocapitalizationType = UITextAutocapitalizationTypeNone;
     field.autocorrectionType = UITextAutocorrectionTypeNo;

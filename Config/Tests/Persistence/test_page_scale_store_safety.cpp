@@ -340,6 +340,9 @@ TEST(SetScale_StoreSafety, TheScaleColumnsHoldTheNewPairExactlyAsGiven)
     CHECK_EQ(ost_ptest::scale_values(db, 100), (std::pair<double, double>(0.1, 1.0 / 3.0)));
     CHECK_EQ(ost_ptest::type_of(db, "BidPages", "ScaleFactor1", 100), "real");
     CHECK_EQ(ost_ptest::type_of(db, "BidPages", "ScaleFactor2", 100), "real");
+    // a factor of 3e-12 would store the small seeded takeoff coordinates as 0 (refused since Windows 0a24294): the three-decimal tables get big coordinates first
+    for (const char *table : {"BidTakeoffs", "BidComments", "BidTypGroupViews"})
+        db.must(string("UPDATE ") + table + " SET Position = '1e12;2e12' WHERE UID = " + std::to_string(ost_ptest::world_row_uid(table, 0)));
     REQUIRE(save(db, {"100"}, 12345678.901234567, 0.000123456789012345, nullptr));
     CHECK_EQ(ost_ptest::scale_values(db, 100), (std::pair<double, double>(12345678.901234567, 0.000123456789012345)));
 }
@@ -467,7 +470,7 @@ TEST(SetScale_StoreSafety, AFactorThatOverflowsOrUnderflowsIsRefused)
         db.must("UPDATE BidPages SET ScaleFactor1 = 1.0, ScaleFactor2 = 1e300 WHERE UID = 100");
         const string before = db.snapshot_all();
         check_refused(db, before, {"100"}, 1.0, 1e-300, "BadNewScale"); // factor 1e-600 = 0
-        CHECK(save(db, {"100"}, 1.0, 1e290, nullptr));
+        CHECK(save(db, {"100"}, 1.0, 1e299, nullptr));                  // the control: factor 0.1
     }
 }
 
@@ -540,6 +543,71 @@ TEST(SetScale_StoreSafety, ACoordinateThatUnderflowsToZeroRefusesTheChange_Harde
     check_refused(db, before, {"100"}, 0.25, 12.0, "Underflow");
     db.must("UPDATE BidPages SET OverlayRect = '5,5,10,10' WHERE UID = 100");
     CHECK(save(db, {"100"}, 0.25, 12.0, nullptr)); // the control
+}
+
+// Windows 0a24294 (page_operations.py:227-233, legend_position.py:10-20, test_page_write_guards.py::PageScaleRangeAccessTests): in the three-decimal tables (BidTakeoffs, BidComments,
+// BidTypGroupViews) a coordinate that is not 0 and would be STORED as 0 (its three-decimal text is "0" or "-0": round(after, 3) == 0) refuses the whole change with the typed reason
+// Underflow; Python rounds the exact binary value half-even, so 0.0005 is written "0.001" and 0.0004 is refused. The 13 annotation tables and the legend write the exact value and
+// are NOT held to it (iOS keeps its stricter exactly-zero refusal there, ACoordinateThatUnderflowsToZeroRefusesTheChange_Hardening). The factor here is 0.5 ((0.125, 12) -> (0.25, 12)).
+TEST(SetScale_StoreSafety, ACoordinateStoredAsZeroAtThreeDecimalsRefusesTheChange)
+{
+    for (const char *table : {"BidTakeoffs", "BidComments", "BidTypGroupViews"})
+    {
+        for (const char *value : {"0.0008;5", "0;0.0006", "-0.0008;5", "1000;1000;2000;0.0002"})
+        {
+            SCOPED_CONTEXT(string(table) + " '" + value + "'");
+            TempDb db("scale_safe_rounds_to_zero");
+            ost_ptest::seed_scale_world(db);
+            const long long uid = ost_ptest::world_row_uid(table, 0);
+            db.must(string("UPDATE ") + table + " SET Position = '" + value + "' WHERE UID = " + std::to_string(uid));
+            const string before = db.snapshot_all();
+            check_refused(db, before, {"100"}, 0.25, 12.0, "Underflow");
+            check_refused(db, before, {"101", "100"}, 0.25, 12.0, "Underflow"); // the earlier page of the batch is rolled back too
+            db.must(string("UPDATE ") + table + " SET Position = '1000;1000;2000;1000' WHERE UID = " + std::to_string(uid));
+            CHECK(save(db, {"100"}, 0.25, 12.0, nullptr)); // the control
+            CHECK_STR_EQ(text_of_row(db, table, 0), "500;500;1000;500\n");
+        }
+    }
+    // the tie: 0.001 x 0.5 = 0.0005 (a hair above the tie as a double) is written "0.001"
+    TempDb db("scale_safe_rounds_to_zero_tie");
+    ost_ptest::seed_scale_world(db);
+    const long long uid = ost_ptest::world_row_uid("BidTakeoffs", 0);
+    db.must("UPDATE BidTakeoffs SET Position = '0.001;5;0;7' WHERE UID = " + std::to_string(uid));
+    CHECK(save(db, {"100"}, 0.25, 12.0, nullptr));
+    CHECK_STR_EQ(text_of_row(db, "BidTakeoffs", 0), "0.001;2.5;0;3.5\n"); // the stored 0 stays 0
+    // the same sizes in an annotation table are written exactly, not refused
+    TempDb annotations("scale_safe_rounds_to_zero_annotation");
+    ost_ptest::seed_scale_world(annotations);
+    annotations.must("UPDATE BidTexts SET Position = '0.0008;0.0008;1;1;0.5' WHERE UID = " + std::to_string(ost_ptest::world_row_uid("BidTexts", 0)));
+    CHECK(save(annotations, {"100"}, 0.25, 12.0, nullptr));
+    CHECK_STR_EQ(text_of_row(annotations, "BidTexts", 0), "0.0004;0.0004;0.5;0.5;0.5\n");
+}
+
+// Windows 0a24294 (set_scale_dialog.py:351-372): ONLY the refusals "the takeoffs and annotations on the page cannot be stored at that scale" (PageScaleRangeError: a value not
+// finite, or a takeoff coordinate stored as 0; the iOS stricter exact-zero refusals belong to it too) show the specific text in the dialog; every other reason (a bad scale, a
+// bad legend or rectangle, a lock, a failed statement) keeps "Failed to save page scale.". page_scale_refusal_is_unstorable_content is what the dialog asks.
+TEST(SetScale_StoreSafety, OnlyTheRefusalsOfUnstorableContentGetTheSpecificText)
+{
+    for (const PageScaleRefusal refusal : {PageScaleRefusal::NonFiniteResult, PageScaleRefusal::Underflow})
+        CHECK(ost_store::page_scale_refusal_is_unstorable_content(refusal));
+    for (const PageScaleRefusal refusal : {PageScaleRefusal::None, PageScaleRefusal::MalformedUid, PageScaleRefusal::EmptyBatch, PageScaleRefusal::NoSuchBid, PageScaleRefusal::NoSuchPage,
+                                           PageScaleRefusal::ForeignBid, PageScaleRefusal::Locked, PageScaleRefusal::MissingColumns, PageScaleRefusal::BadStoredScale,
+                                           PageScaleRefusal::BadNewScale, PageScaleRefusal::BadOverlayRect, PageScaleRefusal::BadLegend, PageScaleRefusal::StatementFailed})
+        CHECK_FALSE(ost_store::page_scale_refusal_is_unstorable_content(refusal));
+    // end to end: a takeoff coordinate that would be stored as 0 and one that overflows are both of that kind; a stored scale that is not usable is not
+    TempDb db("scale_safe_dialog_text");
+    ost_ptest::seed_scale_world(db);
+    PageScaleOutcome outcome;
+    CHECK_FALSE(save(db, {"100"}, 1.0, 1e-9, &outcome)); // 1e-9 / 96 of every takeoff coordinate
+    CHECK(ost_store::page_scale_refusal_is_unstorable_content(outcome.refusal));
+    db.must("UPDATE BidTakeoffs SET Position = '1e300;1' WHERE UID = " + std::to_string(ost_ptest::world_row_uid("BidTakeoffs", 0)));
+    const string overflowing = db.snapshot_all();
+    CHECK_FALSE(save(db, {"100"}, 1.0, 9.6e11, &outcome)); // x 1e10: 1e300 overflows
+    CHECK(ost_store::page_scale_refusal_is_unstorable_content(outcome.refusal));
+    CHECK_EQ(db.snapshot_all(), overflowing);
+    CHECK_FALSE(save(db, {"100"}, 0.0, 12.0, &outcome));
+    CHECK_FALSE(ost_store::page_scale_refusal_is_unstorable_content(outcome.refusal));
+    CHECK_EQ(db.snapshot_all(), overflowing);
 }
 
 // S12 / SS-10: a legend that is not well-formed ("<Legends"), has another root, has a dX that is NaN or not a number is BadLegend and rolls back everything written before it

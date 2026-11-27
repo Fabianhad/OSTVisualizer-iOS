@@ -14,7 +14,9 @@
 //     mocked writer: test_project_write_service.py:873-904);
 //   - a page that is not a page of `bid_uid` (another bid, no bid) is refused (Windows derives the bid from the page and never compares it);
 //   - a locked bid is refused INSIDE the transaction (plan 4.1);
-//   - a factor / coordinate that is not finite and a non-zero coordinate that underflows to 0 refuse the whole change (Windows would write "inf" text);
+//   - a factor / coordinate that is not finite and a non-zero coordinate that underflows to 0 refuse the whole change. Windows refuses a result that is not finite and,
+//     in BidTakeoffs / BidComments / BidTypGroupViews, a non-zero coordinate stored as 0 at three decimals since 0a24294 (PageScaleRangeError; the same refusals here,
+//     reason NonFiniteResult / Underflow); the exactly-zero underflow of an annotation table, the legend or the overlay rectangle is refused by iOS only (stricter);
 //   - the legend XML is rewritten in place (PageScaleTransform.hpp).
 // Kept from Windows: a stored NULL / 0 / negative / NaN / infinite scale refuses every Set Scale of the page, no repair (SS-1); a change whose factor is within
 // 1e-9 of 1 writes the new pair and touches no content; a Position row that is not numeric is left as it is with a warning while the scale changes (SS-13);
@@ -42,11 +44,19 @@ namespace ost_store
         BadStoredScale,  // the stored ScaleFactor1 / ScaleFactor2 of a page is NULL, 0, negative, NaN or infinite (units_per_sheet_inch is nullopt)
         BadNewScale,     // the new pair is not usable (units_per_sheet_inch is nullopt) or the ratio of the two ratios is not finite and > 0
         NonFiniteResult, // a stored or scaled coordinate / rectangle value is not finite
-        Underflow,       // a non-zero coordinate became exactly 0.0
+        Underflow,       // a non-zero coordinate became exactly 0.0, or (the three-decimal tables) would be stored as 0 at three decimals
         BadOverlayRect,  // OverlayRect is not four numbers / not finite / has a negative size
         BadLegend,       // a legend is not well-formed XML, has another root than Legends, a dX / dY that is not a number, or a non-finite result
         StatementFailed  // a statement failed (a failed read, a trigger that aborts an UPDATE, a busy database, a database that cannot be opened)
     };
+
+    // Whether a refusal is the one Windows reports as PageScaleRangeError (page_operations.py:56-59): the takeoffs and annotations of a page cannot be stored at the new scale
+    // (a value that is not finite, a takeoff coordinate that would be stored as 0, the iOS exactly-zero refusals). The dialog gives only these the specific text
+    // (ost_domain::scale_save_failed_issue); every other reason is "Failed to save page scale.".
+    inline bool page_scale_refusal_is_unstorable_content(PageScaleRefusal refusal)
+    {
+        return refusal == PageScaleRefusal::NonFiniteResult || refusal == PageScaleRefusal::Underflow;
+    }
 
     struct PageScaleOutcome
     {

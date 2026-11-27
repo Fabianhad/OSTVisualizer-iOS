@@ -206,7 +206,7 @@ namespace ost_store
                         bids.insert(entry.second);
                 }
                 if (any_null || bids.size() != 1)
-                    return refuse("BidPages mutation targets do not belong to one authoritative Bid.");
+                    return refuse("BidPages mutation targets do not belong to one authoritative bid.");
                 long long owner = 0;
                 if (!integrity::parse_uid(*bids.begin(), owner) || !integrity::bid_exists(_db, owner))
                     return refuse("Bids has no row for UID " + *bids.begin() + "; the requested authoritative owner does not exist.");

@@ -167,7 +167,7 @@ TEST(Und02_InsertTakeoffs, ADuplicateExplicitUidRefusesTheBatch)
     CHECK_EQ(db.snapshot({"BidTakeoffs"}), before);
 }
 
-// A parent on another page is refused (Windows: "A Takeoff and its parent must belong to the same Page"), the batch with it.
+// A parent on another page is refused (Windows: "A takeoff and its parent must belong to the same page"), the batch with it.
 TEST(Und02_InsertTakeoffs, AParentOnAnotherPageRefusesTheBatch)
 {
     TempDb db("batch_insert_parent_page");
