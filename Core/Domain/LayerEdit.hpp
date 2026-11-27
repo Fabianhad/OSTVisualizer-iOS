@@ -50,6 +50,10 @@ namespace ost_domain
     inline constexpr const char *kMoveLayerFailed = "Failed to move layer.";      // layers_dialog.py:646
     inline constexpr const char *kDeleteLayerFailed = "Failed to delete layer.";  // layers_dialog.py:544
     inline constexpr const char *kLayerUsageUnreadable = "Failed to validate layer usage."; // layers_dialog.py:506
+    // Show All / Hide All in a bid whose layer list has no layer of its own (d26893c, ui_event_coordinator.py:6812-6855, texts.py:1321-1324 and
+    // layers_dialog.py:700-716): the warning that replaced the old silent return (Windows owner note c of PORTING_BLOCKERS.md).
+    inline constexpr const char *kLayerVisibilityTitle = "Layer Visibility";
+    inline constexpr const char *kBidHasNoOwnLayersText = "This bid has no layers of its own to show or hide.";
     inline constexpr const char *kLayersDeletedRefreshFailed = "Layers were deleted, but the refresh failed."; // layers_dialog.py:540
     inline constexpr const char *kLayerCreatedRefreshFailed =
         "The layer was created, but the layer list could not be refreshed. Reopen the database to see the new layer."; // ui_event_coordinator.py:6585-6587
@@ -136,8 +140,8 @@ namespace ost_domain
     {
         NothingToDelete, // no selected uid is a deletable listed row: nothing happens, no message (layers_dialog.py:490-496)
         OnlyInUse,       // every deletable row is in use: a warning, no question (messagebox.py:101-106)
-        ConfirmMixed,    // some in use, some not: the in-use lines and "Delete the other {n} item(s)?" (messagebox.py:86-100)
-        Confirm          // none in use: "Delete {n} item(s)?" (messagebox.py:107-118)
+        ConfirmMixed,    // some in use, some not: the in-use lines and "Delete the other {n} item?" / "items?" (messagebox.py:295-317)
+        Confirm          // none in use: "Delete {n} item?" / "items?" (messagebox.py:318-330)
     };
 
     struct LayerDeletePlan
@@ -147,7 +151,8 @@ namespace ost_domain
         std::vector<LayerRef> in_use;    // the rows that are refused, in the same order
         // kDeleteLayerTitle and the Windows text for every kind but NothingToDelete (both empty then). OnlyInUse: one line
         // 'Cannot delete "{name}" because it is in use.' per row, joined by '\n'; ConfirmMixed: those lines, "\n\n" and
-        // "Delete the other {n} item(s)?"; Confirm: "Delete {n} item(s)?".
+        // "Delete the other {n} item?" (n == 1) or "... {n} items?"; Confirm: "Delete {n} item?" (n == 1) or "Delete {n} items?" (d26893c: the
+        // singular and the plural texts; n is never 0 here, a plan with nothing to delete is NothingToDelete).
         std::string title, message;
     };
 

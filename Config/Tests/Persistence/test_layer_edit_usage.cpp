@@ -225,7 +225,7 @@ TEST(LayerEditUsage, TheDeleteChainRefusesAnInUseLayerAndAsksForAnUnusedOne)
     CHECK_STR_EQ(delete_gate(db.path(), "10", project, "106", &plan), "OnlyInUse");
     CHECK_STR_EQ(plan.message, "Cannot delete \"Floors\" because it is in use.");
     CHECK_STR_EQ(delete_gate(db.path(), "10", project, "107", &plan), "Confirm");
-    CHECK_STR_EQ(plan.message, "Delete 1 item(s)?");
+    CHECK_STR_EQ(plan.message, "Delete 1 item?");
     // a locked copy and a shared row are never offered
     CHECK_STR_EQ(delete_gate(db.path(), "10", project, "101"), "NothingToDelete");
     CHECK_STR_EQ(delete_gate(db.path(), "10", project, "8"), "NothingToDelete");
