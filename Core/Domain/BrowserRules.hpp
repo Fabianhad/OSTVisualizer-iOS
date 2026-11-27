@@ -56,8 +56,8 @@ namespace ost_domain
     };
 
     // project_write_handler._delete_bids, bids that are NOT in Deleted Bids: they are moved there after a confirmation.
-    //   1 bid : "Move to Deleted Bids" / "Move this bid to 'Deleted Bids'?\nYou can permanently delete it from there."
-    //   n bids: "Move to Deleted Bids" / "Move {n} bids to 'Deleted Bids'?\nYou can permanently delete them from there."
+    //   1 bid : "Move to Deleted Bids" / "Move this bid to Deleted Bids?\nYou can permanently delete it from there."
+    //   n bids: "Move to Deleted Bids" / "Move {n} bids to Deleted Bids?\nYou can permanently delete them from there."
     DialogText trash_bids_confirmation(size_t count);
 
     // _delete_bids, bids that ARE in Deleted Bids: permanent delete after a confirmation.
