@@ -10,6 +10,9 @@
 //    folders / conditions / request as the Windows tests :16520-16552 and :19220-19236 plus extra rows run through the same function.
 //  * confirm_cases(): presentation/utils/messagebox.py:78-119 confirm_multi_delete with QMessageBox.question / .warning replaced by recorders.
 //    kind 'Q' = question (Yes / No), 'W' = warning; `returned` = the items confirm_multi_delete returned for a Yes (empty for a warning).
+//    The confirm texts of rows 'Delete n item(s)?' / 'Delete the other n item(s)?' were EDITED BY HAND (not re-recorded) to the Windows HEAD d26893c
+//    texts of presentation/texts.py:1204-1205 and :1452-1457 ('Delete 1 item?' / 'Delete N items?', 'Delete the other 1 item?' / '...N items?',
+//    singular for n == 1, plural for every other n including 0) as called by messagebox.py:288-340 confirm_multi_delete.
 #pragma once
 
 #include <string>
@@ -168,15 +171,15 @@ namespace ost_ftest
     inline const std::vector<OracleConfirmCase> &confirm_cases()
     {
         static const std::vector<OracleConfirmCase> cases = {
-            {{{"Walls", "f1"}}, {}, 'Q', "Delete Folder", "Delete 1 item(s)?", {"f1"}},
-            {{{"A", "a"}, {"B", "b"}, {"C", "c"}}, {}, 'Q', "Delete Folder", "Delete 3 item(s)?", {"a", "b", "c"}},
-            {{{"Walls", "f1"}, {"Floors", "f2"}}, {"f1"}, 'Q', "Delete Folder", "Cannot delete \"Walls\" because it is in use.\n\nDelete the other 1 item(s)?", {"f2"}},
-            {{{"Walls", "f1"}, {"Floors", "f2"}, {"Doors", "f3"}}, {"f1", "f3"}, 'Q', "Delete Folder", "Cannot delete \"Walls\" because it is in use.\nCannot delete \"Doors\" because it is in use.\n\nDelete the other 1 item(s)?", {"f2"}},
+            {{{"Walls", "f1"}}, {}, 'Q', "Delete Folder", "Delete 1 item?", {"f1"}},
+            {{{"A", "a"}, {"B", "b"}, {"C", "c"}}, {}, 'Q', "Delete Folder", "Delete 3 items?", {"a", "b", "c"}},
+            {{{"Walls", "f1"}, {"Floors", "f2"}}, {"f1"}, 'Q', "Delete Folder", "Cannot delete \"Walls\" because it is in use.\n\nDelete the other 1 item?", {"f2"}},
+            {{{"Walls", "f1"}, {"Floors", "f2"}, {"Doors", "f3"}}, {"f1", "f3"}, 'Q', "Delete Folder", "Cannot delete \"Walls\" because it is in use.\nCannot delete \"Doors\" because it is in use.\n\nDelete the other 1 item?", {"f2"}},
             {{{"Walls", "f1"}}, {"f1"}, 'W', "Delete Folder", "Cannot delete \"Walls\" because it is in use.", {}},
             {{{"Walls", "f1"}, {"Floors", "f2"}}, {"f1", "f2"}, 'W', "Delete Folder", "Cannot delete \"Walls\" because it is in use.\nCannot delete \"Floors\" because it is in use.", {}},
-            {{}, {}, 'Q', "Delete Folder", "Delete 0 item(s)?", {}},
+            {{}, {}, 'Q', "Delete Folder", "Delete 0 items?", {}},
             {{{"Q \"x\"", "f1"}}, {"f1"}, 'W', "Delete Folder", "Cannot delete \"Q \"x\"\" because it is in use.", {}},
-            {{{"Walls", "f1"}, {"Walls", "f2"}, {"Doors", "f3"}}, {"f2"}, 'Q', "Delete Folder", "Cannot delete \"Walls\" because it is in use.\n\nDelete the other 2 item(s)?", {"f1", "f3"}},
+            {{{"Walls", "f1"}, {"Walls", "f2"}, {"Doors", "f3"}}, {"f2"}, 'Q', "Delete Folder", "Cannot delete \"Walls\" because it is in use.\n\nDelete the other 2 items?", {"f1", "f3"}},
         };
         return cases;
     }

@@ -12,7 +12,8 @@
 //   ost_visualizer/presentation/handlers/condition_action_handler.py :1392 and :1408 (the default name "New Folder"), :1514-1575
 //                                                                    (delete: an unknown uid = nothing happens, then validate, confirm, delete)
 //   ost_visualizer/application/services/project_write_service.py    :855-864 validate_condition_folder_delete, :936-953 _condition_folder_uids_in_use
-//   ost_visualizer/presentation/utils/messagebox.py                 :78-119 confirm_multi_delete (the texts)
+//   ost_visualizer/presentation/utils/messagebox.py                 :78-119 confirm_multi_delete (the texts; HEAD d26893c: :288-340, texts.py:1204-1205 and :1452-1457)
+//   condition_action_handler.py (HEAD d26893c)                      :1336-1349 _free_folder_name (the name of a new folder)
 #pragma once
 #include "BrowserRules.hpp"
 #include "Condition.hpp"
@@ -24,7 +25,7 @@
 
 namespace ost_domain
 {
-    // condition_action_handler.py:1392 / :1408: the name of a new folder (the iOS alert is prefilled with it).
+    // condition_action_handler.py:1392 / :1408: the name of a new folder; the first candidate of free_condition_folder_name (the iOS alert is prefilled with that).
     constexpr const char *kDefaultConditionFolderName = "New Folder";
 
     // BidConditionFolders.Name is VARCHAR(50) (database_creator.py:142), counted in UTF-16 code units (TextLimits.hpp: an emoji takes two).
@@ -48,6 +49,16 @@ namespace ost_domain
     // folder's parent_uid is empty, "0" or not the uid of a folder of `folders`; else the parent's uid. `folders` = the folders of ONE bid.
     std::string effective_condition_folder_parent(const std::unordered_map<std::string, ConditionFolder> &folders,
                                                   const ConditionFolder &folder);
+
+    // ---- the name of a new folder ---------------------------------------------------------------------------------------------
+
+    // condition_action_handler._free_folder_name (Windows HEAD d26893c :1336-1349, texts.py:723 "New Folder ({number})"): the first name that no
+    // SIBLING has. Siblings = the folders whose effective parent is the effective parent of `parent_uid` ("" = the root; "0" and a uid that is not
+    // a folder of `folders` count as the root, like effective_condition_folder_parent). Candidates in order: "New Folder" (kDefaultConditionFolderName),
+    // "New Folder (2)", "New Folder (3)", ...; a candidate is taken when py_lower(py_strip(candidate)) equals py_lower(py_strip(sibling.name)) of a
+    // sibling (the same comparison as check_condition_folder_name). A name under ANOTHER parent does not count, and "New Folder (3)" alone does
+    // not make "New Folder" taken. The result passes the DuplicateSibling check of check_condition_folder_name for the same parent.
+    std::string free_condition_folder_name(const std::unordered_map<std::string, ConditionFolder> &folders, const std::string &parent_uid);
 
     // ---- the name rule --------------------------------------------------------------------------------------------------------
 
@@ -141,12 +152,12 @@ namespace ost_domain
     };
 
     // messagebox.confirm_multi_delete(parent, "Delete Folder", items, used_uids), texts verbatim (title kConditionFolderDeleteTitle):
-    //   none blocked:            Ask,  "Delete {n} item(s)?"                  (n = number of items)
+    //   none blocked:            Ask,  "Delete 1 item?" / "Delete {n} items?"  (n = number of items; singular only for 1, 0 is plural)
     //   some blocked, some not:  Ask,  one line `Cannot delete "{name}" because it is in use.` per blocked item, then a blank line, then
-    //                                  "Delete the other {n} item(s)?"        (n = number deletable)
+    //                                  "Delete the other 1 item?" / "Delete the other {n} items?"  (n = number deletable)
     //   all blocked:             Warn, the lines only
     // `blocked_uids` are the uids of items that are in use. `subfolders_move` (the plan's `subfolders_move`) appends, for an Ask only, an empty
-    // line and kConditionFolderSubfoldersMoveText; it changes nothing else. (An empty `items` gives "Delete 0 item(s)?" like Windows; the
+    // line and kConditionFolderSubfoldersMoveText; it changes nothing else. (An empty `items` gives "Delete 0 items?" like Windows; the
     // screens never ask: an empty request returns before.)
     FolderDeleteConfirmation condition_folder_delete_confirmation(const std::vector<FolderDeleteItem> &items,
                                                                   const std::vector<std::string> &blocked_uids,

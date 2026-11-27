@@ -68,6 +68,19 @@ namespace ost_domain
         return "Next number: " + std::to_string(highest + 1);
     }
 
+    std::string condition_folder_refresh_failed_text(ConditionFolderRefreshAction action, std::size_t item_count)
+    {
+        const char *subject = "The folder was created";
+        switch (action)
+        {
+        case ConditionFolderRefreshAction::Create: subject = "The folder was created"; break;
+        case ConditionFolderRefreshAction::Rename: subject = "The folder was renamed"; break;
+        case ConditionFolderRefreshAction::Delete: subject = item_count > 1 ? "The folders were deleted" : "The folder was deleted"; break;
+        case ConditionFolderRefreshAction::Move: subject = "The condition was moved"; break;
+        }
+        return std::string(subject) + ", but the conditions list could not be refreshed. Reopen the database to see the latest conditions.";
+    }
+
     std::optional<DialogText> condition_folder_name_refusal_dialog(const FolderNameCheck &check)
     {
         switch (check.issue)

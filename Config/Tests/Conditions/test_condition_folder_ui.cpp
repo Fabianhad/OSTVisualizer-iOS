@@ -260,14 +260,25 @@ TEST(NewConditionTexts, TheRefreshWarningIsTheWindowsOne)
 }
 
 // Review of S1 (register CF-8, the safe behaviour reports what was committed): a folder write that went through but whose list could not be read
-// again says that the change was saved (the generic "Failed to load" text says nothing about the write). iOS-only text, pinned so that rewording
-// it is a visible decision; the title is the one of the Windows create warning.
-TEST(NewConditionTexts, TheRefreshWarningOfAFolderWriteSaysTheChangeWasSaved)
+// again says that the change was saved (the generic "Failed to load" text says nothing about the write). Windows HEAD d26893c now has one sentence
+// per action (texts.py:695-710 THE_FOLDER_WAS_CREATED / RENAMED / DELETED_BUT_THE_CONDITIONS, THE_FOLDERS_WERE_DELETED_...; the move text is
+// :691 THE_CONDITION_WAS_MOVED_BUT_THE_CONDITIONS), all under the "Refresh Error" title (CONDITION_ACTION_HANDLER_TITLE_REFRESH_ERROR).
+TEST(NewConditionTexts, TheRefreshWarningOfAFolderWriteIsTheWindowsSentenceOfTheAction)
 {
+    using ost_domain::ConditionFolderRefreshAction;
     CHECK_STR_EQ(ost_domain::kFolderChangeSavedRefreshFailedTitle, "Refresh Error");
     CHECK_STR_EQ(ost_domain::kFolderChangeSavedRefreshFailedTitle, ost_domain::kConditionCreatedRefreshFailedTitle);
-    CHECK_STR_EQ(ost_domain::kFolderChangeSavedRefreshFailedText,
-                 "The folder change was saved, but the list could not be refreshed. Reopen the bid to see it.");
+    const std::string tail = " the conditions list could not be refreshed. Reopen the database to see the latest conditions.";
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Create, 1), "The folder was created, but" + tail);
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Rename, 1), "The folder was renamed, but" + tail);
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Delete, 1), "The folder was deleted, but" + tail);
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Delete, 2), "The folders were deleted, but" + tail);
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Delete, 7), "The folders were deleted, but" + tail);
+    // a request of no folder at all is the singular, like the failure text (the screens never ask with an empty request)
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Delete, 0), "The folder was deleted, but" + tail);
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Move, 1), "The condition was moved, but" + tail);
+    // the item count only matters for a delete
+    CHECK_STR_EQ(ost_domain::condition_folder_refresh_failed_text(ConditionFolderRefreshAction::Create, 5), "The folder was created, but" + tail);
 }
 
 // Review of S1: the iOS-only texts of the create form's discard alert (Windows asks "Save changes before closing?" and forces the dirty flag,
@@ -444,10 +455,10 @@ TEST(ConditionFolderFailure, ALimitOrSchemaRefusalWithoutATextIsTheGenericFailur
     for (const ConditionFolderRefusal refusal : {ConditionFolderRefusal::UidExhausted, ConditionFolderRefusal::HierarchyNotSupported})
     {
         SCOPED_CONTEXT(ost_ftest::refusal_name(refusal));
-        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create folder. ") + kHint);
-        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create the condition folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename the condition folder. ") + kHint);
         CHECK_STR_EQ(failure(ConditionFolderAction::Move, refused(refusal)), std::string("Move to Folder|Failed to move the condition. ") + kHint);
-        CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}}), std::string("Delete Folder|Failed to delete folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}}), std::string("Delete Folder|Failed to delete the condition folder. ") + kHint);
     }
 }
 
@@ -458,10 +469,10 @@ TEST(ConditionFolderFailure, ANameRefusalWithoutATextIsTheGenericFailureOfTheAct
     for (const ConditionFolderRefusal refusal : {ConditionFolderRefusal::DuplicateName, ConditionFolderRefusal::NameTooLong})
     {
         SCOPED_CONTEXT(ost_ftest::refusal_name(refusal));
-        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create folder. ") + kHint);
-        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create the condition folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename the condition folder. ") + kHint);
         CHECK_STR_EQ(failure(ConditionFolderAction::Move, refused(refusal)), std::string("Move to Folder|Failed to move the condition. ") + kHint);
-        CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}}), std::string("Delete Folder|Failed to delete folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}}), std::string("Delete Folder|Failed to delete the condition folder. ") + kHint);
     }
 }
 
@@ -501,9 +512,9 @@ TEST(ConditionFolderFailure, AFolderInUseIsNamedWithTheWindowsText)
 TEST(ConditionFolderFailure, AnInUseThatCannotBeNamedIsTheGenericText)
 {
     CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(ConditionFolderRefusal::InUse, "", {"9"}), {{"Walls", "2"}}),
-                 std::string("Delete Folder|Failed to delete folder. ") + kHint);
+                 std::string("Delete Folder|Failed to delete the condition folder. ") + kHint);
     CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(ConditionFolderRefusal::InUse), {}),
-                 std::string("Delete Folder|Failed to delete folder. ") + kHint);
+                 std::string("Delete Folder|Failed to delete the condition folder. ") + kHint);
 }
 
 // Every refusal that has no text of its own: the iOS wording with the database-locked hint (the existing BrowserFailure pattern).
@@ -517,12 +528,14 @@ TEST(ConditionFolderFailure, EveryOtherRefusalIsTheGenericFailureOfTheAction)
     for (const ConditionFolderRefusal refusal : generic)
     {
         SCOPED_CONTEXT(ost_ftest::refusal_name(refusal));
-        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create folder. ") + kHint);
-        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Create, refused(refusal)), std::string("New Folder|Failed to create the condition folder. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Rename, refused(refusal)), std::string("Rename Folder|Failed to rename the condition folder. ") + kHint);
         CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}}),
-                     std::string("Delete Folder|Failed to delete folder. ") + kHint);
+                     std::string("Delete Folder|Failed to delete the condition folder. ") + kHint);
         CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}, {"B", "2"}}),
-                     std::string("Delete Folder|Failed to delete folders. ") + kHint);
+                     std::string("Delete Folder|Failed to delete 2 condition folders. ") + kHint);
+        CHECK_STR_EQ(failure(ConditionFolderAction::Delete, refused(refusal), {{"A", "1"}, {"B", "2"}, {"C", "3"}}),
+                     std::string("Delete Folder|Failed to delete 3 condition folders. ") + kHint);
         CHECK_STR_EQ(failure(ConditionFolderAction::Move, refused(refusal)), std::string("Move to Folder|Failed to move the condition. ") + kHint);
     }
 }
@@ -564,7 +577,7 @@ TEST(ConditionFolderFailure, TheRealWritersResultsGiveTheExpectedAlerts)
     const ConditionFolderResult blank = ost_store::create_condition_folder(db.path(), "1", "   ", "");
     CHECK_STR_EQ(failure(ConditionFolderAction::Create, blank), "<none>");
     const ConditionFolderResult ghost = ost_store::rename_condition_folder(db.path(), "1", "999", "X");
-    CHECK_STR_EQ(failure(ConditionFolderAction::Rename, ghost), std::string("Rename Folder|Failed to rename folder. ") + kHint);
+    CHECK_STR_EQ(failure(ConditionFolderAction::Rename, ghost), std::string("Rename Folder|Failed to rename the condition folder. ") + kHint);
     ost_ftest::lock_bid(db, 1);
     const ConditionFolderResult locked = ost_store::create_condition_folder(db.path(), "1", "Roofs", "");
     REQUIRE(!locked.ok);

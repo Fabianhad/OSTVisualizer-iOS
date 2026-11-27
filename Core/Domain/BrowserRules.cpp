@@ -31,9 +31,9 @@ namespace ost_domain
     DialogText trash_bids_confirmation(size_t count)
     {
         if (count == 1)
-            return {"Move to Deleted Bids", "Move this bid to 'Deleted Bids'?\nYou can permanently delete it from there."};
+            return {"Move to Deleted Bids", "Move this bid to Deleted Bids?\nYou can permanently delete it from there."};
         return {"Move to Deleted Bids",
-                "Move " + std::to_string(count) + " bids to 'Deleted Bids'?\nYou can permanently delete them from there."};
+                "Move " + std::to_string(count) + " bids to Deleted Bids?\nYou can permanently delete them from there."};
     }
 
     DialogText delete_bids_confirmation(size_t count)
