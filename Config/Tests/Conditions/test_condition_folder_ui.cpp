@@ -212,11 +212,26 @@ TEST(NewConditionTexts, NumbersWithoutValueDoNotCount)
     add_condition(zero, "1", "", 0);
     add_condition(zero, "2", "", 0);
     CHECK_STR_EQ(ost_domain::next_condition_number_text(zero), "Next number: 1");
+    ConditionMap mixed;
+    add_condition(mixed, "1", "", -5);
+    add_condition(mixed, "2", "", 3);
+    CHECK_STR_EQ(ost_domain::next_condition_number_text(mixed), "Next number: 4");
+}
+
+// NC-1 (analyst row A9-001): there is no floor at 0 for the highest number. A bid whose conditions all have negative numbers shows
+// highest + 1, the number MAX(RefNo) + 1 gives the writer (condition_operations.py:61) and the form of the Windows handler
+// (condition_action_handler.py :611-621: max(c.ref_no or 0 ..., default=0) + 1, 1 only for a bid without conditions).
+TEST(NewConditionTexts, ABidWithOnlyNegativeNumbersShowsTheHighestPlusOne)
+{
     ConditionMap negative;
     add_condition(negative, "1", "", -5);
+    CHECK_STR_EQ(ost_domain::next_condition_number_text(negative), "Next number: -4");
+    add_condition(negative, "2", "", -9);
+    CHECK_STR_EQ(ost_domain::next_condition_number_text(negative), "Next number: -4");
+    add_condition(negative, "3", "", -1);
+    CHECK_STR_EQ(ost_domain::next_condition_number_text(negative), "Next number: 0");
+    add_condition(negative, "4", "", 0);
     CHECK_STR_EQ(ost_domain::next_condition_number_text(negative), "Next number: 1");
-    add_condition(negative, "2", "", 3);
-    CHECK_STR_EQ(ost_domain::next_condition_number_text(negative), "Next number: 4");
 }
 
 // The highest possible number: the line is computed in 64 bit (it must not wrap to a negative int); the writer refuses that create with the
@@ -249,6 +264,27 @@ TEST(NewConditionTexts, NextNumberEqualsTheNumberTheWriterAssigns)
     REQUIRE(!uid.empty());
     CHECK_STR_EQ(ost_domain::next_condition_number_text(conditions),
                  "Next number: " + db.text("SELECT RefNo FROM BidConditions WHERE UID = " + uid));
+}
+
+// the same on a bid whose numbers are all negative: the writer gives MAX + 1 = -4
+TEST(NewConditionTexts, NextNumberEqualsTheNumberTheWriterAssignsForNegativeNumbers)
+{
+    ost_ctest::TempDb db("folder_ui_next_number_negative");
+    REQUIRE(db.schema_ok());
+    ost_ftest::seed_bids(db);
+    ConditionMap conditions;
+    for (const int ref : {-5, -9})
+    {
+        ost_ftest::add_condition(db, 100 + (-ref), 1, "", ref);
+        add_condition(conditions, std::to_string(100 + (-ref)), "", ref);
+    }
+    ost_domain::CreateConditionSpec spec;
+    spec.name = "New";
+    std::string error;
+    const std::string uid = ost_store::insert_condition(db.path(), "1", spec, &error);
+    REQUIRE(!uid.empty());
+    CHECK_STR_EQ(db.text("SELECT RefNo FROM BidConditions WHERE UID = " + uid), "-4");
+    CHECK_STR_EQ(ost_domain::next_condition_number_text(conditions), "Next number: -4");
 }
 
 // condition_action_handler.py:764-773: the condition is in the database but the list could not be read again: the Windows warning, verbatim.
