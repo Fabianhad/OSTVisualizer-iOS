@@ -394,7 +394,7 @@ const NSInteger kMaxIndentLevel = 8;
   [self _beginNewFolderInParent:@""];
 }
 
-// Name first (plan N-M1-15): an alert prefilled "New Folder", Cancel creates nothing. `parentFolderUID` "" = the top level.
+// Name first (plan N-M1-15): an alert prefilled with the first free sibling name ("New Folder", "New Folder (2)", ...), Cancel creates nothing. `parentFolderUID` "" = the top level.
 - (void)_beginNewFolderInParent:(NSString *)parentFolderUID {
   if (![self _mayWrite])
     return;
@@ -406,8 +406,10 @@ const NSInteger kMaxIndentLevel = 8;
                                                                  message:nil
                                                           preferredStyle:UIAlertControllerStyleAlert];
   __weak ConditionFoldersViewController *weakSelf = self;
+  // A fresh prompt starts with the first free sibling name (Windows _free_folder_name: "New Folder", "New Folder (2)", ...); a draft wins.
+  NSString *prefill = draft ?: OSTText(ost_domain::free_condition_folder_name(_folders, OSTExactUTF8(parentFolderUID)));
   [alert addTextFieldWithConfigurationHandler:^(UITextField *field) {
-    field.text = draft ?: OSTText(ost_domain::kDefaultConditionFolderName);
+    field.text = prefill;
     field.placeholder = @"Folder name";
     field.autocapitalizationType = UITextAutocapitalizationTypeWords;
     field.clearButtonMode = UITextFieldViewModeWhileEditing;

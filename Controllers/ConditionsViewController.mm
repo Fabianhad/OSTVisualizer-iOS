@@ -513,10 +513,10 @@ static NSString *OSTText(const std::string &text) {
                                 [NSString
                                     stringWithFormat:@"Delete \"%@\"?", name]
                                              message:
-                                                 @"Deleting a Condition will "
-                                                 @"delete all its Takeoffs "
-                                                 @"on all Pages within this "
-                                                 @"Bid.\n\nThis cannot be "
+                                                 @"Deleting a condition will "
+                                                 @"delete all its takeoffs "
+                                                 @"on all pages within this "
+                                                 @"bid.\n\nThis cannot be "
                                                  @"undone."
                                       preferredStyle:
                                           UIAlertControllerStyleAlert];
