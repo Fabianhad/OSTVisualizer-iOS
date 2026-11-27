@@ -548,6 +548,12 @@ const NSInteger kMaxIndentLevel = 8;
   NSMutableArray<NSString *> *deletable = [NSMutableArray array];
   for (const std::string &uid : confirmation.deletable)
     [deletable addObject:OSTText(uid)];
+  // A failed delete is reported for the folders that were SENT (the in-use ones left the request at the confirmation): "Failed to delete the
+  // condition folder." for one, "Failed to delete N condition folders." for several, and a folder that turned in use meanwhile is named.
+  std::vector<ost_domain::FolderDeleteItem> sentItems;
+  for (const ost_domain::FolderDeleteItem &item : items)
+    if (std::find(confirmation.deletable.begin(), confirmation.deletable.end(), item.uid) != confirmation.deletable.end())
+      sentItems.push_back(item);
   UIAlertController *alert = [UIAlertController alertControllerWithTitle:OSTText(confirmation.dialog.title)
                                                                  message:OSTText(confirmation.dialog.message)
                                                           preferredStyle:UIAlertControllerStyleAlert];
@@ -556,7 +562,7 @@ const NSInteger kMaxIndentLevel = 8;
   [alert addAction:[UIAlertAction actionWithTitle:@"Delete"
                                             style:UIAlertActionStyleDestructive
                                           handler:^(UIAlertAction *action) {
-                                            [weakSelf _deleteFolderUIDs:deletable items:items];
+                                            [weakSelf _deleteFolderUIDs:deletable items:sentItems];
                                           }]];
   [self presentViewController:alert animated:YES completion:nil];
 }
