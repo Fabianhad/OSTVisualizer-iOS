@@ -174,7 +174,7 @@ TEST(DelPageRefusals, APageOfAnotherBidIsRefusedWithTheBidScopedText)
     expect_refused(db, "20", {"101"}, "BidPages.UID=101 does not belong to Bids.UID=20.");
 }
 
-// A batch that mixes two bids (Windows: "BidPages mutation targets do not belong to one authoritative Bid.", test_ownership_and_atomicity.py:51):
+// A batch that mixes two bids (Windows: "BidPages mutation targets do not belong to one authoritative bid.", test_ownership_and_atomicity.py:51):
 // refused whichever bid the call names.
 TEST(DelPageRefusals, ABatchOfTwoBidsIsRefusedWhicheverBidTheCallNames)
 {
@@ -185,7 +185,7 @@ TEST(DelPageRefusals, ABatchOfTwoBidsIsRefusedWhicheverBidTheCallNames)
     expect_refused(db, "10", {"200", "100"});
 }
 
-// A page whose BidUID is NULL (Windows IncoherentBidOwnedScopeError, "BidPages mutation targets do not belong to one authoritative Bid.").
+// A page whose BidUID is NULL (Windows IncoherentBidOwnedScopeError, "BidPages mutation targets do not belong to one authoritative bid.").
 TEST(DelPageRefusals, APageWithoutABidIsRefused)
 {
     TempDb db("delpage_ref_null_bid");

@@ -66,7 +66,7 @@ namespace ost_store
     //   "BidTakeoffs.UID=<uid> does not satisfy the Takeoff domain contract"   (a non-finite position or rotation, an empty uid)
     //   "BidTakeoffs.UID=<uid> references missing BidConditions.UID=<n> through BidConditionUID."  (also BidPages / BidPageUID and,
     //                                                                          for a hole, BidTakeoffs / ParentUID)
-    //   "A Takeoff and its parent must belong to the same Page."
+    //   "A takeoff and its parent must belong to the same page."
     //   "BidTakeoffs.UID=<uid> participates in a ParentUID cycle."  (also BidConditionFolders and BidPageFolders)
     // A takeoff with an empty, unparsable or short position is kept (position []). `project.merged_layers` is the layer list
     // (the bid's layers and the locked template layers through ost_domain::merge_layers_for_bid); a list that cannot be read is

@@ -331,7 +331,7 @@ namespace ost_store
             parent_page.bind_int64(1, parent);
             if (parent_page.step_result() != ost_db::StepResult::Row ||
                 parent_page.column_type(0) == ost_db::Statement::TypeNull || parent_page.column_int64(0) != page)
-                return fail(); // "A Takeoff and its parent must belong to the same Page."
+                return fail(); // "A takeoff and its parent must belong to the same page."
         }
 
         // The UID: the explicit one, else MAX(UID) + 1 raised above every column that references a takeoff (Windows

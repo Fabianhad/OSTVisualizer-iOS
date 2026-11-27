@@ -9,7 +9,7 @@
 //   ost_visualizer/presentation/coordinators/ui_event_coordinator.py:5922-5926   the page asks for the content confirmation when its uid is
 //                                                                                 in the stored scan OR the loaded model has takeoffs for it
 //   ost_visualizer/presentation/utils/view_context_menu.py:446-459               "Rename Page..." then "Delete Page"
-//   ost_visualizer/presentation/dialogs/rename_page_dialog.py:55-100             title "Rename Page", the read-only "Old Name" row
+//   ost_visualizer/presentation/dialogs/rename_page_dialog.py:55-100             title "Rename Page", the read-only "Old name:" row
 //   ost_visualizer/presentation/managers/ui_access_manager.py:166-191            _PLACEMENT_BLOCKED (an area placement blocks both items)
 // iOS decisions: N-M1-05 (2D bar: Rename and Delete, 3D bar: Rename only), N-M1-23 (Delete always asks), plan 4.8 (disabled while an area
 // placement is in progress), DP-2 (a committed delete is reported as deleted when the reload fails).
@@ -216,18 +216,18 @@ TEST(PageMenuRules, DeleteContent_UnknownPage_IsNotContent)
 
 TEST(PageDialogText, RenamePrompt_TitleAndTheRawOldName)
 {
-    // rename_page_dialog.py: title "Rename Page", the read-only "Old Name" row shows the raw stored name.
+    // rename_page_dialog.py: title "Rename Page", the read-only "Old name:" row shows the raw stored name.
     const ost_domain::DialogText text = ost_domain::page_rename_prompt_text("A-101");
     CHECK_STR_EQ(text.title, "Rename Page");
-    CHECK_STR_EQ(text.message, "Old Name: A-101");
+    CHECK_STR_EQ(text.message, "Old name: A-101");
 }
 
 TEST(PageDialogText, RenamePrompt_TheStoredNameIsShownAsItIs)
 {
     // Not stripped, not shortened, not the label: a stored name with surrounding spaces and an empty name (register RP-1, RP-5, RP-6).
-    CHECK_STR_EQ(ost_domain::page_rename_prompt_text("  A-101 ").message, "Old Name:   A-101 ");
-    CHECK_STR_EQ(ost_domain::page_rename_prompt_text("").message, "Old Name: ");
-    CHECK_STR_EQ(ost_domain::page_rename_prompt_text("Plan 'B' \"C\"\n2").message, "Old Name: Plan 'B' \"C\"\n2");
+    CHECK_STR_EQ(ost_domain::page_rename_prompt_text("  A-101 ").message, "Old name:   A-101 ");
+    CHECK_STR_EQ(ost_domain::page_rename_prompt_text("").message, "Old name: ");
+    CHECK_STR_EQ(ost_domain::page_rename_prompt_text("Plan 'B' \"C\"\n2").message, "Old name: Plan 'B' \"C\"\n2");
 }
 
 TEST(PageDialogText, DeleteReloadFailed_SaysTheDeleteHappened_AndGivesTheReason)

@@ -179,7 +179,7 @@ TEST(DelPageIntegrity, ATakeoffCycleOnThePageDoesNotStopTheDeleteAndTheBidLoadsA
     CHECK_STR_EQ(project.takeoffs[0].uid, "9");
 }
 
-// A hole on ANOTHER page whose parent is on the deleted page (invalid data: "A Takeoff and its parent must belong to the same Page"): the hole is
+// A hole on ANOTHER page whose parent is on the deleted page (invalid data: "A takeoff and its parent must belong to the same page"): the hole is
 // detached (ParentUID NULL, a root) and kept, not deleted with the page; the bid that could not load before loads now.
 TEST(DelPageIntegrity, AHoleOnAnotherPageWhoseParentIsOnTheDeletedPageIsDetachedNotDeleted)
 {

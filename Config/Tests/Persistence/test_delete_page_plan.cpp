@@ -307,20 +307,21 @@ TEST(DelPageRules, TheListLosesEmptyTextsAndRepeatsAndKeepsTheFirstOrder)
 
 // The confirmation: title "Delete Verification" (the Windows title). A page with content: the iOS wording that names every kind of content and says "from this
 // bid" (register DP-3: the Windows text promises the removal "in the Base Bid, and any Alternates or Change Orders" which the cascade does not do); an empty page:
-// the shorter text (decision D2: iOS always asks). The name goes into the quotes as it is.
+// the shorter text (decision D2: iOS always asks). The name goes into the double quotes as it is. The style is the Windows one since 441b45e / texts.py:1758-1763: double quotes,
+// lowercase "page", two sentences ("... cannot be undone. Are you sure ..."), "hotlinks" in one word, "Named Views" with its capitals (AGENTS.md wording rules).
 TEST(DelPageRules, TheConfirmationTextsAreTheAgreedOnes)
 {
     const ost_domain::DialogText with_content = ost_domain::page_delete_confirmation("Lobby", true);
     CHECK_STR_EQ(with_content.title, "Delete Verification");
     CHECK_STR_EQ(with_content.message,
-                 "The Page 'Lobby' contains takeoffs, annotations, comments, named views or hot links. Deleting this page will remove the page and everything on it from this bid.\n\n"
-                 "Deleting a Page cannot be undone, are you sure you want to delete this Page?");
+                 "The page \"Lobby\" contains takeoffs, annotations, comments, Named Views or hotlinks. Deleting this page will remove the page and everything on it from this bid.\n\n"
+                 "Deleting a page cannot be undone. Are you sure you want to delete this page?");
     CHECK(with_content.message.find("Alternates") == std::string::npos);
     CHECK(with_content.message.find("Change Orders") == std::string::npos);
 
     const ost_domain::DialogText empty = ost_domain::page_delete_confirmation("Lobby", false);
     CHECK_STR_EQ(empty.title, "Delete Verification");
-    CHECK_STR_EQ(empty.message, "Delete the Page 'Lobby'?\n\nDeleting a Page cannot be undone.");
+    CHECK_STR_EQ(empty.message, "Delete the page \"Lobby\"?\n\nDeleting a page cannot be undone.");
 }
 
 // The name is inserted verbatim (Windows f-string): quotes, percent signs, braces, newlines, non-ASCII and a very long name are neither escaped nor cut.
@@ -330,9 +331,9 @@ TEST(DelPageRules, TheNameIsInsertedVerbatimIntoTheConfirmation)
     for (const std::string &name : {std::string("O'Brien"), std::string("100% {0} %s \\n"), std::string("two\nlines"), std::string("caf\xC3\xA9 \xE4\xB8\xAD"), long_name, std::string(" ")})
     {
         SCOPED_CONTEXT("name [" + name + "]");
-        CHECK_STR_EQ(ost_domain::page_delete_confirmation(name, true).message.substr(0, 10 + name.size()), "The Page '" + name);
-        CHECK(ost_domain::page_delete_confirmation(name, true).message.find("The Page '" + name + "' contains takeoffs") == 0);
-        CHECK_STR_EQ(ost_domain::page_delete_confirmation(name, false).message, "Delete the Page '" + name + "'?\n\nDeleting a Page cannot be undone.");
+        CHECK_STR_EQ(ost_domain::page_delete_confirmation(name, true).message.substr(0, 10 + name.size()), "The page \"" + name);
+        CHECK(ost_domain::page_delete_confirmation(name, true).message.find("The page \"" + name + "\" contains takeoffs") == 0);
+        CHECK_STR_EQ(ost_domain::page_delete_confirmation(name, false).message, "Delete the page \"" + name + "\"?\n\nDeleting a page cannot be undone.");
     }
 }
 
