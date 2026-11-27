@@ -50,6 +50,14 @@ static const NSInteger kTagTileY = 404;
 static const NSInteger kTagGap = 405;
 static const NSInteger kTagSpacing = 406;
 
+// Labels of the Advanced switches (Windows texts.py EDIT_CONDITION_DIALOG_OPTION_*, sentence case). They are also the dispatch keys
+// of _advToggleChanged:; the row builders use the same constants, so a label is changed in one place.
+static NSString *const kAdvLabelDisplayName = @"Display name";
+static NSString *const kAdvLabelRoundQuantity = @"Round quantity";
+static NSString *const kAdvLabelDisplayDimension = @"Display dimension";
+static NSString *const kAdvLabelCurvedSegment = @"Set as curved segment";
+static NSString *const kAdvLabelDisplayPattern = @"Display pattern while drawing";
+
 // --- Dimension row model ---
 enum class DimFormat
 {
