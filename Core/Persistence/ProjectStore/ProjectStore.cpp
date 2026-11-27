@@ -14,6 +14,7 @@
 #include "ProjectStore_Integrity.hpp"
 #include "../OstDatabase.hpp"
 #include "../OstSchema.hpp"
+#include "../../Domain/CoreLog.hpp"
 #include "../../Domain/PageDeletion.hpp"
 #include "../../Domain/PositionParser.hpp"
 #include <algorithm>
@@ -77,14 +78,22 @@ namespace ost_store
     }
 
     // The Windows extract_z_value_from_name raises ValueError for an unreadable fraction (zero denominator, e.g.
-    // "Wall @B 1/0\""); the Windows MDB reader (bid_data_reader.py) catches it, logs a warning and stores (0.0, False). That is
-    // ost_domain::derive_elevation_from_name, the derivation the loader shares with condition_to_save (COND-ELEV-01): what the app
-    // keeps in memory after a Save of the dialog equals what this loader reads back.
+    // "Wall @B 1/0\"") and, since 0a24294, for a number beyond the float range ("Huge @T " + 400 nines + "'x"); the Windows MDB
+    // reader (bid_data_reader.py:900-910) catches it, logs "Ignoring unreadable elevation in condition ..." as a warning and stores
+    // (0.0, False): the other conditions of the bid load as usual. The result is ost_domain::derive_elevation_from_name's, the
+    // derivation the loader shares with condition_to_save (COND-ELEV-01): what the app keeps in memory after a Save of the dialog
+    // equals what this loader reads back. The warning goes through ost_log (only the loader logs it, not a Save of the dialog).
     std::pair<double, bool> extract_z_value(const std::string &name)
     {
         double z_inches = 0.0;
         bool is_top = false;
-        ost_domain::derive_elevation_from_name(name, z_inches, is_top);
+        std::string error;
+        if (!ost_domain::extract_z_value_from_name(name, z_inches, is_top, &error))
+        {
+            ost_log::warning("Ignoring unreadable elevation in condition '" + name + "': " + error);
+            z_inches = 0.0; // the derivation of derive_elevation_from_name: (0.0, false)
+            is_top = false;
+        }
         return {z_inches, is_top};
     }
 

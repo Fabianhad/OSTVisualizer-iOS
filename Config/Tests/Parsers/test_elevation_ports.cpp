@@ -5,9 +5,13 @@
 // extract_z_value here.
 #include "ParsersTestSupport.hpp"
 
+#include "Domain/CoreLog.hpp"
+#include "Domain/PositionParser.hpp"
 #include "Persistence/ProjectStore/ProjectStore_Internal.hpp"
 
 #include <cmath>
+#include <cstdlib>
+#include <vector>
 
 namespace
 {
@@ -579,8 +583,11 @@ TEST(ElevationPort, Elv04ValidityGate)
     }
     expect_none("Wall @B 5'");
     // lookalike foot marks: only ' and U+2032 are foot marks
-    for (const char *mark : {OST_U_ENDASH, OST_U_EURO, OST_U_DPRIME})
+    // (U+2033 is no foot mark but, since Windows 0a24294, an inch mark like '"': "5<U+2033> 6\"" is the inches-only text 5" 6" = 5.0,
+    // see ElevationPort.DoublePrimeAndRightDoubleQuoteAreInchMarks)
+    for (const char *mark : {OST_U_ENDASH, OST_U_EURO})
         expect_none(std::string("Wall @T 5") + mark + " 6\"");
+    expect_z("Wall @T 5" OST_U_DPRIME " 6\"", 5.0, true);
     expect_z("Wall @T 5'x", 60.0, true);
     expect_z("Wall @T 5" OST_U_PRIME "x", 60.0, true);
     expect_z("Wall @T 5" OST_U_PRIME " 6\"", 66.0, true);
@@ -588,6 +595,86 @@ TEST(ElevationPort, Elv04ValidityGate)
     expect_z("Wall @T 5 ' 6 \"", 66.0, true);
     expect_z("Wall @T 12' 6\"", 150.0, true);
     expect_z("Wall @T 12' - 6\"", 150.0, true);
+}
+
+// Port of tests/domain/services/test_elevation_text.py::ElevationTextInchMarkAndRangeTests::test_double_prime_and_right_double_quote_are_inch_marks
+// (Windows 0a24294): U+2033 and U+201D read like the ASCII inch mark, in the gate, in the reader and so in the loader. U+201C does not.
+TEST(ElevationPort, DoublePrimeAndRightDoubleQuoteAreInchMarks)
+{
+    for (const char *mark : {OST_U_DPRIME, "\xE2\x80\x9D"})
+    {
+        SCOPED_CONTEXT(std::string("mark=") + mark);
+        const std::string m = mark;
+        CHECK(ost_domain::is_elevation_text("5'6" + m));
+        CHECK(ost_domain::is_elevation_text("6" + m));
+        const auto inches = [](const std::string &text)
+        {
+            double value = -1.0;
+            CHECK(ost_domain::elevation_text_inches(text, value) == ost_domain::ElevationTextStatus::Value);
+            return value;
+        };
+        CHECK_EQ(inches("5'6" + m), 66.0);
+        CHECK_EQ(inches("5' 6" + m), 66.0);
+        CHECK_EQ(inches("10' 6 1/2" + m), 126.5);
+        CHECK_EQ(inches("6" + m), 6.0);
+        CHECK_EQ(inches("1/2" + m), 0.5);
+        CHECK_EQ(inches("-2' 3" + m), -27.0);
+        CHECK_EQ(inches("5" OST_U_PRIME "6" + m), 66.0);
+        CHECK_EQ(inches("5'6" + m + "x"), 66.0); // the gate is a prefix match
+        CHECK_EQ(inches("5'x" + m), 60.0);
+        expect_z("Footing @T 5'6" + m, 66.0, true); // the loader
+        expect_z("Footing @B 5' 6" + m, 66.0, false);
+    }
+    // U+201C (left double quote) is no inch mark: "5'6<U+201C>" is still feet only
+    expect_z("Footing @T 5'6\xE2\x80\x9C", 60.0, true);
+    double inches = -1.0;
+    CHECK(ost_domain::elevation_text_inches("6\xE2\x80\x9C", inches) == ost_domain::ElevationTextStatus::NotAnElevation);
+}
+
+// Port of ...::test_a_value_beyond_the_float_range_raises_like_an_unreadable_text and test_large_finite_values_are_still_read, and of
+// tests/infrastructure/mdb/components/test_bid_data_reader.py::test_a_feet_run_beyond_the_float_range_is_an_unreadable_elevation
+// (Windows 0a24294): a result that is not finite (feet run, inches-only digits, metres, centimetres) is a ValueError
+// "elevation out of range: <first 40 characters>"; the loader reads such a name as (0.0, false) and the other names are unaffected.
+TEST(ElevationPort, AValueBeyondTheFloatRangeIsAnUnreadableElevation)
+{
+    const std::string big = std::string(400, '9');
+    for (const std::string &text : {big + "'x", big + "'6\"", "1" + std::string(400, '0') + "\"", "1" + std::string(400, '0') + " m",
+                                    "-" + big + "cm"})
+    {
+        SCOPED_CONTEXT("length=" + std::to_string(text.size()));
+        double inches = 5.0;
+        CHECK(ost_domain::elevation_text_inches(text, inches) == ost_domain::ElevationTextStatus::Raises);
+        CHECK_EQ(inches, 5.0);
+        expect_none("Huge @T " + text);
+    }
+    // the message names the text, cut at 40 characters
+    double inches = 0.0;
+    std::string error;
+    CHECK(ost_domain::elevation_text_inches("1" + std::string(400, '0') + "\"", inches, &error) == ost_domain::ElevationTextStatus::Raises);
+    CHECK_STR_EQ(error, "elevation out of range: 1" + std::string(39, '0'));
+    // large finite values are still read
+    CHECK(ost_domain::elevation_text_inches("1000000'x", inches) == ost_domain::ElevationTextStatus::Value);
+    CHECK_EQ(inches, 12000000.0);
+    CHECK(ost_domain::elevation_text_inches(std::string(300, '9') + "\"", inches) == ost_domain::ElevationTextStatus::Value);
+    CHECK_EQ(inches, std::strtod(std::string(300, '9').c_str(), nullptr));
+    CHECK(ost_domain::elevation_text_inches("1" + std::string(308, '0') + " cm", inches) == ost_domain::ElevationTextStatus::Value);
+    CHECK(std::isfinite(inches));
+    // the neighbour of an unreadable name reads normally
+    expect_z("Fine @T 9' 6\"", 114.0, true);
+
+    // the loader logs one warning for the unreadable name ("Ignoring unreadable elevation in condition ...") and none for its neighbour
+    std::vector<std::string> warnings;
+    ost_log::set_sink([&warnings](ost_log::Level level, const std::string &message, const std::string &)
+                      {
+                          if (level == ost_log::Level::Warning)
+                              warnings.push_back(message);
+                      });
+    expect_none("Huge @T " + big + "'x");
+    expect_z("Fine @T 9' 6\"", 114.0, true);
+    ost_log::set_sink(ost_log::Sink());
+    REQUIRE_EQ(warnings.size(), size_t(1));
+    CHECK(warnings[0].find("Ignoring unreadable elevation in condition 'Huge @T 999") == 0);
+    CHECK(warnings[0].find("elevation out of range: 999") != std::string::npos);
 }
 
 TEST(ElevationPort, Elv04LegacyScannerOverAcceptedThese)
