@@ -20,6 +20,16 @@ namespace ost_domain
             return value == 0.0 ? 1.0 : value;
         }
 
+        // set_scale_dialog.py:415-418 _format_number: repr(float(value)) with a trailing ".0" removed: the shortest text that reads back as the identical double
+        // (1234567 not 1.23457e+06, 0.3333333333333333 for 1/3); "nan" / "inf" and the exponent forms ("1e+20") are kept as repr gives them.
+        std::string custom_field_text(double value)
+        {
+            std::string text = python_float_repr(value);
+            if (text.size() >= 2 && text.compare(text.size() - 2, 2, ".0") == 0)
+                text.erase(text.size() - 2);
+            return text;
+        }
+
         // Python tuple equality of the form state (set_scale_dialog.py:197-205): == on the floats, the custom texts after strip().
         bool same_state(const ScaleFormState &a, const ScaleFormState &b)
         {
@@ -142,9 +152,9 @@ namespace ost_domain
             state.preset_sf1 = first.sf1;
             state.preset_sf2 = first.sf2;
         }
-        // SS-5: full precision (the same digits as format_custom_scale), not f"{value:g}".
-        state.custom1 = format_general(sf1, 15);
-        state.custom2 = format_general(sf2, 15);
+        // The shortest round-trip text (Windows 0a24294 _format_number), not f"{value:g}" and not 15 digits (SS-5 was the 15-digit hardening).
+        state.custom1 = custom_field_text(sf1);
+        state.custom2 = custom_field_text(sf2);
         state.apply_to_all = false;
         _opened = state;
         _baseline = state;
@@ -194,6 +204,11 @@ namespace ost_domain
         }
         mark_saved(state);
         return ScaleApplyResult::Saved;
+    }
+
+    FormIssue scale_save_failed_issue(bool unstorable_content)
+    {
+        return FormIssue{kScaleSaveFailedTitle, unstorable_content ? kScaleRangeRefusedMessage : kScaleSaveFailedMessage};
     }
 
     std::vector<std::string> page_setting_uids(const ost_data::ProjectData &project, const std::string &page_uid, bool apply_to_all)

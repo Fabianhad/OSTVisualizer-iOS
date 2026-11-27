@@ -9,7 +9,8 @@
 // Deliberate differences from Windows, each pinned by a test that says so (register SS-3, SS-5, SS-14; N-M1-21, N-M1-22):
 //   - a NaN or an infinity typed in a custom field is refused with "... is not a valid number." (Windows lets nan / inf through the
 //     dialog and refuses them later with the generic "Save Failed"), the stripped text is shown;
-//   - the custom fields are filled with FULL precision (format_general(v, 15)) instead of f"{v:g}" (six digits), so that ticking only
+//   - (retired by Windows 0a24294, now PARITY: set_scale_dialog.py:415-418 _format_number) the custom fields are filled with the shortest round-trip text, Python
+//     repr(float(v)) without a trailing ".0" (1234567, 12.0000001, 0.3333333333333333), instead of f"{v:g}" (six digits), so that ticking only
 //     "Apply to all pages" does not rescale the page by the truncation error;
 //   - the form has no Apply button (Cancel + Save only), so apply() below is "Save";
 //   - the page the form was opened on is the PRESSED page, not necessarily the active one: the Windows clause "same active page" of
@@ -41,6 +42,10 @@ namespace ost_domain
     inline constexpr const char *kScaleCustomPositiveMessage = "Custom scale values must be positive.";
     inline constexpr const char *kScaleSaveFailedTitle = "Save Failed";
     inline constexpr const char *kScaleSaveFailedMessage = "Failed to save page scale.";
+    // shared/texts.py:1056-1060 PAGE_OPERATIONS_MESSAGE_THE_SCALE_WAS_NOT_CHANGED_BECAUSE, shown by set_scale_dialog.py:351-358 under kScaleSaveFailedTitle when the save is refused
+    // because the content of the page cannot be stored at the new scale (a PageScaleRangeError; Windows 0a24294).
+    inline constexpr const char *kScaleRangeRefusedMessage =
+        "The scale was not changed because the takeoffs and annotations on the page cannot be stored at that scale.";
 
     // The pair a Save writes and whether it goes to every page of the bid (set_scale_dialog.py:18-22).
     struct ScaleSettings
@@ -87,6 +92,10 @@ namespace ost_domain
     // turned on; the custom texts and the switch are kept. A style without presets leaves has_preset false.
     ScaleFormState scale_form_after_style_change(const ScaleFormState &state, int new_style);
 
+    // The alert of a refused save: kScaleSaveFailedTitle with kScaleRangeRefusedMessage when the content of the page cannot be stored at the new scale
+    // (`unstorable_content`, ost_store::page_scale_refusal_is_unstorable_content), else kScaleSaveFailedMessage (set_scale_dialog.py:351-372).
+    FormIssue scale_save_failed_issue(bool unstorable_content);
+
     // What apply() did (the Windows _apply_changes, :264-308, without the SQL queue branch).
     enum class ScaleApplyResult
     {
@@ -105,7 +114,7 @@ namespace ost_domain
 
         // The state at open (:134-156). The first preset of the styles 1, 2, 3 (find_matching_preset) that matches the page: that style, the
         // "Pre-defined" radio, that preset; no match: style 1, the "Custom" radio and the first preset of style 1 as the picker's value. The
-        // two custom texts are format_general(value, 15) in BOTH cases (full precision, SS-5). apply_to_all is false. This state is the baseline.
+        // two custom texts are the shortest round-trip text of the value (repr without a trailing ".0") in BOTH cases. apply_to_all is false. This state is the baseline.
         ScaleFormState initial() const;
 
         // state != baseline, the custom texts compared after strip() (:207-211).

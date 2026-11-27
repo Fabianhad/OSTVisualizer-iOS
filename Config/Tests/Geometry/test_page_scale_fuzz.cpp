@@ -9,6 +9,7 @@
 #include "Domain/NumberText.hpp"
 #include "Domain/OverlayRect.hpp"
 #include "Domain/PageScaleTransform.hpp"
+#include "Domain/PositionParser.hpp"
 
 #include "PageScaleFuzzOracleData.hpp"
 
@@ -16,12 +17,27 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <vector>
 
 using namespace ost_domain;
 using std::string;
 
 namespace
 {
+    // The rows were recorded from Windows BEFORE 0a24294: in the three-decimal tables a recorded text that holds a "0" / "-0" for a coordinate that was not 0 is now refused by
+    // Windows (require_storable_scaled_values: before != 0 and round(after, 3) == 0), see test_page_scale_text.cpp.
+    bool windows_now_refuses(const string &table, const string &stored, const string &expected)
+    {
+        if (table != "BidTakeoffs" && table != "BidComments" && table != "BidTypGroupViews")
+            return false;
+        const std::vector<double> before = parse_position(stored);
+        const std::vector<double> after = parse_position(expected);
+        for (size_t i = 0; i < before.size() && i < after.size(); ++i)
+            if (before[i] != 0.0 && after[i] == 0.0)
+                return true;
+        return false;
+    }
+
     string describe(const PositionRescale &result)
     {
         static const char *const names[] = {"Empty", "NotNumeric", "Rescaled", "NotFinite", "Underflow", "BadFactor"};
@@ -43,6 +59,11 @@ TEST(SetScale_Fuzz, EveryRandomPositionRowGivesTheWindowsResult)
         else if (row.kind == 1)
         {
             CHECK(result.kind == PositionRescaleKind::NotNumeric);
+        }
+        else if (windows_now_refuses(row.table, row.stored, row.expected))
+        {
+            CHECK(result.kind == PositionRescaleKind::Underflow);
+            CHECK_EQ(result.text, string(""));
         }
         else
         {
