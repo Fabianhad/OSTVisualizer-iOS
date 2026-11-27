@@ -20,15 +20,19 @@ namespace ost_store
             return "Folder";
         }
 
-        // iOS wording, the pattern of BrowserFailure ("Failed to rename project. <hint>"): Windows only logs these failures (CF-7).
+        // The Windows sentences of a failed folder write (HEAD d26893c texts.py:711-722, shown by condition_action_handler._report_folder_write_failure),
+        // each + the database-locked hint. The TITLES stay the iOS ones (the title of the name alert of the action, owner choice, CF-7). The move
+        // sentence is iOS: Windows only logs a failed move.
         std::string generic_message(ConditionFolderAction action, std::size_t item_count)
         {
             std::string text;
             switch (action)
             {
-            case ConditionFolderAction::Create: text = "Failed to create folder."; break;
-            case ConditionFolderAction::Rename: text = "Failed to rename folder."; break;
-            case ConditionFolderAction::Delete: text = item_count > 1 ? "Failed to delete folders." : "Failed to delete folder."; break;
+            case ConditionFolderAction::Create: text = "Failed to create the condition folder."; break;
+            case ConditionFolderAction::Rename: text = "Failed to rename the condition folder."; break;
+            case ConditionFolderAction::Delete:
+                text = item_count > 1 ? "Failed to delete " + std::to_string(item_count) + " condition folders." : "Failed to delete the condition folder.";
+                break;
             case ConditionFolderAction::Move: text = "Failed to move the condition."; break;
             }
             return text + " " + ost_domain::DB_LOCKED_HINT;

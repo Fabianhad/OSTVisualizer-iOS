@@ -151,6 +151,61 @@ TEST(ConditionFolderRules, TheConstantsAreTheWindowsTextsAndTheIosLine)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------
+// the name of a NEW folder: the first free sibling name (condition_action_handler._free_folder_name, Windows HEAD d26893c :1336-1349)
+// ---------------------------------------------------------------------------------------------------------------------------------
+
+// Windows test_a_new_folder_gets_the_first_free_sibling_name: the root holds "New Folder" (f2) and " new folder (2) " (f3), folder f1 (a root folder)
+// holds "New Folder (3)": a new root folder is "New Folder (3)", a new folder under f1 is "New Folder" ("New Folder (3)" does not make "New Folder" taken).
+TEST(ConditionFolderRules, ANewFolderGetsTheFirstFreeSiblingName)
+{
+    const FolderMap folders = {{"f1", {"f1", "Parent", ""}},
+                               {"f2", {"f2", "New Folder", ""}},
+                               {"f3", {"f3", " new folder (2) ", ""}},
+                               {"f4", {"f4", "New Folder (3)", "f1"}}};
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(folders, ""), "New Folder (3)");
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(folders, "f1"), "New Folder");
+}
+
+TEST(ConditionFolderRules, TheFreeFolderNameStartsWithTheDefaultAndCountsUpFromTwo)
+{
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name({}, ""), "New Folder");
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name({{"a", {"a", "New Folder", ""}}}, ""), "New Folder (2)");
+    // only "(2)" taken: the plain name is still free
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name({{"a", {"a", "New Folder (2)", ""}}}, ""), "New Folder");
+    // stripped and case-insensitive (the same rule as the duplicate check)
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name({{"a", {"a", "  NEW FOLDER\t", ""}}, {"b", {"b", "new folder (2)", ""}}}, ""), "New Folder (3)");
+    // a gap is filled: "New Folder" and "(3)" taken -> "(2)"
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name({{"a", {"a", "New Folder", ""}}, {"b", {"b", "New Folder (3)", ""}}}, ""), "New Folder (2)");
+    // a long run
+    FolderMap many = {{"a", {"a", "New Folder", ""}}};
+    for (int number = 2; number <= 12; ++number)
+        many["f" + std::to_string(number)] = {"f" + std::to_string(number), "New Folder (" + std::to_string(number) + ")", ""};
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(many, ""), "New Folder (13)");
+}
+
+// Only SIBLINGS count: the same name under another parent is ignored; a parent that is no folder of the bid ("0", "", unknown uid) is the root,
+// for the new folder and for the existing ones alike (effective parent, like check_condition_folder_name).
+TEST(ConditionFolderRules, TheFreeFolderNameLooksAtTheSiblingsOfTheEffectiveParentOnly)
+{
+    const FolderMap folders = {{"p", {"p", "P", ""}},
+                               {"q", {"q", "Q", ""}},
+                               {"a", {"a", "New Folder", "p"}},
+                               {"b", {"b", "New Folder", "0"}},        // listed at the root
+                               {"c", {"c", "New Folder (2)", "ghost"}}}; // listed at the root
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(folders, "q"), "New Folder");
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(folders, "p"), "New Folder (2)");
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(folders, ""), "New Folder (3)");
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(folders, "0"), "New Folder (3)");
+    CHECK_STR_EQ(ost_domain::free_condition_folder_name(folders, "unknown"), "New Folder (3)");
+    // whatever it returns passes the duplicate check
+    for (const std::string &parent : {std::string(), std::string("p"), std::string("q")})
+    {
+        const std::string name = ost_domain::free_condition_folder_name(folders, parent);
+        CHECK(ost_domain::check_condition_folder_name(folders, parent, "", name).issue == FolderNameIssue::None);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------
 // the parent a folder is listed under (conditions_sidebar.py:469-475)
 // ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -749,8 +804,8 @@ TEST(ConditionFolderRules, TheInUseWalkHandlesAChainOfEightThousandFolders)
 // the texts of the delete confirmation (messagebox.py:78-119; register CF-3, CF-11)
 // ---------------------------------------------------------------------------------------------------------------------------------
 
-// Every oracle row of the real Windows confirm_multi_delete (QMessageBox recorded): title "Delete Folder"; "Delete {n} item(s)?"; the
-// `Cannot delete "{name}" because it is in use.` lines, a blank line and "Delete the other {n} item(s)?"; the warning when everything is blocked;
+// Every oracle row of the real Windows confirm_multi_delete (QMessageBox recorded): title "Delete Folder"; "Delete 1 item?" / "Delete {n} items?" (Windows HEAD d26893c: singular for 1, plural for every other n, also 0); the
+// `Cannot delete "{name}" because it is in use.` lines, a blank line and "Delete the other 1 item?" / "Delete the other {n} items?"; the warning when everything is blocked;
 // the items a Yes deletes.
 TEST(ConditionFolderRules, TheConfirmationTextsMatchTheRealWindowsDialogOnEveryOracleRow)
 {
@@ -778,13 +833,13 @@ TEST(ConditionFolderRules, TheIosLineIsAppendedToAQuestionOnly)
     {
         const auto got = ost_domain::condition_folder_delete_confirmation({Item{"Walls", "f1"}}, {}, true);
         CHECK_STR_EQ(got.dialog.title, "Delete Folder");
-        CHECK_STR_EQ(got.dialog.message, "Delete 1 item(s)?\n\n" + line);
+        CHECK_STR_EQ(got.dialog.message, "Delete 1 item?\n\n" + line);
         CHECK(got.kind == ost_domain::FolderDeleteDialogKind::Ask);
         CHECK(got.deletable == std::vector<std::string>({"f1"}));
     }
     {
         const auto got = ost_domain::condition_folder_delete_confirmation({Item{"Walls", "f1"}, Item{"Floors", "f2"}}, {"f1"}, true);
-        CHECK_STR_EQ(got.dialog.message, "Cannot delete \"Walls\" because it is in use.\n\nDelete the other 1 item(s)?\n\n" + line);
+        CHECK_STR_EQ(got.dialog.message, "Cannot delete \"Walls\" because it is in use.\n\nDelete the other 1 item?\n\n" + line);
         CHECK(got.kind == ost_domain::FolderDeleteDialogKind::Ask);
         CHECK(got.deletable == std::vector<std::string>({"f2"}));
     }
@@ -796,7 +851,7 @@ TEST(ConditionFolderRules, TheIosLineIsAppendedToAQuestionOnly)
     }
     {
         const auto got = ost_domain::condition_folder_delete_confirmation({Item{"Walls", "f1"}}, {}, false);
-        CHECK_STR_EQ(got.dialog.message, "Delete 1 item(s)?"); // without the flag exactly the Windows text
+        CHECK_STR_EQ(got.dialog.message, "Delete 1 item?"); // without the flag exactly the Windows text
     }
 }
 
@@ -814,7 +869,7 @@ TEST(ConditionFolderRules, TheInUseLineNamesTheSelectedFolderEvenWhenADescendant
     CHECK(plan.blocked == std::vector<std::string>({"r"}));
     CHECK(plan.deletable == std::vector<std::string>({"o"}));
     const auto got = ost_domain::condition_folder_delete_confirmation({{"Root", "r"}, {"Other", "o"}}, plan.blocked, plan.subfolders_move);
-    CHECK_STR_EQ(got.dialog.message, "Cannot delete \"Root\" because it is in use.\n\nDelete the other 1 item(s)?");
+    CHECK_STR_EQ(got.dialog.message, "Cannot delete \"Root\" because it is in use.\n\nDelete the other 1 item?");
     CHECK(got.deletable == std::vector<std::string>({"o"}));
 }
 

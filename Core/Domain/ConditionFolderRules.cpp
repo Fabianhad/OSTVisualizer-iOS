@@ -18,11 +18,31 @@ namespace ost_domain
                 return std::string();
             return parent_uid;
         }
+
+        // texts.py:1204-1205 and :1452-1457 (Windows HEAD d26893c): "1 item" for one, "N items" for every other count (0 too).
+        std::string item_count_text(std::size_t count)
+        {
+            return std::to_string(count) + (count == 1 ? " item" : " items");
+        }
     }
 
     std::string effective_condition_folder_parent(const std::unordered_map<std::string, ConditionFolder> &folders, const ConditionFolder &folder)
     {
         return listed_parent(folders, folder.parent_uid);
+    }
+
+    std::string free_condition_folder_name(const std::unordered_map<std::string, ConditionFolder> &folders, const std::string &parent_uid)
+    {
+        // condition_action_handler.py:1336-1349: taken = the stripped, lower-cased names of the folders with the same parent.
+        const std::string parent = listed_parent(folders, parent_uid);
+        std::unordered_set<std::string> taken;
+        for (const auto &entry : folders)
+            if (listed_parent(folders, entry.second.parent_uid) == parent)
+                taken.insert(ost_import::text_rules::py_lower(ost_import::text_rules::py_strip(entry.second.name)));
+        std::string name = kDefaultConditionFolderName;
+        for (int number = 2; taken.count(ost_import::text_rules::py_lower(ost_import::text_rules::py_strip(name))) > 0; ++number)
+            name = std::string(kDefaultConditionFolderName) + " (" + std::to_string(number) + ")";
+        return name;
     }
 
     FolderNameCheck check_condition_folder_name(const std::unordered_map<std::string, ConditionFolder> &folders,
@@ -172,7 +192,7 @@ namespace ost_domain
                                                                   const std::vector<std::string> &blocked_uids,
                                                                   bool subfolders_move)
     {
-        // messagebox.py:78-119 confirm_multi_delete.
+        // messagebox.py:288-340 confirm_multi_delete (Windows HEAD d26893c).
         const std::unordered_set<std::string> used(blocked_uids.begin(), blocked_uids.end());
         FolderDeleteConfirmation confirmation;
         confirmation.dialog.title = kConditionFolderDeleteTitle;
@@ -197,9 +217,9 @@ namespace ost_domain
             return confirmation;
         }
         if (in_use_count > 0)
-            confirmation.dialog.message = in_use_lines + "\n\nDelete the other " + std::to_string(confirmation.deletable.size()) + " item(s)?";
+            confirmation.dialog.message = in_use_lines + "\n\nDelete the other " + item_count_text(confirmation.deletable.size()) + "?";
         else
-            confirmation.dialog.message = "Delete " + std::to_string(items.size()) + " item(s)?";
+            confirmation.dialog.message = "Delete " + item_count_text(items.size()) + "?";
         if (subfolders_move)
             confirmation.dialog.message += std::string("\n\n") + kConditionFolderSubfoldersMoveText;
         return confirmation;

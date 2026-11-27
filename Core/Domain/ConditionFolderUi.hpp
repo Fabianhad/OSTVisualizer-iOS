@@ -19,6 +19,7 @@
 #include "Condition.hpp"
 #include "ConditionFolder.hpp"
 #include "ConditionFolderRules.hpp"
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -82,9 +83,28 @@ namespace ost_domain
 
     // Register CF-8 (the safe behaviour reports what was committed): a folder write went through but the bid could not be read again, so the list
     // could not be refreshed. The title is the one of the Windows create warning (kConditionCreatedRefreshFailedTitle); the text says that the change was saved.
+    // Windows HEAD d26893c has the same warning with one sentence per action (condition_folder_refresh_failed_text below).
     inline constexpr const char *kFolderChangeSavedRefreshFailedTitle = "Refresh Error";
+    // The old iOS-only sentence, kept ONLY until ViewController+Conditions.mm calls condition_folder_refresh_failed_text (below) with the action
+    // that was done: Windows HEAD d26893c has one sentence per action (texts.py:695-710).
     inline constexpr const char *kFolderChangeSavedRefreshFailedText =
         "The folder change was saved, but the list could not be refreshed. Reopen the bid to see it.";
+
+    // The folder action whose write went through while the conditions list could not be read again.
+    enum class ConditionFolderRefreshAction
+    {
+        Create,
+        Rename,
+        Delete,
+        Move
+    };
+
+    // Windows HEAD d26893c condition_action_handler.py:1561, :1612, :1750-1752 (texts.py:695-710, :691), title kFolderChangeSavedRefreshFailedTitle:
+    //   Create: "The folder was created, but the conditions list could not be refreshed. Reopen the database to see the latest conditions."
+    //   Rename: "The folder was renamed, but ..."      Delete (1 folder): "The folder was deleted, but ..."
+    //   Delete (`item_count` > 1): "The folders were deleted, but ..."      Move: "The condition was moved, but ..."
+    // `item_count` only matters for Delete (0 and 1 are singular).
+    std::string condition_folder_refresh_failed_text(ConditionFolderRefreshAction action, std::size_t item_count);
 
     // ---- the refusal of a typed folder name -------------------------------------------------------------------------------------
 
