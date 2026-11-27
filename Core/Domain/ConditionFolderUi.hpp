@@ -85,10 +85,6 @@ namespace ost_domain
     // could not be refreshed. The title is the one of the Windows create warning (kConditionCreatedRefreshFailedTitle); the text says that the change was saved.
     // Windows HEAD d26893c has the same warning with one sentence per action (condition_folder_refresh_failed_text below).
     inline constexpr const char *kFolderChangeSavedRefreshFailedTitle = "Refresh Error";
-    // The old iOS-only sentence, kept ONLY until ViewController+Conditions.mm calls condition_folder_refresh_failed_text (below) with the action
-    // that was done: Windows HEAD d26893c has one sentence per action (texts.py:695-710).
-    inline constexpr const char *kFolderChangeSavedRefreshFailedText =
-        "The folder change was saved, but the list could not be refreshed. Reopen the bid to see it.";
 
     // The folder action whose write went through while the conditions list could not be read again.
     enum class ConditionFolderRefreshAction

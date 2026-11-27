@@ -406,9 +406,11 @@ static NSString *OSTConditionText(const std::string &text) {
 
 // A folder write went through but the bid could not be read again (register CF-8, the safe behaviour reports what was committed): the "Refresh
 // Error" title and a Core text that says the change was saved and what to do, not the "Failed to load" text, which says nothing of the write.
-- (void)_presentConditionFolderRefreshFailure {
+// The text names the action that was saved (Windows condition_action_handler.py, texts of the refresh warnings): "The folder was created|renamed|deleted"
+// ("The folders were deleted" for several) or "The condition was moved", then ", but the conditions list could not be refreshed. Reopen the database ...".
+- (void)_presentConditionFolderRefreshFailureForAction:(ost_domain::ConditionFolderRefreshAction)action count:(NSUInteger)count {
   [self _presentConditionAlertWithTitle:OSTConditionText(ost_domain::kFolderChangeSavedRefreshFailedTitle)
-                                message:OSTConditionText(ost_domain::kFolderChangeSavedRefreshFailedText)];
+                                message:OSTConditionText(ost_domain::condition_folder_refresh_failed_text(action, (std::size_t)count))];
 }
 
 // The "Folders" button: the folder manager is pushed inside the Conditions sheet (iPhone and iPad alike, N-M1-25). Opening it writes nothing,
@@ -457,11 +459,13 @@ static NSString *OSTConditionText(const std::string &text) {
 // A bid that cannot be read again keeps the project as it is and the user is told that the change was saved (the write itself went through, CF-8).
 // The selection of the main view stays as it was (plan 4.11: a folder write does not select anything), also for the condition that was moved.
 - (void)_refreshConditionFoldersFromScreen:(ConditionFoldersViewController *)screen
-                         movedConditionUID:(NSString *)movedConditionUID {
+                         movedConditionUID:(NSString *)movedConditionUID
+                                    action:(ost_domain::ConditionFolderRefreshAction)action
+                                     count:(NSUInteger)count {
   ost_data::ProjectData fresh;
   NSString *loadError = nil;
   if (![ImportService loadProjectWithUID:self.bidUID project:fresh error:&loadError]) {
-    [self _presentConditionFolderRefreshFailure];
+    [self _presentConditionFolderRefreshFailureForAction:action count:count];
     return;
   }
   ost_data::ProjectData &project = self.projectService.mutableProject;
@@ -490,7 +494,10 @@ static NSString *OSTConditionText(const std::string &text) {
                                                                            inBid:self.bidUID
                                                                     parentFolder:parentFolderUID];
   if (outcome.ok)
-    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:nil];
+    [self _refreshConditionFoldersFromScreen:vc
+                           movedConditionUID:nil
+                                      action:ost_domain::ConditionFolderRefreshAction::Create
+                                       count:1];
   return outcome;
 }
 
@@ -501,7 +508,10 @@ static NSString *OSTConditionText(const std::string &text) {
                                                                      toName:name
                                                                       inBid:self.bidUID];
   if (outcome.ok)
-    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:nil];
+    [self _refreshConditionFoldersFromScreen:vc
+                           movedConditionUID:nil
+                                      action:ost_domain::ConditionFolderRefreshAction::Rename
+                                       count:1];
   return outcome;
 }
 
@@ -509,7 +519,10 @@ static NSString *OSTConditionText(const std::string &text) {
                                               deleteFolderUIDs:(NSArray<NSString *> *)folderUIDs {
   OSTConditionFolderOutcome *outcome = [ImportService deleteConditionFolders:folderUIDs inBid:self.bidUID];
   if (outcome.ok)
-    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:nil];
+    [self _refreshConditionFoldersFromScreen:vc
+                           movedConditionUID:nil
+                                      action:ost_domain::ConditionFolderRefreshAction::Delete
+                                       count:folderUIDs.count];
   return outcome;
 }
 
@@ -520,7 +533,10 @@ static NSString *OSTConditionText(const std::string &text) {
                                                            toFolder:folderUID
                                                               inBid:self.bidUID];
   if (outcome.ok)
-    [self _refreshConditionFoldersFromScreen:vc movedConditionUID:conditionUID];
+    [self _refreshConditionFoldersFromScreen:vc
+                           movedConditionUID:conditionUID
+                                      action:ost_domain::ConditionFolderRefreshAction::Move
+                                       count:1];
   return outcome;
 }
 
