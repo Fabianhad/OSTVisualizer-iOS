@@ -714,9 +714,9 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   // The elevation text is kept as typed: it becomes the suffix of the name (COND-ELEV-01). It is validated with the loader's own
   // parser (parse_elevation_z calls elevation_text_inches, Windows b9902e6): a text the loader cannot read (a bare number, mm, units
   // of both systems, "5'" alone, a zero denominator) is refused with the forms that are accepted, like Windows. The dialog also
-  // refuses a text without a closing inch mark in which a letter or digit follows the foot mark ("5'6", "10'6", "5'abc"; "5'x" and
+  // refuses a text without a closing inch mark in which any non-blank character follows the foot mark ("5'6", "10'6", "5'abc", "5'x\""; "5'x" and
   // "5'6\"" pass), which the loader would read as the feet alone (elevation_text_needs_closing_inch_mark, called by parse_elevation_z;
-  // Windows 49a2d59, edit_condition_dialog.py :72, :1444); the alert is the same. The saved condition
+  // Windows d26893c, edit_condition_dialog.py :184-188, :1620-1646, rule widened in 0a24294); the alert is the same. The saved condition
   // does not take is_top or z from the form: condition_to_save derives both from the saved NAME like a reload does (decided
   // 2026-11-19); for a text that passed, the number checked here is the one that derivation gives, so memory equals a reload.
   const std::string elevValue = ost_import::text_rules::py_strip(

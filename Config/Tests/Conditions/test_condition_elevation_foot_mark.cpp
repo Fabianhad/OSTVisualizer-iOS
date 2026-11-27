@@ -377,7 +377,7 @@ namespace
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Port of test_text_right_after_the_foot_mark_needs_a_closing_inch_mark (the Windows rows run in one bid each; here every row runs
-// in both): a letter or digit after the foot mark with no closing inch mark is refused, whatever follows, U+2032 included.
+// in both): any non-blank character after the foot mark with no closing inch mark is refused (Windows 0a24294; was letters and digits only), whatever follows, U+2032 included.
 TEST(CondElev02_ClosingInchMark, TextRightAfterTheFootMarkNeedsAClosingInchMark)
 {
     check_rows(kGroupA);
@@ -583,7 +583,7 @@ TEST(CondElev02_ClosingInchMark, EveryFootMarkOfTheTextIsChecked)
     check_rows(kGroupF);
 }
 
-// U+2032 (prime) is a foot mark like the apostrophe: the lone x and a closing inch mark are accepted, a letter or digit is refused.
+// U+2032 (prime) is a foot mark like the apostrophe: the lone x and a closing inch mark are accepted, any other non-blank character is refused (Windows 0a24294).
 TEST(CondElev02_ClosingInchMark, ThePrimeMarkBehavesLikeTheApostrophe)
 {
     check_rows(kGroupG);
