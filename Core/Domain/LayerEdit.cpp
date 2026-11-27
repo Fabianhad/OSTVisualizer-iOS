@@ -218,7 +218,9 @@ namespace ost_domain
         {
             // messagebox.py:86-98
             plan.kind = LayerDeleteKind::ConfirmMixed;
-            plan.message = lines + "\n\nDelete the other " + std::to_string(plan.deletable.size()) + " item(s)?";
+            // d26893c (d2caf63) messagebox.py:295-317: the singular text for one row, the plural for every other count
+            plan.message = lines + "\n\nDelete the other " + std::to_string(plan.deletable.size()) +
+                           (plan.deletable.size() == 1 ? " item?" : " items?");
         }
         else if (!plan.in_use.empty())
         {
@@ -230,7 +232,8 @@ namespace ost_domain
         {
             // messagebox.py:107-118
             plan.kind = LayerDeleteKind::Confirm;
-            plan.message = "Delete " + std::to_string(plan.deletable.size()) + " item(s)?";
+            // messagebox.py:318-330 (MESSAGEBOX_MESSAGE_DELETE_ONE_ITEM / _ITEMS): "Delete 1 item?", "Delete 3 items?"
+            plan.message = "Delete " + std::to_string(plan.deletable.size()) + (plan.deletable.size() == 1 ? " item?" : " items?");
         }
         return plan;
     }

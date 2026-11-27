@@ -416,7 +416,7 @@ void OSTLayerPresentNameAlert(UIViewController *root, NSString *title, NSString 
 
 // The Windows delete flow for one layer (layers_dialog.py:487-548, messagebox.py:78-119): the usage is read from the file when the action starts
 // (the strict 11-table rule; an unreadable usage refuses the delete, LY-2: Windows would answer "nothing in use" and clear the references), then
-// Core's plan decides: a layer in use is only refused with its Windows text, anything else asks "Delete 1 item(s)?" with No as the default.
+// Core's plan decides: a layer in use is only refused with its Windows text, anything else asks "Delete 1 item?" ("Delete N items?" for N > 1) with No as the default.
 // The store itself clears the references and deletes, so this check is what keeps a condition from losing its layer.
 - (void)_startDeleteOfLayerUID:(NSString *)layerUID {
   const ost_data::ProjectData &project = self.projectService.project;

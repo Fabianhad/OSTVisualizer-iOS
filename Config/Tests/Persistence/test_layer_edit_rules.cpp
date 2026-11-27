@@ -748,7 +748,8 @@ namespace
 {
     // The oracle of messagebox.py:78-119 confirm_multi_delete(parent, "Delete Layer", items, used): which dialog it showed (question = a
     // confirmation with Yes / No and No as the default; warning = a message and no deletion), its text, and the rows it returns when the answer
-    // is Yes. Executed with python -B -I and QMessageBox.question / warning replaced by recorders.
+    // is Yes. Executed with python -B -I and QMessageBox.question / warning replaced by recorders (the "item(s)" texts were recorded at 49a2d59;
+    // parity-sync-2 hand-edited them to the singular / plural texts of d26893c, messagebox.py:295-330: count 1 = "item", any other count "items").
     struct DeleteOracleCase
     {
         const char *label;
@@ -763,16 +764,16 @@ namespace
     std::vector<DeleteOracleCase> delete_oracle()
     {
         return {
-            {"plain one", {{"Walls", "5"}}, {}, "Confirm", "Delete 1 item(s)?", "5", ""},
+            {"plain one", {{"Walls", "5"}}, {}, "Confirm", "Delete 1 item?", "5", ""},
             {"only in use", {{"Walls", "5"}}, {"5"}, "OnlyInUse", "Cannot delete \"Walls\" because it is in use.", "", "5"},
             {"mixed",
              {{"Walls", "5"}, {"Floors", "6"}, {"Unused", "7"}},
              {"5", "6"},
              "ConfirmMixed",
-             "Cannot delete \"Walls\" because it is in use.\nCannot delete \"Floors\" because it is in use.\n\nDelete the other 1 item(s)?",
+             "Cannot delete \"Walls\" because it is in use.\nCannot delete \"Floors\" because it is in use.\n\nDelete the other 1 item?",
              "7",
              "5,6"},
-            {"plain three", {{"A", "1"}, {"B", "2"}, {"C", "3"}}, {}, "Confirm", "Delete 3 item(s)?", "1,2,3", ""},
+            {"plain three", {{"A", "1"}, {"B", "2"}, {"C", "3"}}, {}, "Confirm", "Delete 3 items?", "1,2,3", ""},
             {"two in use",
              {{"Walls", "5"}, {"Floors", "6"}},
              {"5", "6"},
@@ -785,10 +786,10 @@ namespace
              {{"Walls", "5"}, {"Floors", "6"}, {"Unused", "7"}},
              {"6"},
              "ConfirmMixed",
-             "Cannot delete \"Floors\" because it is in use.\n\nDelete the other 2 item(s)?",
+             "Cannot delete \"Floors\" because it is in use.\n\nDelete the other 2 items?",
              "5,7",
              "6"},
-            {"not in used set", {{"Walls", "5"}}, {"6"}, "Confirm", "Delete 1 item(s)?", "5", ""},
+            {"not in used set", {{"Walls", "5"}}, {"6"}, "Confirm", "Delete 1 item?", "5", ""},
         };
     }
 }
@@ -842,7 +843,7 @@ TEST(LayerEditDeletePlan, Windows_OnlyTheDeletableRowsOfAMixedSelectionGoOn)
     const ost_domain::LayerDeletePlan mixed = ost_domain::plan_layer_delete(listed, {"103", "105", "8", "999", "107"}, {});
     CHECK_STR_EQ(kind_text(mixed.kind), "Confirm");
     CHECK_STR_EQ(join(mixed.deletable), "105,107");
-    CHECK_STR_EQ(mixed.message, "Delete 2 item(s)?");
+    CHECK_STR_EQ(mixed.message, "Delete 2 items?");
     // only rows that cannot be deleted: nothing, silently (test_layers_dialog.py:848 only_built_in_layers_selected_never_reaches_the_confirmation)
     const ost_domain::LayerDeletePlan none = ost_domain::plan_layer_delete(listed, {"101", "8", "999"}, {});
     CHECK_STR_EQ(kind_text(none.kind), "NothingToDelete");
@@ -865,7 +866,7 @@ TEST(LayerEditDeletePlan, Windows_ActionTimeUsageDecidesEveryTime)
     // (test_nested_layer_editor.py:74) content on another page was removed after the editor opened: unused now -> the question
     const ost_domain::LayerDeletePlan unused = ost_domain::plan_layer_delete(listed, {"layer-1"}, {});
     CHECK_STR_EQ(kind_text(unused.kind), "Confirm");
-    CHECK_STR_EQ(unused.message, "Delete 1 item(s)?");
+    CHECK_STR_EQ(unused.message, "Delete 1 item?");
     // new authoritative content makes the same layer used again -> the warning, no question
     const ost_domain::LayerDeletePlan used = ost_domain::plan_layer_delete(listed, {"layer-1"}, {"layer-1"});
     CHECK_STR_EQ(kind_text(used.kind), "OnlyInUse");
@@ -880,7 +881,7 @@ TEST(LayerEditDeletePlan, ARepeatedUidCountsOnceAndTheSelectionOrderIsKept)
     const ost_domain::LayerDeletePlan plan = ost_domain::plan_layer_delete(listed, {"7", "5", "7", "5"}, {"999", "abc"});
     CHECK_STR_EQ(kind_text(plan.kind), "Confirm");
     CHECK_STR_EQ(join(plan.deletable), "7,5");
-    CHECK_STR_EQ(plan.message, "Delete 2 item(s)?");
+    CHECK_STR_EQ(plan.message, "Delete 2 items?");
 }
 
 // The in-use test is on the uid TEXT (messagebox.py:84-85 `str(uid) in used_uids`): "5" is not "05".

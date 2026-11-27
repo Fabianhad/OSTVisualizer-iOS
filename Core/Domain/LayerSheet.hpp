@@ -23,11 +23,13 @@
 namespace ost_domain
 {
 
-    // iOS-only (plan 4.14, N-M1-03: the owner may reword it): a rename or a move that was written, whose layer list could not be read again.
-    // Windows answers "Failed to rename layer." / "Failed to move layer." there although the change committed (project_write_service.py:6845-6847:
-    // `if not success or not self.reload_database(db_path): return False`), the same oddity as register CF-8 for folders: the text says what was kept.
-    inline constexpr const char *kLayerChangeRefreshFailed =
-        "The change was saved, but the layer list could not be refreshed. Reopen the database to see it.";
+    // A rename or a move that was written, whose layer list could not be read again. Windows 49a2d59 answered "Failed to rename layer." / "Failed to
+    // move layer." there although the change committed; since d26893c (0a24294) it says what was kept (texts.py:1306-1313, the dialog twins
+    // texts.py:1645-1652, tests test_ui_event_coordinator.py:14173 and test_layers_dialog.py:1072). The title stays "Refresh Error" (the sidebar's).
+    inline constexpr const char *kLayerRenamedRefreshFailed =
+        "The layer was renamed, but the layer list could not be refreshed. Reopen the database to see the change.";
+    inline constexpr const char *kLayerMovedRefreshFailed =
+        "The layer was moved, but the layer list could not be refreshed. Reopen the database to see the change.";
 
     // What one row of the sheet offers. A row that is not in the list offers nothing (every flag false, also can_add_below).
     struct LayerRowActions
@@ -64,7 +66,14 @@ namespace ost_domain
     DialogText layer_write_failure_text(LayerAction action, const std::string &store_error);
 
     // A write that committed but whose layer list could not be read again; the new state is kept. Create: "Refresh Error" and kLayerCreatedRefreshFailed;
-    // Delete: "Delete Layer" and kLayersDeletedRefreshFailed (both Windows); Rename and Move: "Refresh Error" and kLayerChangeRefreshFailed.
+    // Delete: "Delete Layer" and kLayersDeletedRefreshFailed (both Windows); Rename and Move: "Refresh Error" and kLayerRenamedRefreshFailed /
+    // kLayerMovedRefreshFailed (Windows d26893c).
     DialogText layer_refresh_failure_text(LayerAction action);
+
+    // What a Show All / Hide All tells the user when it did not write (Windows d26893c, update_all_layers_visibility_deferred
+    // ui_event_coordinator.py:6812-6855 and layers_dialog._set_all_show :700-716): NoOwnLayers (the layer list has only shared rows, or nothing)
+    // gives {kLayerVisibilityTitle, kBidHasNoOwnLayersText}; AlreadyThere (a success, nothing to write) and Write give an empty title and message:
+    // no alert. Nothing is written in any of these cases by this function; it only decides the text.
+    DialogText bulk_layer_visibility_notice(const BulkLayerPlan &plan);
 
 }

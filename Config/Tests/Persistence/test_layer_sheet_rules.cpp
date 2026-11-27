@@ -12,9 +12,9 @@
 //   ui_event_coordinator.py:6584-6587  "Refresh Error" / "The layer was created, but the layer list could not be refreshed. Reopen the database to
 //       see the new layer."; layers_dialog.py:540 "Delete Layer" / "Layers were deleted, but the refresh failed."
 //   messagebox.py:8 DB_LOCKED_HINT = "The database may be locked by another application."
-// iOS-only (plan 4.14, N-M1-03): the DB-locked hint after the generic failure texts of create / rename / move (N-M1-17, plan 5.3), and the refresh
-// text of a rename and a move that committed (register CF-8 is the folder twin: Windows answers "Failed to rename layer." for a rename that DID
-// commit when only the reload failed, project_write_service.py:6845-6847).
+// iOS-only (plan 4.14, N-M1-03): the DB-locked hint after the generic failure texts of create / rename / move (N-M1-17, plan 5.3).
+// Windows d26893c (parity-sync-2): the rename / move refresh texts (texts.py:1306-1313, 0a24294) and the Show All / Hide All message of a bid without
+// layers of its own (texts.py:1321-1324).
 #include "LayerEditTestSupport.hpp"
 
 #include "Domain/BrowserRules.hpp"
@@ -23,6 +23,7 @@
 #include "Domain/LayerSheet.hpp"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using ost_domain::BidLayer;
@@ -166,8 +167,9 @@ TEST(LayerSheet, AStoreTextReplacesTheGenericText)
     CHECK_STR_EQ(del.message, "y");
 }
 
-// ui_event_coordinator.py:6584-6587 (create) and layers_dialog.py:540 (delete) are Windows texts; a rename and a move that committed get the
-// iOS sentence (Windows says "Failed to ..." there although the change was written, register CF-8's twin).
+// ui_event_coordinator.py:6584-6587 (create), layers_dialog.py:540 (delete) and, since d26893c (0a24294), the rename and the move
+// (texts.py:1306-1313 UI_EVENT_COORDINATOR_MESSAGE_THE_LAYER_WAS_RENAMED_BUT_THE / _MOVED_BUT_THE, the twins at texts.py:1645-1652, tests
+// test_ui_event_coordinator.py:14173, test_layers_dialog.py:1072) are Windows texts; the title stays the sidebar's "Refresh Error".
 TEST(LayerSheet, RefreshFailureTextsSayWhatWasCommitted)
 {
     const ost_domain::DialogText create = ost_domain::layer_refresh_failure_text(LayerAction::Create);
@@ -179,10 +181,63 @@ TEST(LayerSheet, RefreshFailureTextsSayWhatWasCommitted)
     CHECK_STR_EQ(del.message, "Layers were deleted, but the refresh failed.");
     const ost_domain::DialogText rename = ost_domain::layer_refresh_failure_text(LayerAction::Rename);
     CHECK_STR_EQ(rename.title, "Refresh Error");
-    CHECK_STR_EQ(rename.message, "The change was saved, but the layer list could not be refreshed. Reopen the database to see it.");
+    CHECK_STR_EQ(rename.message,
+                 "The layer was renamed, but the layer list could not be refreshed. Reopen the database to see the change.");
     const ost_domain::DialogText move = ost_domain::layer_refresh_failure_text(LayerAction::Move);
     CHECK_STR_EQ(move.title, "Refresh Error");
-    CHECK_STR_EQ(move.message, rename.message);
+    CHECK_STR_EQ(move.message,
+                 "The layer was moved, but the layer list could not be refreshed. Reopen the database to see the change.");
+    CHECK_NE(move.message, rename.message);
+}
+
+// Windows update_all_layers_visibility_deferred (ui_event_coordinator.py:6812-6855, d26893c): a Show All / Hide All in a bid whose layer list has no
+// layer of its own (only shared rows, or nothing) returns WriteReloadResult(user_message=UI_EVENT_COORDINATOR_MESSAGE_THIS_BID_HAS_NO_LAYERS_OF_ITS)
+// and _on_layers_show_all shows it as a warning titled UI_EVENT_COORDINATOR_TITLE_LAYER_VISIBILITY; the Layers dialog shows the same text
+// (layers_dialog.py:700-716). Tests: test_ui_event_coordinator.py:14256-14274 (test_hide_all_with_only_shared_layers_tells_the_user_in_the_sidebar_too),
+// test_layers_dialog.py (test_hide_all_refused_with_a_reason_shows_that_reason). A bid with its own layers that already have the requested
+// visibility is a success without a write (return True): no message.
+TEST(LayerSheet, BulkVisibilityTextsAreTheWindowsTexts)
+{
+    CHECK_STR_EQ(ost_domain::kLayerVisibilityTitle, "Layer Visibility");
+    CHECK_STR_EQ(ost_domain::kBidHasNoOwnLayersText, "This bid has no layers of its own to show or hide.");
+}
+
+TEST(LayerSheet, ShowAllAndHideAllTellWhenTheBidHasNoLayersOfItsOwn)
+{
+    using ost_domain::BulkLayerOutcome;
+    using ost_domain::BulkLayerPlan;
+    using ost_domain::Layer;
+    const std::string bid = "10";
+    const std::vector<BidLayer> only_shared = {shared("8", "Shared Template", 7)};
+    const std::vector<BidLayer> own_walls = {row("105", "Walls", 4)};
+    Layer walls;
+    walls.uid = "105";
+    walls.name = "Walls";
+    walls.visible = true;
+    const std::unordered_map<std::string, Layer> live = {{"105", walls}};
+    const std::unordered_map<std::string, Layer> none;
+    for (const bool show : {false, true})
+    {
+        SCOPED_CONTEXT(show ? "Show All" : "Hide All");
+        // [shared template row] and [] -> NoOwnLayers -> the alert
+        for (const std::vector<BidLayer> &listed : {only_shared, std::vector<BidLayer>{}})
+        {
+            const BulkLayerPlan plan = ost_domain::plan_bulk_layer_visibility(listed, bid, none, show);
+            CHECK(plan.outcome == BulkLayerOutcome::NoOwnLayers);
+            const ost_domain::DialogText notice = ost_domain::bulk_layer_visibility_notice(plan);
+            CHECK_STR_EQ(notice.title, "Layer Visibility");
+            CHECK_STR_EQ(notice.message, "This bid has no layers of its own to show or hide.");
+        }
+    }
+    // an own layer that already has the requested visibility is a success: no alert; one that differs is written: no alert
+    const BulkLayerPlan there = ost_domain::plan_bulk_layer_visibility(own_walls, bid, live, true);
+    CHECK(there.outcome == BulkLayerOutcome::AlreadyThere);
+    CHECK(ost_domain::bulk_layer_visibility_notice(there).title.empty());
+    CHECK(ost_domain::bulk_layer_visibility_notice(there).message.empty());
+    const BulkLayerPlan write = ost_domain::plan_bulk_layer_visibility(own_walls, bid, live, false);
+    CHECK(write.outcome == BulkLayerOutcome::Write);
+    CHECK(ost_domain::bulk_layer_visibility_notice(write).title.empty());
+    CHECK(ost_domain::bulk_layer_visibility_notice(write).message.empty());
 }
 
 // None of the committed-but-not-shown texts claims a failure, and none of the failure texts claims a success.
