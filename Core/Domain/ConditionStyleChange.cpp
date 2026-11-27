@@ -5,6 +5,8 @@
 #include "ConditionFormRules.hpp"
 #include "PositionParser.hpp"
 
+#include <cmath>
+
 namespace ost_domain
 {
 
@@ -191,14 +193,16 @@ namespace ost_domain
         out.color_fill = form.color_fill;
         out.pattern = form.pattern;
         out.spacing = form.spacing;
-        // a slot without a quantity has no unit: `uom = -1 if calc == 0 else uom_combo.currentData()` (a stored slot of calc 0
-        // with another unit is read back as -1, so a Save writes -1)
+        // a slot without a quantity has no unit: `uom = -1 if calc == 0 else uom_combo.currentData()`, but only for a slot the user
+        // changed: `if self._qty_rows()[i] == self._saved_qty_rows[i]: continue` (Windows d26893c, edit_condition_dialog.py :1905-1925)
+        // skips a slot whose quantity is as loaded, and the unit combo of a slot of calc 0 is empty, so a stored slot of calc 0 with
+        // another unit (an import) keeps that unit through any Save.
         out.calc_type1 = form.calc_type1;
-        out.uom1 = form.calc_type1 == 0 ? -1 : form.uom1;
+        out.uom1 = form.calc_type1 == 0 ? (stored.calc_type1 == 0 ? stored.uom1 : -1) : form.uom1;
         out.calc_type2 = form.calc_type2;
-        out.uom2 = form.calc_type2 == 0 ? -1 : form.uom2;
+        out.uom2 = form.calc_type2 == 0 ? (stored.calc_type2 == 0 ? stored.uom2 : -1) : form.uom2;
         out.calc_type3 = form.calc_type3;
-        out.uom3 = form.calc_type3 == 0 ? -1 : form.uom3;
+        out.uom3 = form.calc_type3 == 0 ? (stored.calc_type3 == 0 ? stored.uom3 : -1) : form.uom3;
         out.notes = form.notes;
 
         // The controls of the style: Linear, Count / Attachment, and everything else (Area and a stored type outside 0..3, COND-M08)
@@ -233,8 +237,11 @@ namespace ost_domain
         else
         {
             out.thickness = form.thickness;
-            out.rise = form.rise;
-            out.run = form.run;
+            // The form shows abs(rise) / abs(run) and the save compares abs(typed) with abs(stored) (Windows d26893c,
+            // edit_condition_dialog.py :1860, :1882): a stored negative value is not rewritten by a save that did not change it,
+            // a changed value is written as its absolute value. The Linear branch above compares the signed values.
+            out.rise = std::fabs(form.rise) == std::fabs(stored.rise) ? stored.rise : std::fabs(form.rise);
+            out.run = std::fabs(form.run) == std::fabs(stored.run) ? stored.run : std::fabs(form.run);
             out.round_quantity = form.round_quantity;
             out.round_up = form.round_up;
             out.grid = form.grid;
