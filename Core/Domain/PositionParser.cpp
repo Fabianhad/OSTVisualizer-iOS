@@ -1013,6 +1013,10 @@ namespace ost_domain
             return true;
         }
 
+        // Python's OverflowError text of float(feet_val * 12) / int + float; elevation_text_inches turns it into the
+        // "elevation out of range" ValueError
+        constexpr const char *kFeetOverflowMessage = "int too large to convert to float";
+
         void set_error(std::string *error, const std::string &message)
         {
             if (error)
@@ -1160,7 +1164,7 @@ namespace ost_domain
                 double feet_inches = 0.0;
                 if (!feet_digits_to_inches(ascii_digits(feet_str), feet_inches))
                 {
-                    set_error(error, "int too large to convert to float");
+                    set_error(error, kFeetOverflowMessage);
                     return false;
                 }
                 const double total = feet_inches + inches_val;
@@ -1175,7 +1179,7 @@ namespace ost_domain
                 double feet_inches = 0.0;
                 if (!feet_digits_to_inches(digits, feet_inches))
                 {
-                    set_error(error, "int too large to convert to float");
+                    set_error(error, kFeetOverflowMessage);
                     return false;
                 }
                 // float(feet_val * 12) of the signed int: -0 is the int 0, so the result is +0.0
@@ -1226,6 +1230,19 @@ namespace ost_domain
             return 0.0;
         }
 
+        // elevation_text.py::normalize_inch_marks (0a24294, :31-35): U+2033 (double prime) and U+201D (right double quotation mark)
+        // are read as the ASCII inch mark. Not U+201C, and U+2032 stays a foot mark.
+        u32 normalize_inch_marks(u32 text)
+        {
+            for (char32_t &c : text)
+            {
+                if (c == 0x2033 || c == 0x201D)
+                    c = U'"';
+            }
+            return text;
+        }
+
+        // is_elevation_text on a text whose inch marks are already normalised (the callers normalise first, like Windows)
         bool is_elevation_u32(const u32 &text)
         {
             std::vector<Span> caps;
@@ -1555,7 +1572,13 @@ namespace ost_domain
 
     bool is_elevation_text(const std::string &text)
     {
-        return is_elevation_u32(decode_utf8(text));
+        return is_elevation_u32(normalize_inch_marks(decode_utf8(text)));
+    }
+
+    bool elevation_text_starts_with_feet_and_inches(const std::string &text)
+    {
+        std::vector<Span> caps;
+        return gate_feet_inches().match(normalize_inch_marks(decode_utf8(text)), caps);
     }
 
     bool parse_fractional_inches_text(const std::string &text, double &out, std::string *error)
@@ -1580,28 +1603,47 @@ namespace ost_domain
 
     ElevationTextStatus elevation_text_inches(const std::string &text, double &inches, std::string *error)
     {
-        // elevation_text.py:131-144
-        const u32 elevation_text = strip(decode_utf8(text));
+        // elevation_text.py:138-158 (0a24294): normalize_inch_marks(text).strip(), then the gate
+        const u32 elevation_text = strip(normalize_inch_marks(decode_utf8(text)));
         if (!is_elevation_u32(elevation_text))
             return ElevationTextStatus::NotAnElevation;
         const bool has_imperial = contains(elevation_text, U'\'') || contains(elevation_text, 0x2032) ||
                                   contains(elevation_text, U'"');
         // "m" in lowered or "cm" in lowered (the second test is implied by the first)
         const bool has_metric = contains(py_lower(elevation_text), U'm');
+        // ValueError(f"elevation out of range: {elevation_text[:40]}"): raised for an OverflowError (a feet run beyond the float
+        // range) and for any result that is not finite (inches-only digits, metres, centimetres)
+        const auto out_of_range = [&]()
+        {
+            if (error)
+                *error = "elevation out of range: " + encode_utf8(elevation_text.substr(0, 40));
+            return ElevationTextStatus::Raises;
+        };
+        double value = 0.0;
         if (has_imperial && !has_metric)
         {
-            double value = 0.0;
-            if (!parse_imperial_u32(elevation_text, value, error))
+            std::string parse_error;
+            if (!parse_imperial_u32(elevation_text, value, &parse_error))
+            {
+                if (parse_error == kFeetOverflowMessage)
+                    return out_of_range();
+                if (error)
+                    *error = parse_error;
                 return ElevationTextStatus::Raises;
-            inches = value;
-            return ElevationTextStatus::Value;
+            }
         }
-        if (has_metric && !has_imperial)
+        else if (has_metric && !has_imperial)
         {
-            inches = cm_to_inches(parse_metric_u32(elevation_text));
-            return ElevationTextStatus::Value;
+            value = cm_to_inches(parse_metric_u32(elevation_text));
         }
-        return ElevationTextStatus::NotAnElevation; // units of both systems in one text
+        else
+        {
+            return ElevationTextStatus::NotAnElevation; // units of both systems in one text
+        }
+        if (!std::isfinite(value))
+            return out_of_range();
+        inches = value;
+        return ElevationTextStatus::Value;
     }
 
     bool extract_z_value_from_name(const std::string &name, double &z_inches, bool &is_top, std::string *error)

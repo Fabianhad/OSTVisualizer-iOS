@@ -117,9 +117,10 @@ TEST(ElevationTextValue, AZeroDenominatorRaisesLikeTheLoader)
     CHECK(elevation_text_inches("1/0\"", inches) == ElevationTextStatus::Raises);
 }
 
-// Run on Windows (not in its tests): a feet run beyond the float range raises OverflowError ("int too large to convert to float")
-// and one beyond Python's 4300-digit int() limit raises ValueError. Both are Raises here; the dialog (parse_elevation_z) refuses them
-// with its normal message instead of copying the uncaught OverflowError of the Windows dialog.
+// A feet run beyond the float range raises OverflowError ("int too large to convert to float") in the Windows reader, which since
+// 0a24294 (elevation_text.py:154-155) re-raises it as ValueError("elevation out of range: <first 40 characters>"); one beyond
+// Python's 4300-digit int() limit raises ValueError. Both are Raises here; the dialog (parse_elevation_z) refuses them with its
+// normal message and the loader reads the name as (0.0, false), like the Windows dialog and reader do since 0a24294.
 TEST(ElevationTextValue, FeetOverTheFloatRangeOrDigitLimitRaises)
 {
     const std::string over_float = "1" + std::string(404, '0') + "'x"; // 405 digits: OverflowError on Windows
@@ -127,7 +128,7 @@ TEST(ElevationTextValue, FeetOverTheFloatRangeOrDigitLimitRaises)
     double inches = 777.0;
     std::string error;
     CHECK(read(over_float, inches, &error) == ElevationTextStatus::Raises);
-    CHECK_STR_EQ(error, "int too large to convert to float");
+    CHECK_STR_EQ(error, "elevation out of range: 1" + std::string(39, '0'));
     CHECK(read(over_limit, inches) == ElevationTextStatus::Raises);
     CHECK(read("-" + over_float, inches) == ElevationTextStatus::Raises);
     CHECK(read("1" + std::string(404, '0') + "' 6\"", inches) == ElevationTextStatus::Raises);
@@ -145,17 +146,26 @@ TEST(ElevationTextValue, FeetOverTheFloatRangeOrDigitLimitRaises)
     CHECK_EQ(inches, 1.2e307);
 }
 
-// Run on Windows: metres beyond the float range give inf ("1" + 400 zeros + " m" -> inf, no exception); the dialog refuses a
-// non-finite number (isfinite), the function itself reports the Windows value.
-TEST(ElevationTextValue, MetresBeyondTheFloatRangeAreInfinite)
+// Windows 0a24294 (elevation_text.py:156-157, run on Windows HEAD d26893c): a result that is not finite raises
+// ValueError("elevation out of range: <first 40 characters>"): metres beyond the float range ("1" + 400 zeros + " m") gave inf with
+// no exception on 49a2d59. The dialog refuses it with its normal message, the loader reads the name as (0.0, false).
+TEST(ElevationTextValue, MetresBeyondTheFloatRangeRaiseLikeAnUnreadableText)
 {
-    double inches = 0.0;
-    CHECK(read("1" + std::string(400, '0') + " m", inches) == ElevationTextStatus::Value);
-    CHECK(std::isinf(inches));
-    CHECK(inches > 0.0);
-    CHECK(read("-1" + std::string(400, '0') + " m", inches) == ElevationTextStatus::Value);
-    CHECK(std::isinf(inches));
-    CHECK(inches < 0.0);
+    double inches = 777.0;
+    std::string error;
+    CHECK(read("1" + std::string(400, '0') + " m", inches, &error) == ElevationTextStatus::Raises);
+    CHECK_STR_EQ(error, "elevation out of range: 1" + std::string(39, '0'));
+    CHECK(read("-1" + std::string(400, '0') + " m", inches, &error) == ElevationTextStatus::Raises);
+    CHECK_STR_EQ(error, "elevation out of range: -1" + std::string(38, '0'));
+    CHECK(read("1" + std::string(400, '0') + " cm", inches) == ElevationTextStatus::Raises);
+    CHECK(read("1" + std::string(400, '0') + "\"", inches) == ElevationTextStatus::Raises); // inches only
+    CHECK_EQ(inches, 777.0);                                                                   // never written for Raises
+    double z = 0.0;
+    bool top = true;
+    CHECK_FALSE(extract_z_value_from_name("Wall @T 1" + std::string(400, '0') + " m", z, top));
+    derive_elevation_from_name("Wall @T 1" + std::string(400, '0') + " m", z, top);
+    CHECK_EQ(z, 0.0);
+    CHECK_FALSE(top);
 }
 
 // Run on Windows (not in its tests): the quirks of the shared gate. "5'" alone is no elevation (the feet-only pattern needs a word
