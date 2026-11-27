@@ -63,6 +63,17 @@ namespace ost_domain
         return text;
     }
 
+    DialogText bulk_layer_visibility_notice(const BulkLayerPlan &plan)
+    {
+        DialogText text;
+        if (plan.outcome == BulkLayerOutcome::NoOwnLayers)
+        {
+            text.title = kLayerVisibilityTitle;
+            text.message = kBidHasNoOwnLayersText;
+        }
+        return text;
+    }
+
     DialogText layer_refresh_failure_text(LayerAction action)
     {
         DialogText text;
@@ -77,9 +88,12 @@ namespace ost_domain
             text.message = kLayersDeletedRefreshFailed;
             break;
         case LayerAction::Rename:
+            text.title = kRefreshErrorTitle;
+            text.message = kLayerRenamedRefreshFailed;
+            break;
         case LayerAction::Move:
             text.title = kRefreshErrorTitle;
-            text.message = kLayerChangeRefreshFailed;
+            text.message = kLayerMovedRefreshFailed;
             break;
         }
         return text;

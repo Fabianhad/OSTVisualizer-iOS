@@ -1,4 +1,5 @@
 #include "../../../Core/Domain/Layer.hpp"
+#include "../../../Core/Domain/LayerSheet.hpp"
 #import "../ViewController_Internal.h"
 
 @interface ViewController (Layers) <UITableViewDataSource, UITableViewDelegate>
@@ -97,17 +98,25 @@
 // locked template layer of no bid or of another bid) is never changed, in the
 // write, in memory or in the list (LP-24 (a); the plan is
 // ost_domain::plan_bulk_layer_visibility). When the bid has no layer of its own
-// the plan is NoOwnLayers: Windows returns False there and the sidebar path
-// ignores it, so nothing is written, nothing changes and no alert is shown. The
-// project follows only after the write worked, a refused write is reported and
-// changes nothing (DBP-11, DBP-17, Windows restore_authoritative).
+// the plan is NoOwnLayers: nothing is written and nothing changes, and since
+// Windows d26893c (ui_event_coordinator.py:6812-6835, layers_dialog.py:700-716)
+// the user is told: "Layer Visibility" / "This bid has no layers of its own to
+// show or hide." (Core: bulk_layer_visibility_notice, which is silent for
+// AlreadyThere). The project follows only after the write worked, a refused
+// write is reported and changes nothing (DBP-11, DBP-17, Windows
+// restore_authoritative).
 - (void)_setAllLayersVisible:(BOOL)show {
   const auto &project = self.projectService.project;
   const ost_domain::BulkLayerPlan plan = ost_domain::plan_bulk_layer_visibility(
       project.merged_layers, std::string(self.bidUID.UTF8String ?: ""),
       project.layers, show);
-  if (plan.outcome != ost_domain::BulkLayerOutcome::Write)
+  if (plan.outcome != ost_domain::BulkLayerOutcome::Write) {
+    const ost_domain::DialogText notice = ost_domain::bulk_layer_visibility_notice(plan);
+    if (!notice.title.empty())
+      [self _presentLayerVisibilityNoticeTitle:[NSString stringWithUTF8String:notice.title.c_str()]
+                                       message:[NSString stringWithUTF8String:notice.message.c_str()]];
     return;
+  }
   if (self.bidUID.length > 0 &&
       ![ImportService setLayersVisibility:show
                                 forLayers:plan.uids
@@ -228,6 +237,22 @@
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:@"Layer Visibility"
                        message:@"Failed to update layer visibility."
+                preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                            style:UIAlertActionStyleDefault
+                                          handler:nil]];
+  [presenter presentViewController:alert animated:YES completion:nil];
+}
+
+// Windows _on_layers_show_all / layers_dialog._set_all_show: the message of a Show All / Hide All that did nothing because the bid has no layer of
+// its own, shown on the topmost controller (the Layers sheet is presented over this one); the check marks did not change, so nothing is reloaded.
+- (void)_presentLayerVisibilityNoticeTitle:(NSString *)title message:(NSString *)message {
+  UIViewController *presenter = self;
+  while (presenter.presentedViewController)
+    presenter = presenter.presentedViewController;
+  UIAlertController *alert = [UIAlertController
+      alertControllerWithTitle:title
+                       message:message
                 preferredStyle:UIAlertControllerStyleAlert];
   [alert addAction:[UIAlertAction actionWithTitle:@"OK"
                                             style:UIAlertActionStyleDefault
