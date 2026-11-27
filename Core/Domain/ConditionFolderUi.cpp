@@ -62,9 +62,16 @@ namespace ost_domain
 
     std::string next_condition_number_text(const std::unordered_map<std::string, Condition> &conditions)
     {
-        long long highest = 0; // a bid without numbers starts at 1 (NULL and 0 do not count, like MAX over the numbers that exist)
+        // MAX(RefNo) + 1 of the writer (condition_operations.py:61) and of the Windows form (condition_action_handler.py:611-621): a bid without
+        // conditions starts at 1, and there is no floor at 0: a bid whose numbers are all negative shows the highest + 1 (-4 for -5)
+        long long highest = 0;
+        bool first = true;
         for (const auto &entry : conditions)
-            highest = std::max(highest, static_cast<long long>(entry.second.ref_no));
+        {
+            const long long number = static_cast<long long>(entry.second.ref_no);
+            highest = first ? number : std::max(highest, number);
+            first = false;
+        }
         return "Next number: " + std::to_string(highest + 1);
     }
 

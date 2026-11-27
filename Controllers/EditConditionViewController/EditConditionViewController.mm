@@ -184,7 +184,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
 // What the form shows of a condition that is loaded into it (Windows _load_condition, edit_condition_dialog.py :839-847 of the
 // Windows 49a2d59): the stored style stays as it is (COND-M08). A type outside Linear / Area / Count /
-// Attachment adds the disabled "Unknown (N)" entry to the style choice (_unknownStyleType, replaced or removed at the next load) and
+// Attachment adds the disabled "Unknown (N)" entry to the style choice (_unknownStyleType, replaced or removed at the next load or by a save of a real style) and
 // is built Area-like, and a Save without a style choice keeps it. Trim and Curved Segment never show both (COND-TRIM-01). A Save
 // writes these values only when something else makes the form dirty.
 - (void)_normalizeLoadedCondition {
@@ -310,9 +310,9 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     _advRows.push_back({@"Tolerance", AdvRowType::Dimension, kTagTolerance,
                         false, _condition.connect_tolerance});
     _advRows.push_back(
-        {@"Display Name", AdvRowType::Toggle, 0, _condition.display_name, 0});
+        {kAdvLabelDisplayName, AdvRowType::Toggle, 0, _condition.display_name, 0});
   } else if (isLinear) {
-    _advRows.push_back({@"Round Quantity", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelRoundQuantity, AdvRowType::Toggle, 0,
                         _condition.round_quantity, 0});
     _advRows.push_back({@"Round to", AdvRowType::Dimension, kTagRoundTo, false,
                         _condition.round_up});
@@ -325,10 +325,10 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     _advRows.push_back({@"Tolerance", AdvRowType::Dimension, kTagTolerance,
                         false, _condition.connect_tolerance});
     _advRows.push_back({@"Trim", AdvRowType::Toggle, 0, _condition.trim, 0});
-    _advRows.push_back({@"Curved Segment", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelCurvedSegment, AdvRowType::Toggle, 0,
                         _condition.is_curved_segment, 0});
   } else {
-    _advRows.push_back({@"Round Quantity", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelRoundQuantity, AdvRowType::Toggle, 0,
                         _condition.round_quantity, 0});
     _advRows.push_back({@"Round to", AdvRowType::Dimension, kTagRoundTo, false,
                         _condition.round_up});
@@ -339,12 +339,12 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
                         _condition.grid_size2});
     _advRows.push_back(
         {@"Gap", AdvRowType::Dimension, kTagGap, false, _condition.gap});
-    _advRows.push_back({@"Display Pattern", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelDisplayPattern, AdvRowType::Toggle, 0,
                         _condition.display_grid_while_drawing, 0});
-    _advRows.push_back({@"Display Dimension", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelDisplayDimension, AdvRowType::Toggle, 0,
                         _condition.display_dimension, 0});
     _advRows.push_back(
-        {@"Display Name", AdvRowType::Toggle, 0, _condition.display_name, 0});
+        {kAdvLabelDisplayName, AdvRowType::Toggle, 0, _condition.display_name, 0});
     _advRows.push_back({@"Snap to Linear", AdvRowType::Toggle, 0,
                         _condition.snap_to_linear != -1, 0});
   }
@@ -497,6 +497,10 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
                                         toSave.ref_no);
   _conditionsMap[toSave.uid] = toSave;
   _condition = toSave;
+  // Windows _after_successful_save / _sync_unknown_style_item: once a real style is saved the disabled "Unknown (N)" entry is gone from
+  // the style choice (a save that keeps the unknown type keeps the entry)
+  _unknownStyleType =
+      ost_domain::unknown_style_type(_condition.condition_type);
   [self _syncFieldCacheFromCondition];
   [self _rebuildDimRows];
   [self _rebuildAdvRows];
