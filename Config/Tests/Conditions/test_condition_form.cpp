@@ -497,7 +497,7 @@ TEST(Msg01_Dimension, BlankIsZeroAndTextIsTheWindowsParse)
 TEST(CondElev01_Elevation, TheTextGivesZAndNanIsRefused)
 {
     const std::string imperial_hint = "Use feet and inches with unit marks, for example 10' 6\".";
-    const std::string metric_hint = "Use metres or centimetres, for example \"3.2 m\" or \"320 cm\".";
+    const std::string metric_hint = "Use meters or centimeters, for example \"3.2 m\" or \"320 cm\".";
 
     double z = -1.0;
     const auto closing = parse_elevation_z("10'6", false, z);
