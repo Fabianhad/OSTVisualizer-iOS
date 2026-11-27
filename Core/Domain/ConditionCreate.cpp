@@ -266,15 +266,18 @@ namespace ost_domain
         // back would not be the text written (Windows binds a str, which is always valid text).
         if (!utf16_length(spec.notes))
             return condition_create_failed_issue();
-        // NC-5: the Windows writer accepts an empty name (the dialog refuses it first with name.strip()); a blank one is refused here
+        // NC-5: the Windows writer accepts an empty name (the dialog refuses it first with name.strip()); a blank one is refused here with
+        // the text of the Windows use case (create_condition_spec_dto.py:62-72, texts.py:133-135)
         if (ost_import::text_rules::py_strip(spec.name).empty())
-            return condition_create_failed_issue();
+            return condition_create_failed_issue("Condition name cannot be empty.");
         // a NUL cuts a C string: the name (and the notes) the loader reads back would not be the text that was written
         if (has_nul(spec.name) || has_nul(spec.notes))
             return condition_create_failed_issue();
-        // NC-10: the Windows writer passes NaN / infinity on (SQLite stores NaN as NULL silently)
+        // NC-10: the Windows writer passes NaN / infinity on (SQLite stores NaN as NULL silently); the use case refuses it with its own text
+        // (create_condition_spec_dto.py:69-72, texts.py:136-138)
         if (!all_finite(spec))
-            return condition_create_failed_issue();
+            return condition_create_failed_issue(
+                "The condition was not created because one of its values is not a finite number.");
         // NC-4 / N-M1-13: Name VARCHAR(255) counts UTF-16 units, the " @T value" suffix included (the spec's name is the whole name)
         if (*units > kMaxConditionNameUnits)
             return FormIssue{kFormValidationErrorTitle, kConditionNameTooLongMessage};
