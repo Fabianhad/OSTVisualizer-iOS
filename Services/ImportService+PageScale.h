@@ -16,15 +16,18 @@
 // or none (Windows page_operations.py save_page_scale, project_write_service.py save_page_scales). Empty and repeated page UIDs are dropped; the
 // UI passes ost_domain::page_setting_uids (the pressed page, or every page of the bid in page-bar order for "Apply to all pages").
 // YES when written. NO, nothing written, when the change is refused or a statement fails: *locked (optional) is YES when the reason is the
-// bid lock (a locked bid, or a lock state that could not be read: fail closed), *errorText (optional) names the reason (the Windows wording
-// "Page <uid> requires finite positive scale factors" where Windows has one). The UI shows the Windows alert "Save Failed" / "Failed to save page
-// scale." for every NO (the reason is for the log), or "This bid is locked." when *locked is YES. After a YES the caller updates ProjectData
+// bid lock (a locked bid, or a lock state that could not be read: fail closed), *unstorableContent (optional) is YES when the reason is that the takeoffs and
+// annotations of a page cannot be stored at the new scale (ost_store::page_scale_refusal_is_unstorable_content: Windows PageScaleRangeError), *errorText
+// (optional) names the reason (the Windows wording "Page <uid> requires finite positive scale factors" where Windows has one). The UI shows the Windows
+// alert "Save Failed" / "Failed to save page scale." for every NO (the reason is for the log), "Save Failed" / "The scale was not changed because the takeoffs
+// and annotations on the page cannot be stored at that scale." when *unstorableContent is YES, or "This bid is locked." when *locked is YES. After a YES the caller updates ProjectData
 // with ost_domain::apply_page_scales (the memory twin) and refreshes the views (plan 4.11).
 + (BOOL)savePageScales:(const std::vector<std::string> &)pageUIDs
                   inBid:(NSString *)bidUID
            scaleFactor1:(double)scaleFactor1
            scaleFactor2:(double)scaleFactor2
                  locked:(BOOL *)locked
+        unstorableContent:(BOOL *)unstorableContent
               errorText:(NSString **)errorText;
 
 @end

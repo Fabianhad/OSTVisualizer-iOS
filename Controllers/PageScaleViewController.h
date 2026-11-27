@@ -16,7 +16,12 @@ typedef NS_ENUM(NSInteger, PageScaleSaveResult) {
   PageScaleSaveResultFailed = 1,
   /// The bid is locked: the delegate has already shown "This bid is locked.";
   /// the form stays open and shows nothing more.
-  PageScaleSaveResultLocked = 2
+  PageScaleSaveResultLocked = 2,
+  /// Refused because the takeoffs and annotations of the page cannot be stored at
+  /// that scale: the form stays open and shows "Save Failed" / "The scale was
+  /// not changed because the takeoffs and annotations on the page cannot be
+  /// stored at that scale." (Windows PageScaleRangeError).
+  PageScaleSaveResultUnstorable = 3
 };
 
 @protocol PageScaleViewControllerDelegate <NSObject>

@@ -134,18 +134,20 @@ static std::string OSTPageScaleStdString(NSString *text) {
     return PageScaleSaveResultFailed;
 
   BOOL locked = NO;
+  BOOL unstorable = NO;
   NSString *errorText = nil;
   if (![ImportService savePageScales:uids
                                inBid:self.bidUID
                         scaleFactor1:settings.scale_factor1
                         scaleFactor2:settings.scale_factor2
                               locked:&locked
+                   unstorableContent:&unstorable
                            errorText:&errorText]) {
     // the store refuses a locked bid again inside its transaction; the guard says so (a bid that unlocked meanwhile is a plain failure)
     if (locked && [self _refuseIfBidLocked])
       return PageScaleSaveResultLocked;
     NSLog(@"Failed to save page scale: %@", errorText ?: @"");
-    return PageScaleSaveResultFailed;
+    return unstorable ? PageScaleSaveResultUnstorable : PageScaleSaveResultFailed;
   }
 
   // The memory twin: it equals a reload of the pages from the database (positions rescaled, the page's pair, the overlay rectangle). It refuses for every
