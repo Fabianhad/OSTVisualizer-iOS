@@ -1,4 +1,10 @@
 #import "../ViewController_Internal.h"
+#include "../../../Core/Domain/FailureText.hpp"
+
+// An NSString for a Core text (valid UTF-8).
+static NSString *OSTExportNS(const std::string &text) {
+  return [NSString stringWithUTF8String:text.c_str()] ?: @"";
+}
 
 @implementation ViewController (Export)
 
@@ -52,8 +58,7 @@
 }
 
 - (void)_shareExportURLs:(NSArray<NSURL *> *)urls
-                 outcome:(ExportOutcome)outcome
-              formatName:(NSString *)formatName {
+                 outcome:(ExportOutcome)outcome {
   if (!urls) {
     // Like Windows, a missing selection or takeoff, an export without any
     // surviving mesh and a failed write are three different results.
@@ -63,27 +68,29 @@
                                  message:@"No takeoffs found for any of the "
                                          @"selected pages."];
       break;
-    case ExportOutcomeNothingToExport:
-      [self _presentExportAlertWithTitle:@"Nothing to Export"
-                                 message:@"No visible meshes to export."];
+    // The Windows wording (EXP-21): the title of every failure is "Export Error", the alert shows one user sentence and the technical
+    // reason stays in the log (ExportService). The writers return no errno yet, so a write failure is the generic sentence.
+    case ExportOutcomeNothingToExport: {
+      const ost_domain::DialogText text = ost_domain::export_failure_text(
+          ost_domain::ExportFailureKind::NoFileWritten);
+      [self _presentExportAlertWithTitle:OSTExportNS(text.title)
+                                 message:OSTExportNS(text.message)];
       break;
-    case ExportOutcomeFailed:
-      [self _presentExportAlertWithTitle:@"Export Error"
-                                 message:[NSString
-                                             stringWithFormat:
-                                                 @"Error creating %@ export: "
-                                                 @"The export failed.",
-                                                 formatName]];
+    }
+    case ExportOutcomeFailed: {
+      const ost_domain::DialogText text = ost_domain::export_failure_text(
+          ost_domain::ExportFailureKind::Unexpected);
+      [self _presentExportAlertWithTitle:OSTExportNS(text.title)
+                                 message:OSTExportNS(text.message)];
       break;
-    default:
-      [self _presentExportAlertWithTitle:@"Export Error"
-                                 message:[NSString
-                                             stringWithFormat:
-                                                 @"Error creating %@ export: "
-                                                 @"The file could not be "
-                                                 @"written.",
-                                                 formatName]];
+    }
+    default: {
+      const ost_domain::DialogText text = ost_domain::export_failure_text(
+          ost_domain::ExportFailureKind::WriteFailed);
+      [self _presentExportAlertWithTitle:OSTExportNS(text.title)
+                                 message:OSTExportNS(text.message)];
       break;
+    }
     }
     return;
   }
@@ -104,7 +111,7 @@
                  selectedPages:self.projectService.selected3DPageUIDs
                   renderConfig:self.projectService.renderConfig
                        outcome:&outcome];
-  [self _shareExportURLs:urls outcome:outcome formatName:@"OBJ"];
+  [self _shareExportURLs:urls outcome:outcome];
 }
 
 - (void)_exportDXF {
@@ -114,7 +121,7 @@
                  selectedPages:self.projectService.selected3DPageUIDs
                   renderConfig:self.projectService.renderConfig
                        outcome:&outcome];
-  [self _shareExportURLs:urls outcome:outcome formatName:@"DXF"];
+  [self _shareExportURLs:urls outcome:outcome];
 }
 
 - (void)_exportThreeJS {
@@ -124,7 +131,7 @@
                      selectedPages:self.projectService.selected3DPageUIDs
                       renderConfig:self.projectService.renderConfig
                            outcome:&outcome];
-  [self _shareExportURLs:urls outcome:outcome formatName:@"HTML"];
+  [self _shareExportURLs:urls outcome:outcome];
 }
 
 @end

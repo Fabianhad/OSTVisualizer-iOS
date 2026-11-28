@@ -11,8 +11,9 @@ typedef NS_ENUM(NSInteger, ExportOutcome) {
   // (Windows ExportErrorCode.NO_DATA).
   ExportOutcomeNoTakeoffs,
   // There are takeoffs but no mesh survives (negative-only export, every
-  // positive consumed by negatives of its type): Windows WORKER_FAILED
-  // ("Export function returned False"). No file is written.
+  // positive consumed by negatives of its type): Windows WORKER_FAILED, shown
+  // as "No file was written. ..." (ost_domain::export_failure_text). No file
+  // is written.
   ExportOutcomeNothingToExport,
   // The file could not be written.
   ExportOutcomeWriteFailed,
