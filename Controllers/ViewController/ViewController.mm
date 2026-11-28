@@ -1033,7 +1033,8 @@ static const int kToolbar2DOnlyTag = 40000;
 
 // A user-triggered undo / redo that did not run (Windows show_error("Undo" / "Redo", ...)): same alert shape as -_presentSaveFailure.
 - (void)undoRedoPresentRefusalWithTitle:(NSString *)title message:(NSString *)message {
-  // A locked bid refuses the write (M1 lock guard, fail closed): say so ("This bid is locked."), not that the change "could not be undone".
+  // A locked bid is told so ("This bid is locked."), not that the change "could not be undone" (practically unreachable today: takeoff writes are not
+  // lock-guarded yet, N-M1-01; kept so that a later lock retrofit says "This bid is locked." instead of "could not be undone").
   if ([self _refuseIfBidLocked])
     return;
   UIViewController *presenter = self;
