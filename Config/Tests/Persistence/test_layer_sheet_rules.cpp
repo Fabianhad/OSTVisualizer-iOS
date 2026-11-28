@@ -261,7 +261,7 @@ TEST(LayerSheet, SingleToggleOfASharedTemplateLayerIsRefusedWithTheTextAndTheTit
                                           row("23", "Callouts", 4, "bid-2", true, true)};
     for (const char *uid : {"1", "23"})
     {
-        SCOPED_CONTEXT(uid);
+        SCOPED_CONTEXT(std::string("uid ") + uid);  // not SCOPED_CONTEXT(uid): std::string(uid) would parse as a declaration (-Wvexing-parse)
         const ost_domain::DialogText refusal = ost_domain::single_layer_visibility_refusal(listed, "bid-1", uid);
         CHECK_STR_EQ(refusal.title, "Layer Visibility");
         CHECK_STR_EQ(refusal.message,
@@ -281,7 +281,7 @@ TEST(LayerSheet, SingleToggleOfAnyOtherRowIsNotRefused)
                                           row("9", "Other", 4, "bid-2")};
     for (const char *uid : {"l1", "13", "101", "2", "9", "404", ""})
     {
-        SCOPED_CONTEXT(uid);
+        SCOPED_CONTEXT(std::string("uid ") + uid);  // not SCOPED_CONTEXT(uid): std::string(uid) would parse as a declaration (-Wvexing-parse)
         const ost_domain::DialogText refusal = ost_domain::single_layer_visibility_refusal(listed, "bid-1", uid);
         CHECK(refusal.title.empty());
         CHECK(refusal.message.empty());
