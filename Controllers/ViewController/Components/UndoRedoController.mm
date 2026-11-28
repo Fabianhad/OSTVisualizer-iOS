@@ -122,6 +122,58 @@ uidsOf(const std::vector<ost_domain::Takeoff> &takeoffs) {
   return uids;
 }
 
+// The references an entry replays, in the words of the Core rule
+// (ost_domain::history_replay_targets): which takeoffs it changes in place and
+// which pages it re-creates takeoffs on, for the direction of the call.
+static ost_domain::HistoryReplayTargets
+replayTargets(const UndoEntry &entry, ost_domain::HistoryDirection direction) {
+  ost_domain::HistoryEntryKind kind = ost_domain::HistoryEntryKind::Move;
+  std::vector<std::string> takeoffUIDs;
+  std::vector<std::string> pageUIDs;
+  switch (entry.action) {
+  case UndoAction::Move:
+    kind = ost_domain::HistoryEntryKind::Move;
+    takeoffUIDs.push_back(entry.takeoff_uid);
+    break;
+  case UndoAction::MoveGroup:
+    kind = ost_domain::HistoryEntryKind::MoveGroup;
+    for (const auto &move : entry.moves)
+      takeoffUIDs.push_back(move.uid);
+    break;
+  case UndoAction::SetNegative:
+    kind = ost_domain::HistoryEntryKind::SetNegative;
+    for (const auto &change : entry.negatives)
+      takeoffUIDs.push_back(change.uid);
+    break;
+  case UndoAction::Place:
+    kind = ost_domain::HistoryEntryKind::Place;
+    takeoffUIDs.push_back(entry.placed_takeoff.uid);
+    pageUIDs.push_back(entry.placed_takeoff.page_uid);
+    break;
+  case UndoAction::Delete:
+    kind = ost_domain::HistoryEntryKind::Delete;
+    for (const auto &takeoff : entry.deleted_takeoffs) {
+      takeoffUIDs.push_back(takeoff.uid);
+      pageUIDs.push_back(takeoff.page_uid);
+    }
+    break;
+  }
+  return ost_domain::history_replay_targets(kind, direction, takeoffUIDs,
+                                            pageUIDs);
+}
+
+// YES = the page or a takeoff of the entry is gone (Windows
+// HistoryTargetUnavailableError): the undo / redo is refused before anything is
+// written. A delegate that cannot answer treats the entry as available.
+static BOOL targetsUnavailable(id<UndoRedoDelegate> delegate,
+                               const UndoEntry &entry,
+                               ost_domain::HistoryDirection direction) {
+  if (![delegate respondsToSelector:@selector(undoRedoReplayTargetsUnavailable:)])
+    return NO;
+  return [delegate
+      undoRedoReplayTargetsUnavailable:replayTargets(entry, direction)];
+}
+
 // Undoes one entry. YES only when the change was applied and stored; then the
 // entry moves to the redo stack, otherwise it stays on the undo stack and the
 // next undo tries it again (UND-02).
@@ -274,23 +326,61 @@ static BOOL applyRedo(id<UndoRedoDelegate> delegate, UndoEntry &entry) {
 }
 
 - (void)performUndo {
-  id<UndoRedoDelegate> delegate = _delegate;
-  if (!delegate)
-    return;
-  const bool advanced = _history.undo(
-      [delegate](UndoEntry &entry) { return applyUndo(delegate, entry) == YES; });
-  if (advanced)
-    [delegate undoRedoDidModify];
+  (void)[self performUndoUserInitiated:YES];
 }
 
 - (void)performRedo {
+  (void)[self performRedoUserInitiated:YES];
+}
+
+- (BOOL)performUndoUserInitiated:(BOOL)userInitiated {
+  return [self stepInDirection:ost_domain::HistoryDirection::Undo
+                 userInitiated:userInitiated];
+}
+
+- (BOOL)performRedoUserInitiated:(BOOL)userInitiated {
+  return [self stepInDirection:ost_domain::HistoryDirection::Redo
+                 userInitiated:userInitiated];
+}
+
+// One undo or redo (Windows undo() / redo(user_initiated)). The decision, the
+// four texts and "the entry stays" are Core (ost_domain::run_history_step):
+// a stale entry (its page or takeoff is gone) is refused before anything is
+// written, a failed write leaves the stacks as they are, an empty history is
+// no refusal. A refusal of a USER call is shown; a programmatic call only logs.
+- (BOOL)stepInDirection:(ost_domain::HistoryDirection)direction
+          userInitiated:(BOOL)userInitiated {
   id<UndoRedoDelegate> delegate = _delegate;
   if (!delegate)
-    return;
-  const bool advanced = _history.redo(
-      [delegate](UndoEntry &entry) { return applyRedo(delegate, entry) == YES; });
-  if (advanced)
+    return NO;
+  const bool undoing = direction == ost_domain::HistoryDirection::Undo;
+  const ost_domain::HistoryStepResult result = ost_domain::run_history_step(
+      _history, direction, userInitiated == YES,
+      [delegate, direction](const UndoEntry &entry) {
+        return targetsUnavailable(delegate, entry, direction) == YES;
+      },
+      [delegate, undoing](UndoEntry &entry) {
+        return (undoing ? applyUndo(delegate, entry)
+                        : applyRedo(delegate, entry)) == YES;
+      });
+  if (result.advanced) {
     [delegate undoRedoDidModify];
+    return YES;
+  }
+  if (result.refusal) {
+    NSLog(@"%s refused (%s); the entry stays in the history", undoing ? "Undo" : "Redo",
+          *result.refusal == ost_domain::HistoryRefusal::TargetUnavailable
+              ? "the page or item no longer exists"
+              : "the change could not be applied or stored");
+    SEL present = @selector(undoRedoPresentRefusalWithTitle:message:);
+    if (result.alert && [delegate respondsToSelector:present]) {
+      NSString *title = [NSString stringWithUTF8String:result.alert->title.c_str()];
+      NSString *message =
+          [NSString stringWithUTF8String:result.alert->message.c_str()];
+      [delegate undoRedoPresentRefusalWithTitle:title message:message];
+    }
+  }
+  return NO;
 }
 
 - (BOOL)deleteSelection:(const std::string &)selectedUID
