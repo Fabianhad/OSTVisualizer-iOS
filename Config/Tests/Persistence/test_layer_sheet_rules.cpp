@@ -240,6 +240,56 @@ TEST(LayerSheet, ShowAllAndHideAllTellWhenTheBidHasNoLayersOfItsOwn)
     CHECK(ost_domain::bulk_layer_visibility_notice(write).message.empty());
 }
 
+// Windows d1c430a (owner note b): update_layer_visibility_deferred (ui_event_coordinator.py:6564-6573) refuses the single show / hide of a shared
+// template layer (is_shared_template_layer(layer, bid_ref.bid_uid): locked template row of no bid or of another bid): it returns
+// WriteReloadResult(user_message=UI_EVENT_COORDINATOR_MESSAGE_THIS_LAYER_IS_A_LOCKED_TEMPLATE) before anything is scheduled, and the sidebar
+// (_on_layer_visibility_toggled :6525-6535) and the Layers dialog (layers_dialog.py:677-683) show it under "Layer Visibility". Tests:
+// test_ui_event_coordinator.py:11507 (test_a_single_toggle_of_a_shared_locked_template_layer_is_refused: the layers l1 (own), "1" Image (no bid) and
+// "23" Callouts (bid-2), both locked templates, are refused with the text, nothing queued, nothing changed) and :11530
+// (test_the_sidebar_shows_the_shared_layer_refusal_and_restores_the_tick), test_layers_dialog.py:996. The Image layer has no exemption.
+TEST(LayerSheet, SingleToggleOfASharedTemplateLayerTextsAreTheWindowsTexts)
+{
+    CHECK_STR_EQ(ost_domain::kSharedTemplateLayerToggleText,
+                 "This layer is a locked template layer that other bids share, so it cannot be shown or hidden from this bid.");
+    CHECK_STR_EQ(ost_domain::kLayerVisibilityTitle, "Layer Visibility");
+}
+
+TEST(LayerSheet, SingleToggleOfASharedTemplateLayerIsRefusedWithTheTextAndTheTitle)
+{
+    // the list of test_a_single_toggle_of_a_shared_locked_template_layer_is_refused, for the open bid "bid-1"
+    const std::vector<BidLayer> listed = {row("l1", "Layer 1", 1, "bid-1"), shared("1", "Image", 0),
+                                          row("23", "Callouts", 4, "bid-2", true, true)};
+    for (const char *uid : {"1", "23"})
+    {
+        SCOPED_CONTEXT(uid);
+        const ost_domain::DialogText refusal = ost_domain::single_layer_visibility_refusal(listed, "bid-1", uid);
+        CHECK_STR_EQ(refusal.title, "Layer Visibility");
+        CHECK_STR_EQ(refusal.message,
+                     "This layer is a locked template layer that other bids share, so it cannot be shown or hidden from this bid.");
+    }
+}
+
+// Everything else is toggled as before (no title, no message): the bid's own layer, the bid's own locked copy of a template layer (not shared),
+// a template row that is not locked, a plain layer of another bid (Windows writes it; it cannot be in the merged list), and a uid that is not
+// listed (the store decides: Windows returns False there and the sheet shows its generic failure).
+TEST(LayerSheet, SingleToggleOfAnyOtherRowIsNotRefused)
+{
+    const std::vector<BidLayer> listed = {row("l1", "Layer 1", 1, "bid-1"),
+                                          row("13", "Annotation", 2, "bid-1", true, true),
+                                          row("101", "Image", 0, "bid-1", false, true),
+                                          row("2", "Default", 3, "", true, false),
+                                          row("9", "Other", 4, "bid-2")};
+    for (const char *uid : {"l1", "13", "101", "2", "9", "404", ""})
+    {
+        SCOPED_CONTEXT(uid);
+        const ost_domain::DialogText refusal = ost_domain::single_layer_visibility_refusal(listed, "bid-1", uid);
+        CHECK(refusal.title.empty());
+        CHECK(refusal.message.empty());
+    }
+    // with no bid open the rows of no bid are not shared ('' == ''), as is_shared_template_layer says
+    CHECK(ost_domain::single_layer_visibility_refusal({shared("1", "Image", 0)}, "", "1").message.empty());
+}
+
 // None of the committed-but-not-shown texts claims a failure, and none of the failure texts claims a success.
 TEST(LayerSheet, RefreshTextsAreNeverTheFailureTexts)
 {

@@ -54,6 +54,10 @@ namespace ost_domain
     // layers_dialog.py:700-716): the warning that replaced the old silent return (Windows owner note c of PORTING_BLOCKERS.md).
     inline constexpr const char *kLayerVisibilityTitle = "Layer Visibility";
     inline constexpr const char *kBidHasNoOwnLayersText = "This bid has no layers of its own to show or hide.";
+    // The single show / hide of a shared template layer (a locked template row of no bid or of another bid) is refused (Windows d1c430a, owner note b,
+    // texts.py UI_EVENT_COORDINATOR_MESSAGE_THIS_LAYER_IS_A_LOCKED_TEMPLATE, ui_event_coordinator.py:6564-6573), under kLayerVisibilityTitle.
+    inline constexpr const char *kSharedTemplateLayerToggleText =
+        "This layer is a locked template layer that other bids share, so it cannot be shown or hidden from this bid.";
     inline constexpr const char *kLayersDeletedRefreshFailed = "Layers were deleted, but the refresh failed."; // layers_dialog.py:540
     inline constexpr const char *kLayerCreatedRefreshFailed =
         "The layer was created, but the layer list could not be refreshed. Reopen the database to see the new layer."; // ui_event_coordinator.py:6585-6587

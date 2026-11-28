@@ -74,6 +74,23 @@ namespace ost_domain
         return text;
     }
 
+    DialogText single_layer_visibility_refusal(const std::vector<BidLayer> &listed, const std::string &bid_uid, const std::string &uid)
+    {
+        DialogText text;
+        for (const BidLayer &entry : listed)
+        {
+            if (entry.uid != uid)
+                continue;
+            if (is_shared_template_layer(entry, bid_uid))
+            {
+                text.title = kLayerVisibilityTitle;
+                text.message = kSharedTemplateLayerToggleText;
+            }
+            break;
+        }
+        return text;
+    }
+
     DialogText layer_refresh_failure_text(LayerAction action)
     {
         DialogText text;
