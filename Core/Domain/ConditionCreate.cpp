@@ -55,7 +55,7 @@ namespace ost_domain
         form.thickness = defaults.thickness;
         form.pattern = Pattern::Transparent;
         form.display_size = 100.0;
-        form.width = 12.0; // the Windows value in both systems; a Count / Attachment in a metric bid changes it through its style choice
+        form.width = defaults.width; // Windows d1c430a (condition_action_handler.py:637): mm_to_inches(300.0) in a metric bid, 12.0 otherwise, every style
         form.height = 0.0;
         form.depth = 0.0;
         form.rise = 0.0;
@@ -135,6 +135,7 @@ namespace ost_domain
         spec.condition_type = type;
         spec.pattern = static_cast<int>(Pattern::Transparent);
         spec.color_fill = form.color_fill;
+        spec.width = form.width; // Windows d1c430a (:681 width=synthetic.width): the dialog sends only values that differ from the form's start
         spec.layer_uid = default_layer_uid;
         spec.display_dimension = false;
 

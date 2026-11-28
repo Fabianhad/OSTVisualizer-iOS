@@ -107,13 +107,16 @@ namespace ost_domain
     // pattern Transparent (8), display_size 100.0, width 12.0, height / depth / rise / run 0.0, spacing 4.0, color_fill 13353215, shape -1,
     // layer = `default_layer_uid`, uom1 2, uom2 / uom3 -1, calc_type1 1, calc_type2 / calc_type3 0, round_up 0.0, every flag false, grid sizes and
     // gap 0.0; ref_no stays 0 (the form shows "Next number" instead, N-M1-07). In a METRIC bid (N-M1-08) thickness and spacing are
-    // mm_to_inches(100.0) and uom1 is 13 (Windows starts from the imperial values there, NC-6). It is the form as it looks after choosing the
+    // mm_to_inches(100.0) and uom1 is 13 (Windows starts from the imperial values there, NC-6); the width is mm_to_inches(300.0) = 11.811023622047244
+    // (Windows d1c430a: mm_to_inches(300.0) if metric else 12.0, every style, and build_spec starts from it). It is the form as it looks after choosing the
     // style Linear: apply_style_change(form, Linear, metric) changes nothing in it (including the iOS-only Connect controls).
     Condition new_condition_form(const std::string &default_layer_uid, bool metric);
 
     // condition_action_handler.py:593-619 build_spec. `form` is the synthetic condition (new_condition_form) and `changes` what the dialog's Save
     // sends (condition_changes_for_save(form, edited form, metric); an empty set for an untouched form). The spec starts as the plain
-    // CreateConditionSpec defaults with name "Untitled", pattern Transparent, color_fill = form.color_fill, layer_uid = `default_layer_uid`,
+    // CreateConditionSpec defaults with name "Untitled", pattern Transparent, color_fill = form.color_fill, width = form.width (Windows d1c430a
+    // width=synthetic.width: the dialog sends only values that differ from the form's start, so a metric Count would otherwise fall back to
+    // the spec default 12.0), layer_uid = `default_layer_uid`,
     // display_dimension false and the row of type_defaults_row(type, metric) for thickness, spacing, shape, uom1, calc_type1,
     // display_grid_while_drawing and backout, where type = changes.values.condition_type when the change set has ConditionType, else
     // form.condition_type (a table miss keeps the spec defaults). Then every field of `changes` that is a spec field replaces its value (RefNo and

@@ -1565,14 +1565,16 @@ TEST(CondCreateReassemble, TheNameReadsBackThroughTheLoader)
 }
 
 // Added in the independent review (not a Windows port): what the form keeps of the Windows synthetic condition in BOTH measurement systems. Only the thickness,
-// the spacing and the first unit follow the metric rows (N-M1-08); the width stays the Windows 12.0 (a Count / Attachment gets its metric width through its style
-// choice, apply_style_change), the other units and quantities, the Connect controls and the snap are the same numbers in a metric bid.
-TEST(CondCreateForm, OnlyThicknessSpacingAndFirstUnitFollowTheMeasurementSystem)
+// the spacing, the first unit and (Windows d1c430a, condition_action_handler.py:637) the width follow the measurement system: 12 inches imperial, mm_to_inches(300.0)
+// (11.811023622047244, the 300 mm the form shows for a Count / Attachment) metric; the other units and quantities, the Connect controls and the snap are the same
+// numbers in a metric bid.
+TEST(CondCreateForm, OnlyThicknessSpacingWidthAndFirstUnitFollowTheMeasurementSystem)
 {
     const Condition imperial = new_condition_form("40", false);
     const Condition metric = new_condition_form("40", true);
     CHECK_EQ(imperial.width, 12.0);
-    CHECK_EQ(metric.width, 12.0);
+    CHECK_EQ(metric.width, mm_to_inches(300.0));
+    CHECK_EQ(metric.width, 11.811023622047244);
     CHECK_EQ(metric.thickness, mm_to_inches(100.0));
     CHECK_EQ(metric.spacing, mm_to_inches(100.0));
     CHECK_EQ(metric.uom1, 13);
@@ -1590,6 +1592,48 @@ TEST(CondCreateForm, OnlyThicknessSpacingAndFirstUnitFollowTheMeasurementSystem)
         CHECK(form.connect);
         CHECK_EQ(form.connect_tolerance, 6.0);
         CHECK_EQ(form.snap_to_linear, -1);
+    }
+}
+
+// Windows d1c430a (condition_action_handler.py:637 synthetic width = mm_to_inches(300.0) if metric else 12.0, :681 build_spec width=synthetic.width; tests
+// test_a_metric_count_or_attachment_is_created_with_the_shown_300_mm_width and test_an_imperial_count_is_created_with_the_shown_12_inch_width): the width
+// the new condition is stored with is the width of the form, for EVERY style. A metric bid stores 300 mm = 11.811023622047244 inches (Linear and Area too,
+// whose width field is hidden: Windows stores it as well), an imperial bid 12.0. Both when only the style is chosen (the Windows build_spec from the table)
+// and when the Edit dialog's own changes of the style choice are sent (a Count / Attachment pick sets the same 300 mm, which does not differ from the form
+// start, so Width is not among the changes and the form's width must still reach the spec).
+TEST(CondCreateSpec, TheNewConditionIsCreatedWithTheWidthTheFormShowsForEveryStyle)
+{
+    for (const bool metric : {false, true})
+        for (int type = 0; type <= 3; ++type)
+        {
+            SCOPED_CONTEXT("type " + std::to_string(type) + (metric ? " metric" : " imperial"));
+            const double shown = metric ? mm_to_inches(300.0) : 12.0;
+            const Condition form = new_condition_form("40", metric);
+            CHECK_EQ(form.width, shown);
+
+            // the style chosen, nothing else typed (the Windows build_spec from the table)
+            CHECK_EQ(build_create_spec(form, type_only(type), "", "40", metric).width, shown);
+            // the form untouched (Linear)
+            CHECK_EQ(build_create_spec(form, ConditionChanges(), "", "40", metric).width, shown);
+            // the changes the Edit dialog's Save sends for the same style choice
+            const Condition edited = apply_style_change(form, static_cast<ConditionType>(type), metric).condition;
+            const ConditionChanges changes = condition_changes_for_save(form, edited, metric);
+            CHECK_EQ(build_create_spec(form, changes, "", "40", metric).width, shown);
+            if (type >= 2)
+                CHECK_EQ(edited.width, shown); // the Count / Attachment pick shows the same width as the form start
+        }
+    CHECK_EQ(build_create_spec(new_condition_form("40", true), ConditionChanges(), "", "40", true).width, 11.811023622047244);
+
+    // a width the user typed replaces it (Count in a metric bid: 250 mm; imperial: 18)
+    for (const bool metric : {false, true})
+    {
+        SCOPED_CONTEXT(metric ? "typed metric" : "typed imperial");
+        const Condition form = new_condition_form("40", metric);
+        Condition edited = apply_style_change(form, ConditionType::Count, metric).condition;
+        edited.width = metric ? mm_to_inches(250.0) : 18.0;
+        const ConditionChanges changes = condition_changes_for_save(form, edited, metric);
+        CHECK(changes.has(ConditionField::Width));
+        CHECK_EQ(build_create_spec(form, changes, "", "40", metric).width, edited.width);
     }
 }
 
