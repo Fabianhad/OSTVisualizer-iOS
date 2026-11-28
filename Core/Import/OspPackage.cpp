@@ -6,6 +6,7 @@
 #include "CabExtractor.hpp"
 #include "CabMemberName.hpp"
 #include "Digest.hpp"
+#include "ImportDiagnostics.hpp"
 #include "TextRules.hpp"
 #include "XmlNormalizer.hpp"
 #include "pugixml.hpp"
@@ -565,7 +566,7 @@ namespace ost_import
 
             OstRawData raw = parse_ost_xml(ost_bytes.data(), ost_bytes.size());
             if (raw.empty())
-                return fail(raw.error.empty() ? std::string("No Bid element found in OST file") : raw.error);
+                return fail(raw.error.empty() ? std::string(kNoBidError) : raw.error);
             if (!copied_paths.empty())
             {
                 const auto pages = raw.bid_tables.find("BidPages");
@@ -598,7 +599,7 @@ namespace ost_import
         std::string extract_dir;
         if (!fs.make_temp_directory(temp_parent, "ostv_osp_", extract_dir))
         {
-            result.error = "Cannot create a temporary folder for the OSP package";
+            result.error = kOspTempFolderError;
             return false;
         }
         const bool ok = stage_inside(data, length, package, extract_dir, images_root, fs, result);

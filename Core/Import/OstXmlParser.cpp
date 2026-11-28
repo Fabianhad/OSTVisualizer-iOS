@@ -1,4 +1,5 @@
 #include "OstXmlParser.hpp"
+#include "ImportDiagnostics.hpp"
 #include "XmlNormalizer.hpp"
 #include "pugixml.hpp"
 #include "../Persistence/OstSchema.hpp"
@@ -70,14 +71,14 @@ namespace ost_import
         pugi::xml_node root = doc.first_child();
         if (!root)
         {
-            result.error = "No Bid element found in OST file";
+            result.error = kNoBidError;
             return result;
         }
 
         pugi::xml_node bid_elem = root.child("Bid");
         if (!bid_elem)
         {
-            result.error = "No Bid element found in OST file";
+            result.error = kNoBidError;
             return result;
         }
 

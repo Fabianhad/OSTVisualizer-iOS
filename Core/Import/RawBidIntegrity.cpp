@@ -4,6 +4,7 @@
 
 #include "../Domain/CoreLog.hpp"
 #include "../Persistence/OstSchema.hpp"
+#include "ImportDiagnostics.hpp"
 #include "TextRules.hpp"
 
 #include <algorithm>
@@ -686,7 +687,7 @@ namespace ost_import
             const TakeoffGraphResolution graph = resolve_takeoff_graph(raw);
             if (!graph.fatal_issues.empty())
             {
-                error = "The imported takeoff graph is invalid: " + format_integrity_issues(graph.fatal_issues);
+                error = std::string(kTakeoffGraphInvalidPrefix) + format_integrity_issues(graph.fatal_issues);
                 return false;
             }
             if (graph.skipped_count() > 0)
@@ -713,7 +714,7 @@ namespace ost_import
             {
                 const std::string text = format_integrity_issues(invalid_refs);
                 ost_log::log(ost_log::Level::Error, "Rejecting OST import because it contains invalid database references: " + text);
-                error = "The imported project contains invalid references.";
+                error = kInvalidReferencesError;
                 if (details)
                     *details = text;
                 return false;
