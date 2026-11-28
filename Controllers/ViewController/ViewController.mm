@@ -557,8 +557,18 @@ static const int kToolbar2DOnlyTag = 40000;
   if (!tk)
     return;
 
-  bool currentNeg = tk->is_negative;
-  NSString *title = currentNeg ? @"\u2713 Count as Negative Quantity"
+  // The item and its check mark come from ost_domain::negative_toggle_for_press
+  // (host-tested). iOS has no multi-selection and no paste before M2, so the
+  // group is EMPTY and the single takeoff path applies: the item is offered, it
+  // is checked when that takeoff is negative. M2 passes the pasted takeoff uids
+  // here and in _toggleNegativeForPressedTakeoff: (N-M2-04, owner decision 3).
+  const ost_domain::NegativeToggle toggle =
+      ost_domain::negative_toggle_for_press(_projectService.project.takeoffs,
+                                            std::vector<std::string>(),
+                                            takeoffUID);
+  if (!toggle.offered)
+    return;
+  NSString *title = toggle.checked ? @"\u2713 Count as Negative Quantity"
                                : @"Count as Negative Quantity";
 
   UIAlertController *sheet = [UIAlertController
@@ -572,8 +582,7 @@ static const int kToolbar2DOnlyTag = 40000;
                     actionWithTitle:title
                               style:UIAlertActionStyleDefault
                             handler:^(UIAlertAction *a) {
-                              [self _setNegative:!currentNeg
-                                  forPressedTakeoff:uid];
+                              [self _toggleNegativeForPressedTakeoff:uid];
                             }]];
 
   [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel"
@@ -593,14 +602,17 @@ static const int kToolbar2DOnlyTag = 40000;
 // pressed takeoff: the negative flag of that takeoff alone, in ONE history
 // entry, so one undo restores it and one redo applies it again (UND-09). A
 // condition that is merely selected in the sidebar widens nothing; the decision
-// is ost_domain::negative_changes_for_press (host-tested).
-- (void)_setNegative:(BOOL)negative
-    forPressedTakeoff:(const std::string &)pressedUID {
-  const std::vector<NegativeChange> changes =
-      ost_domain::negative_changes_for_press(_projectService.project.takeoffs,
-                                             pressedUID, negative == YES);
-  if (changes.empty())
+// is ost_domain::negative_toggle_for_press (host-tested). The group is empty
+// until M2: the paste wiring passes the pasted takeoff uids, and then one press
+// sets the whole group in this same ONE entry (owner decision 3).
+- (void)_toggleNegativeForPressedTakeoff:(const std::string &)pressedUID {
+  const ost_domain::NegativeToggle toggle =
+      ost_domain::negative_toggle_for_press(_projectService.project.takeoffs,
+                                            std::vector<std::string>(),
+                                            pressedUID);
+  if (!toggle.offered || toggle.changes.empty())
     return;
+  const std::vector<NegativeChange> &changes = toggle.changes;
   const std::vector<std::pair<std::string, bool>> updates =
       ost_domain::negative_values(changes, false);
 
