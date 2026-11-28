@@ -282,7 +282,7 @@ TEST(DelPageRefusals, DuplicateChildUidsOutsideThePageDoNotMatter)
 // The last page (register DP-5)
 // ---------------------------------------------------------------------------------------------------------------------------------
 
-// Windows has the rule in the UI only (ui_event_coordinator.py:5893, :5995-6001, "Cannot delete the last page in the bid."); the writer would delete every
+// Windows has the rule in memory only, in the UI and the write service, which excludes the NO_PAGE_ID pseudo page since d1c430a (ui_event_coordinator.py:5893, :5995-6001, "Cannot delete the last page in the bid."); the writer would delete every
 // page. iOS: the Core refuses, with the Windows text, and writes nothing.
 TEST(DelPageRefusals, TheOnlyPageOfABidIsRefusedWithTheWindowsText)
 {

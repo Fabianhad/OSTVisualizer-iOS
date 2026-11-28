@@ -56,14 +56,15 @@ namespace ost_meshing
     //     else for it); a positive of a type without negatives comes out unchanged;
     //   * an exception of the difference (std::exception) makes the whole pass return every positive unchanged and logs
     //     one error "Boolean operations failed; returning positive meshes unchanged: <what>" through ost_log.
-    // The winding is not touched. Windows (b9902e6, boolean_operations.py apply_boolean_operations) hands back the ORIGINAL mesh
+    // The winding is not touched. Windows (boolean_operations.py apply_boolean_operations) hands back the ORIGINAL mesh
     // of a positive whose bounding box does not strictly overlap (< on all three axes, touching counts as apart) the bounding
-    // box of any negative of its type, and reverses the faces (f0, f2, f1) of the native result only for the positives that
-    // may be cut (an empty positive counts as one, empty negatives are ignored); the winding the generators give an uncut mesh
-    // stays what it is there (EXP-17). iOS keeps every mesh outward-facing, cut or not, by user decision (GEO-15, EXP-13,
-    // EXP-M02, EXP-17, MSH-21): nothing here or downstream reverses or relies on a flip, and every positive of a type that has a
+    // box of any negative of its type; only the positives that may be cut (an empty positive counts as one, empty negatives
+    // are ignored) go through the native difference. Windows d1c430a made every shape outward (outward_faces in
+    // domain/mesh.py:62) and removed the face flip from that pass; iOS already stored every mesh outward-facing, cut or not:
+    // winding parity (GEO-15, EXP-13, EXP-M02, MSH-21). Nothing here or downstream reverses or relies on a flip. EXP-17 (the
+    // order of the triangles after the bounding-box shortcut) stays a difference: every positive of a type that has a
     // negative goes through the difference (no bounding-box pre-check, so an uncut one comes back rebuilt by it, not as the
-    // identical generator mesh). An empty `difference` is ost_geometry::boolean_difference_batch.
+    // identical generator mesh).
     std::vector<BooleanPassResult> apply_boolean_operations(
         std::vector<BooleanPassMesh> meshes,
         const BooleanDifferenceFn &difference = {});

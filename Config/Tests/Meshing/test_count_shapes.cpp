@@ -6,9 +6,9 @@
 // utils/mesh.py (face tables).
 //
 // Vertices: iOS vertex i is the Windows vertex i mapped by (X, Y, Z) -> (X, Z, -Y), so the shapes are compared index by
-// index. Faces: the triangle and rhombus tables are the Windows tables; the Windows radial table winds inward, iOS
-// stores outward-facing faces (EXP-13), so each radial face (a, b, c) is stored as the Windows OBJ writer writes it,
-// (a, c, b). Every new prism therefore has a positive signed volume.
+// index. Faces: the triangle and rhombus tables are the Windows tables; the Windows radial table winds inward and Windows
+// d1c430a turns it outward with outward_faces (domain/mesh.py:62); iOS stores the outward faces directly, so each radial face
+// (a, b, c) is stored as (a, c, b). Every new prism therefore has a positive signed volume.
 #include "MeshingTestUtil.hpp"
 #include "WindowsOracles.hpp"
 
@@ -101,7 +101,7 @@ TEST(CountShapes, MatchWindowsMeshFactoryOnTheOracleCases)
             {
                 SCOPED_CONTEXT("face " + std::to_string(i));
                 std::array<uint32_t, 3> expect = wf[i];
-                if (table.rfind("radial", 0) == 0) // Windows radial tables wind inward; iOS stores them outward
+                if (table.rfind("radial", 0) == 0) // Windows radial tables wind inward (outward since d1c430a via outward_faces); iOS stores them outward
                     std::swap(expect[1], expect[2]);
                 CHECK(r.mesh.faces[i] == expect);
             }

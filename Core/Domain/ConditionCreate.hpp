@@ -104,7 +104,7 @@ namespace ost_domain
                                             const std::unordered_map<std::string, Layer> &bid_layers);
 
     // The synthetic condition of a new condition's form (condition_action_handler.py:552-587): uid "__new__", name "", Linear, thickness 4.0,
-    // pattern Transparent (8), display_size 100.0, width 12.0, height / depth / rise / run 0.0, spacing 4.0, color_fill 13353215, shape -1,
+    // pattern Transparent (8), display_size 100.0, width 12.0 (imperial; 300 mm in a metric bid, below), height / depth / rise / run 0.0, spacing 4.0, color_fill 13353215, shape -1,
     // layer = `default_layer_uid`, uom1 2, uom2 / uom3 -1, calc_type1 1, calc_type2 / calc_type3 0, round_up 0.0, every flag false, grid sizes and
     // gap 0.0; ref_no stays 0 (the form shows "Next number" instead, N-M1-07). In a METRIC bid (N-M1-08) thickness and spacing are
     // mm_to_inches(100.0) and uom1 is 13 (Windows starts from the imperial values there, NC-6); the width is mm_to_inches(300.0) = 11.811023622047244

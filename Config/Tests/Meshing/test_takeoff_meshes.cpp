@@ -197,7 +197,7 @@ TEST(PageTransform3D, AsymmetricAreaFlipsAndRotationsPortOfWindowsTests)
         check_vertices_index_wise(m, c.vertices, 1e-9);
         check_bounds_ios(m, c.bounds, 1e-9);
         CHECK(triangle_set(m.faces) == triangle_set(c.faces));
-        CHECK_NEAR(signed_volume(m), 1.25, 1e-9); // Windows asserts |volume| 1.25 for every flip
+        CHECK_NEAR(signed_volume(m), 1.25, 1e-9); // Windows d1c430a asserts the signed volume 1.25 (outward) for every flip
     }
 }
 

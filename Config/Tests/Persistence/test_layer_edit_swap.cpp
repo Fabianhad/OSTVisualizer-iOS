@@ -144,7 +144,7 @@ TEST(LayerEditSwap, AForeignLayerIsRefusedOnEitherSide)
 }
 
 // LY-6: a shared template row (no bid: the schema's rows 1-4 and 'Shared Template' 8) is refused on either side: Windows raises the raw scope error
-// "BidLayers mutation targets do not belong to one authoritative Bid."; nothing is written.
+// "BidLayers mutation targets do not belong to one authoritative bid."; nothing is written.
 TEST(LayerEditSwap, ASharedTemplateRowIsRefusedOnEitherSide)
 {
     TempDb db("swap_shared");

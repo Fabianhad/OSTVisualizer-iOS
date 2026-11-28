@@ -229,7 +229,7 @@ namespace ost_store
                 if (locked)
                     return refuse(std::string());
 
-                // The last page (iOS, register DP-5; Windows keeps this rule in the UI only): the pages are unique rows of this bid, so the
+                // The last page (iOS, register DP-5; Windows keeps this rule in memory (UI and write service, not in the database writer; NO_PAGE_ID is not counted since d1c430a)): the pages are unique rows of this bid, so the
                 // bid keeps a page when it has more pages than the delete names.
                 Statement count = _db.prepare("SELECT COUNT(*) FROM [BidPages] WHERE [BidUID] = ?");
                 if (!count.valid())

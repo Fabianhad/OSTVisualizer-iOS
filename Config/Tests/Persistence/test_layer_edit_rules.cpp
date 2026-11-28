@@ -696,7 +696,7 @@ TEST(LayerEditMove, ALockedTemplateOrSharedRowCannotBeMovedItself)
 }
 
 // N-M1-19 / LY-6 (layer_operations.py:432-465 has no filter, layers_dialog.py:634 checks the selected row only: a shared neighbour raises the
-// raw scope error "BidLayers mutation targets do not belong to one authoritative Bid."): a SHARED neighbour disables the move, a locked copy
+// raw scope error "BidLayers mutation targets do not belong to one authoritative bid."): a SHARED neighbour disables the move, a locked copy
 // of the bid's own as the neighbour is allowed (its sequence is rewritten, D6).
 TEST(LayerEditMove, ASharedNeighbourDisablesTheMoveButALockedOwnCopyDoesNot)
 {

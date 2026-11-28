@@ -144,8 +144,9 @@ namespace ost_meshing
 
         // calc_radial_mesh_verts (+ calc_circ_pts) and get_radial_mesh_faces: `segments` points on an ellipse with
         // radii rx / ry (ry == 0 means rx, Windows `r_y or r_x`) starting at angle_offset, the same ring on top, then the
-        // two cap centres. The Windows face table winds inward; iOS stores outward-facing faces (positive signed
-        // volume, as the OBJ writer of Windows writes them: every face (a, b, c) stored as (a, c, b)).
+        // two cap centres. The Windows face table winds inward and Windows d1c430a turns it outward with outward_faces
+        // (domain/mesh.py:62); iOS stores outward-facing faces directly (positive signed volume: every face (a, b, c) of the
+        // table is stored as (a, c, b)): parity.
         ost_geometry::CppMeshData build_radial_prism(double x, double z, double rx, double ry, double height,
                                                      int segments, double y_offset, double rotation,
                                                      double angle_offset)
