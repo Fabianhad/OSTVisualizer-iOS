@@ -2,6 +2,7 @@
 #import "EditConditionHelpers.h"
 #include "../../../Core/Domain/ConditionChoices.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
+#include "../../../Core/Domain/ConditionQuantityChoices.hpp"
 #include "../../../Core/Domain/DimensionFormat.hpp"
 #include <cmath>
 
@@ -369,15 +370,11 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
   if (calcType == 0) {
     cell.detailTextLabel.text = @"(none)";
   } else {
-    NSString *calcLabel = @"(none)";
-    auto qtyOpts =
-        ost_domain::get_quantity_options_for_type(_condition.condition_type);
-    for (const auto &opt : qtyOpts) {
-      if (opt.first == calcType) {
-        calcLabel = [NSString stringWithUTF8String:opt.second.c_str()];
-        break;
-      }
-    }
+    // the label of the option, or "Unknown (N)" for a stored quantity the style does not offer (Windows d1c430a)
+    NSString *calcLabel = [NSString
+        stringWithUTF8String:ost_domain::condition_quantity_label(
+                                 _condition.condition_type, calcType)
+                                 .c_str()];
     // the labels are UTF-8 (IN², m², ...): converted as text, never printed through %s (QTY-16)
     std::string uomLabel = ost_domain::get_uom_label(uom);
     if (!uomLabel.empty()) {
