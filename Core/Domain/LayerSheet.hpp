@@ -76,4 +76,13 @@ namespace ost_domain
     // no alert. Nothing is written in any of these cases by this function; it only decides the text.
     DialogText bulk_layer_visibility_notice(const BulkLayerPlan &plan);
 
+    // The single show / hide of ONE row of the layer list `listed` for the open bid `bid_uid` (Windows d1c430a, owner note b,
+    // update_layer_visibility_deferred ui_event_coordinator.py:6564-6573 and the alert of _on_layer_visibility_toggled :6525-6535 /
+    // layers_dialog.py:677-683): a shared template row (is_shared_template_layer: locked template row of no bid or of another bid, the Image layer
+    // included, no exemption) is REFUSED: {kLayerVisibilityTitle, kSharedTemplateLayerToggleText}; the caller shows that alert, writes nothing,
+    // changes nothing and puts the check mark back to the stored value. Every other uid (the bid's own layer, its own locked copy, an unlocked
+    // template row, a uid that is not listed) gives an empty title and message: the toggle goes on to the store (which also refuses a shared
+    // template row, so a caller that skips this function still writes nothing). Show All / Hide All do not call this: they write own layers only.
+    DialogText single_layer_visibility_refusal(const std::vector<BidLayer> &listed, const std::string &bid_uid, const std::string &uid);
+
 }

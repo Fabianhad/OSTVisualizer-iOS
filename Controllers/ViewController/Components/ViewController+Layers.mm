@@ -320,6 +320,19 @@
     const std::string layerUID =
         self.projectService.sortedLayerUIDs[indexPath.row];
     const BOOL show = ![self _visibilityOfListedLayer:layerUID];
+    // Windows d1c430a (update_layer_visibility_deferred, ui_event_coordinator.py:6564-6573; the alert of _on_layer_visibility_toggled): the
+    // single show / hide of a shared template row (a locked template layer of no bid or of another bid, the Image layer included) is refused
+    // with "Layer Visibility" / "This layer is a locked template layer that other bids share, so it cannot be shown or hidden from this
+    // bid." before anything is written; the check mark is put back to the stored value (reload of the sheet). Core decides (owner note b).
+    const ost_domain::DialogText refusal = ost_domain::single_layer_visibility_refusal(
+        self.projectService.project.merged_layers,
+        std::string(self.bidUID.UTF8String ?: ""), layerUID);
+    if (!refusal.title.empty()) {
+      [tableView reloadData];
+      [self _presentLayerVisibilityNoticeTitle:[NSString stringWithUTF8String:refusal.title.c_str()]
+                                       message:[NSString stringWithUTF8String:refusal.message.c_str()]];
+      return;
+    }
     // Stored first (Windows layers_dialog._on_show_changed): a refused write
     // (a layer that is no layer of a bid, a failed statement) changes nothing
     // and is reported (DBP-11, DBP-17).
