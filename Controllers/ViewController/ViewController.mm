@@ -1025,6 +1025,24 @@ static const int kToolbar2DOnlyTag = 40000;
   [self _syncSelection];
 }
 
+// Windows HistoryTargetUnavailableError: the page or a takeoff the replay needs is gone from the project (the rule is Core
+// ost_domain::history_targets_unavailable). The undo / redo is then refused before it writes and the entry stays.
+- (BOOL)undoRedoReplayTargetsUnavailable:(const ost_domain::HistoryReplayTargets &)targets {
+  return ost_domain::history_targets_unavailable(_projectService.project, targets);
+}
+
+// A user-triggered undo / redo that did not run (Windows show_error("Undo" / "Redo", ...)): same alert shape as -_presentSaveFailure.
+- (void)undoRedoPresentRefusalWithTitle:(NSString *)title message:(NSString *)message {
+  UIViewController *presenter = self;
+  while (presenter.presentedViewController)
+    presenter = presenter.presentedViewController;
+  UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
+                                                                 message:message
+                                                          preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+  [presenter presentViewController:alert animated:YES completion:nil];
+}
+
 - (void)undoRedoDidModify {
   [self _refreshOverlays];
   [self _generateMeshesForSelectedPages];

@@ -5,6 +5,7 @@
 #include "../../../Core/Domain/NegativeChange.hpp"
 #include "../../../Core/Domain/PageScaleTransform.hpp"
 #include "../../../Core/Domain/Takeoff.hpp"
+#include "../../../Core/Domain/UndoRedoRules.hpp"
 #include "../../../Core/Geometry/drag_rules.hpp"
 #include <optional>
 #include <string>
@@ -68,6 +69,20 @@ using NegativeChange = ost_domain::NegativeChange;
 - (std::optional<ost_domain::PageScale>)undoRedoPageScaleForPage:
     (const std::string &)pageUID;
 
+/// Called before an undo / redo writes anything (parity pass 3, Windows
+/// HistoryTargetUnavailableError): YES when the page, or a takeoff, the replay
+/// needs no longer exists in the project (the decision is Core
+/// ost_domain::history_targets_unavailable). The undo / redo is then refused
+/// with the "page or item no longer exists" text and the entry stays. A
+/// delegate without this method treats every entry as available.
+- (BOOL)undoRedoReplayTargetsUnavailable:
+    (const ost_domain::HistoryReplayTargets &)targets;
+/// A USER-triggered undo / redo did not advance: show the alert (title "Undo" /
+/// "Redo", the message of Core history_refusal_dialog). Never called for a
+/// programmatic call (performUndoUserInitiated:NO), which only logs.
+- (void)undoRedoPresentRefusalWithTitle:(NSString *)title
+                                message:(NSString *)message;
+
 @end
 
 @interface UndoRedoController : NSObject
@@ -91,8 +106,18 @@ using NegativeChange = ost_domain::NegativeChange;
 /// takeoffs (Windows _push_local_property_history).
 - (void)pushNegativeChanges:(const std::vector<NegativeChange> &)changes;
 
+/// The Undo / Redo buttons: a user-triggered call (Windows undo() / redo() with
+/// user_initiated True). A refusal (the page or item of the entry is gone, or
+/// the change could not be stored) is shown to the user and the entry stays in
+/// its stack.
 - (void)performUndo;
 - (void)performRedo;
+
+/// The same with the Windows `user_initiated` flag. NO (an internal caller):
+/// a refusal only logs and shows nothing. Answers whether the history advanced.
+/// An empty history answers NO without a refusal.
+- (BOOL)performUndoUserInitiated:(BOOL)userInitiated;
+- (BOOL)performRedoUserInitiated:(BOOL)userInitiated;
 
 /// Deletes the takeoff and all its descendants (Windows
 /// expand_takeoff_uids_with_descendants) in one step and records it. NO, with
