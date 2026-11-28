@@ -59,7 +59,7 @@ namespace ost_domain
             generic = kDeleteLayerFailed;
             break;
         }
-        text.message = store_error.empty() ? std::string(generic) + " " + DB_LOCKED_HINT : store_error;
+        text.message = store_error.empty() ? std::string(generic) : store_error;
         return text;
     }
 
@@ -105,11 +105,11 @@ namespace ost_domain
             text.message = kLayersDeletedRefreshFailed;
             break;
         case LayerAction::Rename:
-            text.title = kRefreshErrorTitle;
+            text.title = kRenameLayerTitle; // layers_dialog.py:489 LAYERS_DIALOG_TITLE_RENAME_LAYER (owner decision 2)
             text.message = kLayerRenamedRefreshFailed;
             break;
         case LayerAction::Move:
-            text.title = kRefreshErrorTitle;
+            text.title = kMoveLayerTitle; // layers_dialog.py:784 LAYERS_DIALOG_TITLE_MOVE_LAYER (owner decision 2)
             text.message = kLayerMovedRefreshFailed;
             break;
         }

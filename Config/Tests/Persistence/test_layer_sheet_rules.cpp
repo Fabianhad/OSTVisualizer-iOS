@@ -12,7 +12,7 @@
 //   ui_event_coordinator.py:6584-6587  "Refresh Error" / "The layer was created, but the layer list could not be refreshed. Reopen the database to
 //       see the new layer."; layers_dialog.py:540 "Delete Layer" / "Layers were deleted, but the refresh failed."
 //   messagebox.py:8 DB_LOCKED_HINT = "The database may be locked by another application."
-// iOS-only (plan 4.14, N-M1-03): the DB-locked hint after the generic failure texts of create / rename / move (N-M1-17, plan 5.3).
+// Owner decision 2 (parity pass 3): the dialog titles and texts are taken literally; the DB-locked hint of N-M1-17 is dropped (the dialog has none).
 // Windows d26893c (parity-sync-2): the rename / move refresh texts (texts.py:1306-1313, 0a24294) and the Show All / Hide All message of a bid without
 // layers of its own (texts.py:1321-1324).
 #include "LayerEditTestSupport.hpp"
@@ -68,7 +68,6 @@ namespace
                (a.can_move_up ? "U" : "-") + (a.can_move_down ? "N" : "-");
     }
 
-    constexpr const char *kHint = "The database may be locked by another application.";
 }
 
 // layers_dialog.py:285-291, :315-322, :628-654, :656-684 on the device-pack list. Own locked copies and the shared row are not editable but a
@@ -132,23 +131,26 @@ TEST(LayerSheet, ARowOfAnotherBidIsNotMovable)
     CHECK(mine.can_delete);
 }
 
-// layers_dialog.py:417, :473, :646, :544 with the titles of :427, :469, :654, :544, and the hint of ui_event_coordinator.py:6648-6652. The pinned strings
+// layers_dialog.py:417, :473, :646, :544 with the titles of :427, :469, :654, :544. The dialog never adds DB_LOCKED_HINT (it exists only in the sidebar,
+// ui_event_coordinator.py:6819-6825); owner decision 2 takes the dialog text literally, so there is no hint (this drops N-M1-17). The pinned strings
 // are literals on purpose: a reworded constant must fail here.
-TEST(LayerSheet, WriteFailureTextsAreTheWindowsTextsPlusTheHint)
+TEST(LayerSheet, WriteFailureTextsAreTheWindowsDialogTexts)
 {
     const ost_domain::DialogText create = ost_domain::layer_write_failure_text(LayerAction::Create, "");
     CHECK_STR_EQ(create.title, "New Layer");
-    CHECK_STR_EQ(create.message, std::string("Failed to create layer. ") + kHint);
+    CHECK_STR_EQ(create.message, "Failed to create layer.");
     const ost_domain::DialogText rename = ost_domain::layer_write_failure_text(LayerAction::Rename, "");
     CHECK_STR_EQ(rename.title, "Rename Layer");
-    CHECK_STR_EQ(rename.message, std::string("Failed to rename layer. ") + kHint);
+    CHECK_STR_EQ(rename.message, "Failed to rename layer.");
     const ost_domain::DialogText move = ost_domain::layer_write_failure_text(LayerAction::Move, "");
     CHECK_STR_EQ(move.title, "Move Layer");
-    CHECK_STR_EQ(move.message, std::string("Failed to move layer. ") + kHint);
+    CHECK_STR_EQ(move.message, "Failed to move layer.");
     const ost_domain::DialogText del = ost_domain::layer_write_failure_text(LayerAction::Delete, "");
     CHECK_STR_EQ(del.title, "Delete Layer");
-    CHECK_STR_EQ(del.message, std::string("Failed to delete layer. ") + kHint);
-    CHECK_STR_EQ(ost_domain::DB_LOCKED_HINT, kHint);
+    CHECK_STR_EQ(del.message, "Failed to delete layer.");
+    // no generic text carries the hint
+    for (const ost_domain::DialogText *text : {&create, &rename, &move, &del})
+        CHECK(text->message.find(ost_domain::DB_LOCKED_HINT) == std::string::npos);
 }
 
 // A text the store gave for the user (the duplicate text, the sequence limit, the identity limit) replaces the generic text: no hint after it,
@@ -169,7 +171,8 @@ TEST(LayerSheet, AStoreTextReplacesTheGenericText)
 
 // ui_event_coordinator.py:6584-6587 (create), layers_dialog.py:540 (delete) and, since d26893c (0a24294), the rename and the move
 // (texts.py:1306-1313 UI_EVENT_COORDINATOR_MESSAGE_THE_LAYER_WAS_RENAMED_BUT_THE / _MOVED_BUT_THE, the twins at texts.py:1645-1652, tests
-// test_ui_event_coordinator.py:14173, test_layers_dialog.py:1072) are Windows texts; the title stays the sidebar's "Refresh Error".
+// test_ui_event_coordinator.py:14173, test_layers_dialog.py:1072) are Windows texts. Owner decision 2: the dialog's titles, layers_dialog.py:489 and :784
+// (LAYERS_DIALOG_TITLE_RENAME_LAYER / _MOVE_LAYER); only the create refresh keeps "Refresh Error" (condition_action_handler.py:416-430 path).
 TEST(LayerSheet, RefreshFailureTextsSayWhatWasCommitted)
 {
     const ost_domain::DialogText create = ost_domain::layer_refresh_failure_text(LayerAction::Create);
@@ -180,14 +183,15 @@ TEST(LayerSheet, RefreshFailureTextsSayWhatWasCommitted)
     CHECK_STR_EQ(del.title, "Delete Layer");
     CHECK_STR_EQ(del.message, "Layers were deleted, but the refresh failed.");
     const ost_domain::DialogText rename = ost_domain::layer_refresh_failure_text(LayerAction::Rename);
-    CHECK_STR_EQ(rename.title, "Refresh Error");
+    CHECK_STR_EQ(rename.title, "Rename Layer");
     CHECK_STR_EQ(rename.message,
                  "The layer was renamed, but the layer list could not be refreshed. Reopen the database to see the change.");
     const ost_domain::DialogText move = ost_domain::layer_refresh_failure_text(LayerAction::Move);
-    CHECK_STR_EQ(move.title, "Refresh Error");
+    CHECK_STR_EQ(move.title, "Move Layer");
     CHECK_STR_EQ(move.message,
                  "The layer was moved, but the layer list could not be refreshed. Reopen the database to see the change.");
     CHECK_NE(move.message, rename.message);
+    CHECK_NE(rename.title, move.title);
 }
 
 // Windows update_all_layers_visibility_deferred (ui_event_coordinator.py:6812-6855, d26893c): a Show All / Hide All in a bid whose layer list has no

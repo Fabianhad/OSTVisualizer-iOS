@@ -11,9 +11,10 @@
 //   layers_dialog.py:315-322                                        New runs with ANY row selected (after that row's sequence)
 //   layers_dialog.py:628-654, :656-684                              move: the selected row must be modifiable, the ends of the list have no neighbour
 //   layers_dialog.py:417, :473, :646, :544                          "Failed to rename / create / move / delete layer."
-//   presentation/coordinators/ui_event_coordinator.py:6648-6652     the sidebar's delete failure adds DB_LOCKED_HINT
+//   presentation/coordinators/ui_event_coordinator.py:6819-6825     DB_LOCKED_HINT exists only in the sidebar; the dialog never adds it
 //   ui_event_coordinator.py:6584-6587, layers_dialog.py:540          the committed-but-not-refreshed texts of create and delete
-//   presentation/utils/messagebox.py:8                              DB_LOCKED_HINT
+//   layers_dialog.py:489, :784                                      the rename / move refresh failures use the dialog titles "Rename Layer" / "Move Layer"
+//   presentation/utils/messagebox.py:8                              DB_LOCKED_HINT (not used here since owner decision 2)
 #pragma once
 #include "BrowserRules.hpp"
 #include "Layer.hpp"
@@ -25,7 +26,7 @@ namespace ost_domain
 
     // A rename or a move that was written, whose layer list could not be read again. Windows 49a2d59 answered "Failed to rename layer." / "Failed to
     // move layer." there although the change committed; since d26893c (0a24294) it says what was kept (texts.py:1306-1313, the dialog twins
-    // texts.py:1645-1652, tests test_ui_event_coordinator.py:14173 and test_layers_dialog.py:1072). The title stays "Refresh Error" (the sidebar's).
+    // texts.py:1645-1652, tests test_ui_event_coordinator.py:14173 and test_layers_dialog.py:1072). The titles are the dialog's "Rename Layer" / "Move Layer" (layers_dialog.py:489, :784; owner decision 2).
     inline constexpr const char *kLayerRenamedRefreshFailed =
         "The layer was renamed, but the layer list could not be refreshed. Reopen the database to see the change.";
     inline constexpr const char *kLayerMovedRefreshFailed =
@@ -61,13 +62,13 @@ namespace ost_domain
 
     // A write that was refused or failed (nothing changed). The title is the Windows title of the action ("New Layer", "Rename Layer", "Move
     // Layer", "Delete Layer"). The message is `store_error` when the store gave a text for the user (the duplicate text, a limit text), else the
-    // Windows generic text of the action ("Failed to create layer.", ...) followed by one space and DB_LOCKED_HINT (plan 5.3, N-M1-17: Windows
-    // adds the hint to the delete failure of the sidebar, ui_event_coordinator.py:6648-6652; the other three get it the same way on iOS).
+    // Windows dialog text of the action ("Failed to create layer.", ...) exactly, without DB_LOCKED_HINT (owner decision 2 takes the dialog literally;
+    // the hint exists only in the sidebar, so the iOS addition N-M1-17 is gone).
     DialogText layer_write_failure_text(LayerAction action, const std::string &store_error);
 
     // A write that committed but whose layer list could not be read again; the new state is kept. Create: "Refresh Error" and kLayerCreatedRefreshFailed;
-    // Delete: "Delete Layer" and kLayersDeletedRefreshFailed (both Windows); Rename and Move: "Refresh Error" and kLayerRenamedRefreshFailed /
-    // kLayerMovedRefreshFailed (Windows d26893c).
+    // Delete: "Delete Layer" and kLayersDeletedRefreshFailed (both Windows); Rename and Move: "Rename Layer" / "Move Layer" and kLayerRenamedRefreshFailed /
+    // kLayerMovedRefreshFailed (Windows dialog, layers_dialog.py:489, :784).
     DialogText layer_refresh_failure_text(LayerAction action);
 
     // What a Show All / Hide All tells the user when it did not write (Windows d26893c, update_all_layers_visibility_deferred
