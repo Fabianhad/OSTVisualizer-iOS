@@ -183,7 +183,7 @@ TEST(LayerEditTexts, TheWindowsTextsAreExact)
     CHECK_STR_EQ(ost_domain::kDeleteLayerFailed, "Failed to delete layer.");     // layers_dialog.py:544
     CHECK_STR_EQ(ost_domain::kLayerUsageUnreadable, "Failed to validate layer usage."); // layers_dialog.py:506
     CHECK_STR_EQ(ost_domain::kLayersDeletedRefreshFailed, "Layers were deleted, but the refresh failed."); // layers_dialog.py:540
-    CHECK_STR_EQ(ost_domain::kRefreshErrorTitle, "Refresh Error");               // ui_event_coordinator.py:6584
+    CHECK_STR_EQ(ost_domain::kRefreshErrorTitle, "Refresh Error");               // ui_event_coordinator.py:6747
     CHECK_STR_EQ(ost_domain::kLayerCreatedRefreshFailed,
                  "The layer was created, but the layer list could not be refreshed. Reopen the database to see the new layer."); // :6585-6587
 }

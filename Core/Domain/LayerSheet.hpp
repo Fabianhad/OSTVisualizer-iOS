@@ -12,7 +12,7 @@
 //   layers_dialog.py:628-654, :656-684                              move: the selected row must be modifiable, the ends of the list have no neighbour
 //   layers_dialog.py:417, :473, :646, :544                          "Failed to rename / create / move / delete layer."
 //   presentation/coordinators/ui_event_coordinator.py:6819-6825     DB_LOCKED_HINT exists only in the sidebar; the dialog never adds it
-//   ui_event_coordinator.py:6584-6587, layers_dialog.py:540          the committed-but-not-refreshed texts of create and delete
+//   ui_event_coordinator.py:6745-6750, layers_dialog.py:540          the committed-but-not-refreshed texts of create and delete
 //   layers_dialog.py:489, :784                                      the rename / move refresh failures use the dialog titles "Rename Layer" / "Move Layer"
 //   presentation/utils/messagebox.py:8                              DB_LOCKED_HINT (not used here since owner decision 2)
 #pragma once

@@ -9,7 +9,7 @@
 //   layers_dialog.py:417 / :473 / :646 / :544  "Failed to rename layer." / "Failed to create layer." / "Failed to move layer." / "Failed to delete layer."
 //       with the titles "Rename Layer" / "New Layer" / "Move Layer" / "Delete Layer"
 //   ui_event_coordinator.py:6648-6652  the sidebar's delete failure: "Delete Layer" / "Failed to delete layer. " + DB_LOCKED_HINT
-//   ui_event_coordinator.py:6584-6587  "Refresh Error" / "The layer was created, but the layer list could not be refreshed. Reopen the database to
+//   ui_event_coordinator.py:6745-6750  "Refresh Error" / "The layer was created, but the layer list could not be refreshed. Reopen the database to
 //       see the new layer."; layers_dialog.py:540 "Delete Layer" / "Layers were deleted, but the refresh failed."
 //   messagebox.py:8 DB_LOCKED_HINT = "The database may be locked by another application."
 // Owner decision 2 (parity pass 3): the dialog titles and texts are taken literally; the DB-locked hint of N-M1-17 is dropped (the dialog has none).
@@ -169,7 +169,7 @@ TEST(LayerSheet, AStoreTextReplacesTheGenericText)
     CHECK_STR_EQ(del.message, "y");
 }
 
-// ui_event_coordinator.py:6584-6587 (create), layers_dialog.py:540 (delete) and, since d26893c (0a24294), the rename and the move
+// ui_event_coordinator.py:6745-6750 (create), layers_dialog.py:540 (delete) and, since d26893c (0a24294), the rename and the move
 // (texts.py:1306-1313 UI_EVENT_COORDINATOR_MESSAGE_THE_LAYER_WAS_RENAMED_BUT_THE / _MOVED_BUT_THE, the twins at texts.py:1645-1652, tests
 // test_ui_event_coordinator.py:14173, test_layers_dialog.py:1072) are Windows texts. Owner decision 2: the dialog's titles, layers_dialog.py:489 and :784
 // (LAYERS_DIALOG_TITLE_RENAME_LAYER / _MOVE_LAYER); only the create refresh keeps "Refresh Error" (condition_action_handler.py:416-430 path).

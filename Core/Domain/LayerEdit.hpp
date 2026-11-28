@@ -44,7 +44,7 @@ namespace ost_domain
     inline constexpr const char *kRenameLayerTitle = "Rename Layer";              // layers_dialog.py:427
     inline constexpr const char *kMoveLayerTitle = "Move Layer";                  // layers_dialog.py:654
     inline constexpr const char *kDeleteLayerTitle = "Delete Layer";              // layers_dialog.py:506, :508, :542, :544
-    inline constexpr const char *kRefreshErrorTitle = "Refresh Error";            // ui_event_coordinator.py:6584; since owner decision 2 only the create refresh failure uses it
+    inline constexpr const char *kRefreshErrorTitle = "Refresh Error";            // ui_event_coordinator.py:6747; since owner decision 2 only the create refresh failure uses it
     inline constexpr const char *kNewLayerFailed = "Failed to create layer.";     // layers_dialog.py:473
     inline constexpr const char *kRenameLayerFailed = "Failed to rename layer.";  // layers_dialog.py:417
     inline constexpr const char *kMoveLayerFailed = "Failed to move layer.";      // layers_dialog.py:646

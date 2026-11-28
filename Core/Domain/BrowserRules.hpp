@@ -89,7 +89,7 @@ namespace ost_domain
 
     DialogText browser_failure_text(BrowserFailure failure);
 
-    // file_operation_handler: a database that cannot be read is "Error Loading File" / "Failed to load <name>:\n<reason>". The reason is
-    // the text the store reports (it names the cause, in the Windows wording where Windows has one).
+    // file_operation_handler: a database that cannot be read is "Error Loading File" / "Failed to load <name>:\n<reason>". The reason is a
+    // user sentence (load_failure_reason in FailureText.hpp); the text the store reports is logged, never shown (EXP-21).
     DialogText load_failure_text(const std::string &display_name, const std::string &reason);
 }
