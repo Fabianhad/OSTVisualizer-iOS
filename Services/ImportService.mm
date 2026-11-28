@@ -6,6 +6,7 @@
 #include "../Core/Import/OstXmlParser.hpp"
 #include "../Core/Import/RawBidIntegrity.hpp"
 #include "../Core/Persistence/ProjectStore/ProjectStore.hpp"
+#include <exception>
 #include <string>
 
 NSErrorDomain const OSTImportErrorDomain = @"OSTImport";
@@ -78,7 +79,7 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   if (!ost_store::create_schema(db_path)) {
     NSLog(@"ImportService: %@: the database schema could not be created", label);
     if (error) {
-      *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Unexpected
+      *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Damaged
                                    format:format];
     }
     return NO;
@@ -89,7 +90,7 @@ NSNotificationName const OSTRenderConfigChangedNotification =
     NSLog(@"ImportService: %@: storing the project failed: %s", label,
           result.error.c_str());
     if (error) {
-      *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Unexpected
+      *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Damaged
                                    format:format];
     }
     return NO;
@@ -106,7 +107,48 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   return YES;
 }
 
+// A C++ exception that nothing classified is the Windows "unexpected" case (an exception outside import_ost): the reason is only logged.
++ (BOOL)_failedUnexpectedly:(const char *)what
+                     format:(ost_domain::ImportFormat)format
+                      error:(NSError **)error {
+  NSLog(@"ImportService: the import stopped with an unexpected exception: %s",
+        what);
+  if (error) {
+    *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Unexpected
+                                 format:format];
+  }
+  return NO;
+}
+
 + (BOOL)importOSTFile:(NSURL *)fileURL error:(NSError **)error {
+  try {
+    return [self _importOSTFile:fileURL error:error];
+  } catch (const std::exception &e) {
+    return [self _failedUnexpectedly:e.what()
+                              format:ost_domain::ImportFormat::Ost
+                               error:error];
+  } catch (...) {
+    return [self _failedUnexpectedly:"unknown exception"
+                              format:ost_domain::ImportFormat::Ost
+                               error:error];
+  }
+}
+
++ (BOOL)importOSPFile:(NSURL *)fileURL error:(NSError **)error {
+  try {
+    return [self _importOSPFile:fileURL error:error];
+  } catch (const std::exception &e) {
+    return [self _failedUnexpectedly:e.what()
+                              format:ost_domain::ImportFormat::Osp
+                               error:error];
+  } catch (...) {
+    return [self _failedUnexpectedly:"unknown exception"
+                              format:ost_domain::ImportFormat::Osp
+                               error:error];
+  }
+}
+
++ (BOOL)_importOSTFile:(NSURL *)fileURL error:(NSError **)error {
   BOOL accessing = [fileURL startAccessingSecurityScopedResource];
 
   // `bytes` points into the data: it must live until the parse is done (ARC may otherwise release it after its last message).
@@ -151,7 +193,7 @@ NSNotificationName const OSTRenderConfigChangedNotification =
                        error:error];
 }
 
-+ (BOOL)importOSPFile:(NSURL *)fileURL error:(NSError **)error {
++ (BOOL)_importOSPFile:(NSURL *)fileURL error:(NSError **)error {
   BOOL accessing = [fileURL startAccessingSecurityScopedResource];
 
   // `bytes` points into the (memory mapped) data: it must live until the package is staged.

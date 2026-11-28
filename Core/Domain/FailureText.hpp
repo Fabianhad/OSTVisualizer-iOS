@@ -47,11 +47,13 @@ namespace ost_domain
         TakeoffGraphInvalid = 3, // duplicate takeoff UID, ParentUID cycle, parent on another page (the same)
         InvalidReferences = 4,   // "The imported project contains invalid references." (the same)
         FileNotFound = 5,    // open-in only: the file is not there (use case: "File does not exist.")
-        Unexpected = 6       // a failure of the device or the store, not a statement about the file
+        Unexpected = 6       // a genuinely unexpected condition (a C++ exception, no error at all); never returned by classify_import_failure
     };
 
     // Maps the raw diagnostic of Core (OstXmlParser, RawBidIntegrity, OspPackage: the constants of Import/ImportDiagnostics.hpp) to a kind.
-    // Anything it does not know is Damaged, as the Windows local import reports every failure of the file. The raw text is for the log.
+    // Anything it does not know is Damaged, as the Windows local import swallows EVERY exception inside import_ost / import_osp
+    // (ost_importer.py:94-107) and shows the "damaged" sentence: that includes a failed store, schema or temporary folder. Unexpected is
+    // never returned here. The raw text is for the log.
     ImportFailureKind classify_import_failure(const std::string &raw);
 
     // The Import Error alert. Picker: every kind but Unexpected is "The <OST|OSP> file is damaged or uses an unsupported format, so it

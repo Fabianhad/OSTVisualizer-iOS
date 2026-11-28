@@ -63,11 +63,21 @@ TEST(Exp21_ImportClassify, TheKnownDiagnosticsHaveTheirOwnKind)
     CHECK(ost_domain::classify_import_failure("The imported takeoff graph is invalid: BidTakeoffs.UID=40 occurs 2 times") ==
           ImportFailureKind::TakeoffGraphInvalid);
     CHECK(ost_domain::classify_import_failure("The imported project contains invalid references.") == ImportFailureKind::InvalidReferences);
-    // a device side failure, not a statement about the file
-    CHECK(ost_domain::classify_import_failure("Cannot create a temporary folder for the OSP package") == ImportFailureKind::Unexpected);
 }
 
-TEST(Exp21_ImportClassify, EveryOtherDiagnosticIsDamaged)
+// The numeric value of each kind is the code of the NSError that ImportService returns and that SceneDelegate casts back to the enum:
+// reordering the enum would still compile, so the values are pinned.
+TEST(Exp21_ImportClassify, TheKindValuesAreTheNSErrorCodes)
+{
+    CHECK_EQ(static_cast<int>(ImportFailureKind::Damaged), 1);
+    CHECK_EQ(static_cast<int>(ImportFailureKind::NoBid), 2);
+    CHECK_EQ(static_cast<int>(ImportFailureKind::TakeoffGraphInvalid), 3);
+    CHECK_EQ(static_cast<int>(ImportFailureKind::InvalidReferences), 4);
+    CHECK_EQ(static_cast<int>(ImportFailureKind::FileNotFound), 5);
+    CHECK_EQ(static_cast<int>(ImportFailureKind::Unexpected), 6);
+}
+
+TEST(Exp21_ImportClassify, EveryOtherDiagnosticIsDamagedAndNeverUnexpected)
 {
     const char *const raws[] = {
         "mismatched tag: line 3, column 5",
@@ -76,6 +86,9 @@ TEST(Exp21_ImportClassify, EveryOtherDiagnosticIsDamaged)
         "The embedded OST file could not be read",
         "embedded OST data is corrupt: no element found",
         "Invalid OSP file format",
+        // Windows swallows every exception inside import_ost / import_osp (ost_importer.py:94-107): the temporary folder, like the store,
+        // is "damaged" in the picker and in the open-in path; the classifier never returns Unexpected
+        "Cannot create a temporary folder for the OSP package",
         "Exceeds the limit (4300 digits) for integer string conversion: value has 5000 digits; use sys.set_int_max_str_digits() to increase the limit",
         "",
     };

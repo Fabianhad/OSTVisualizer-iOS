@@ -47,8 +47,6 @@ namespace ost_domain
             return ImportFailureKind::NoBid;
         if (raw == ost_import::kInvalidReferencesError)
             return ImportFailureKind::InvalidReferences;
-        if (raw == ost_import::kOspTempFolderError)
-            return ImportFailureKind::Unexpected;
         const size_t prefix_length = std::strlen(ost_import::kTakeoffGraphInvalidPrefix);
         if (raw.compare(0, prefix_length, ost_import::kTakeoffGraphInvalidPrefix) == 0)
             return ImportFailureKind::TakeoffGraphInvalid;
