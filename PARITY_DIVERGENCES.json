@@ -45,7 +45,8 @@
    "TEST COUNTS (2026-11-21, job 6): host tests before job 6 1720 (1729 with the Manifold boolean tests), now 1760 (1769 with Manifold): +40 (+40); the final full runs of the finished tree (after the independent review, its fix-ups and the mutation gap closures: MSVC 1760 and 1769 with Manifold, clang 1760 and 1769 with Manifold, all pass) give the same numbers as the earlier runs of the combined tree before the independent review; 1760 = 1750 behaviour tests + 10 harness self-tests. Only the Conditions area changed: 211 -> 251 (+40 = elevation foot mark +14 (CondElev02_ClosingInchMark), allocator +14 (CondAlloc01_*), COND-M08 +15 -3 = +12 (CondM08_UnknownStyle.* added, CondM08_UnsupportedType.* removed)); every other area is unchanged (Browser 67, Export 108 (114), Formatting 74, Geometry 173, Harness 10, Import 307, Meshing 107 (110), Parsers 120, Persistence 308, Quantities 134, Settings 101). check_objc: 27 of 27 files, 0 errors, 4 stub warnings (unchanged).",
    "CI RESULT OF JOB 6 (2026-11-21 UTC): GitHub Actions run 44953904172 (workflow Build IPA, event push of branch ios-parity-sync, head commit e151655, which carries the five commits of job 6: 8773287, 8ef1251, bb58e0f, fc3a18e and e151655, pushed together as eae0894..e151655; 6 min 45 s) succeeded on the first run: the host tests passed 12 of 12 areas (the CI build uses the Manifold stub), xcodebuild Release iphoneos BUILD SUCCEEDED against the real iPhoneOS 18.5 SDK with the same first-party warnings as run 44856186199 (nothing added, nothing removed; the three warnings of EditConditionViewController+TableView.mm moved to :158, :44 and :76 because job 6 edited that file), and the IPA artifact was packaged and parsed locally (its executable contains the new code of job 6). So the code of job 6, the Obj-C(++) wiring included (EditConditionViewController*.mm for COND-M08, ImportService.mm and ViewController+Conditions.mm for the Duplicate alert), compiles against the real SDK and links with the host-test-covered Core; it has never run on a device or a simulator, the run does not show that the new Obj-C code is correct at runtime, the Manifold-only host tests were run locally only (MSVC and clang, all pass), and the 27 fixed-ui-unverified statuses and the device checks DEV-01 to DEV-11 stay open. The docs-only commit that records this run carries [skip ci] and has no run of its own: the last CI-verified code state is e151655. Details: finalOutcome.verification.ci and finalOutcome.verification.job6.github. [Updated 2026-11-21 (job 8): the device checks DEV-01 to DEV-11 are all PASS (the owner's iPhone, IPA of run 44953904172) and the fixed-ui-unverified statuses are 23 (27 until job 8); see header.deviceChecksJob8.]",
    "JOB 7 (2026-11-21, user: \"Record my decisions and the device-check results, then merge ios-parity-sync into main if everything passed. Windows repo read-only. No force-push. Never change app behavior in this job.\"): documents only. The five decisions of the owner are in header.decisionsJob7 and, for the three records they touch, in items.COND-M08.decisionUpdate4, items.COND-ELEV-01.decisionUpdate4 and items.DLG-FINITE-01.decisionUpdate4: the overflow alert of Duplicate keeps the title 'Duplicate Error'; the Windows quantity reset is not ported and is a possible Windows defect (silent data loss, it also hits unknown types), which closes owner note k (FYI-20); two duplicates at 2147483646 are pinned in Core and by sequential store calls and are not reachable through the UI; the stray ASCII double quote that switches the foot-mark rule off is a possible Windows defect, ported as is; the stale Windows line citations in four iOS comment files are left. The owner's device-check table (DEV-01 to DEV-11) came back with all eleven results blank: nothing is recorded as passed or failed, all eleven stay open, no status changed (172 / 27 / 16 / 0 / 1 / 4 = 220) and the merge into main was not done (main stays at 4a1302d, ios-parity-sync is not merged, no pull request exists). Owner notes after job 7: 32 entries, 4 resolved (a, e, g, k), 2 informational (j, o), 26 open; 28 entries of needsMyDecision.open are still current. No CI run exists for the documents-only commit ([skip ci]); the last CI-verified code state is e151655 (run 44953904172). [Superseded / updated 2026-11-21 (job 8): the device-check table was returned blank in job 7 (true when written); in job 8 the owner reported DEV-01 to DEV-11 all PASS, so 'all eleven stay open' and 'no item is verified on device' no longer hold; see notes[19] and header.deviceChecksJob8.] [Updated 2026-11-27 (job 9, Windows d26893c): the owner decision on the stray quote in this note is withdrawn: Windows 0a24294 fixed the rule and iOS follows (items.COND-ELEV-01.decisionUpdate5)]",
-   "JOB 8, STEP 0 (2026-11-21, owner message of job 8): documents only, no code, test or behaviour changed. The owner tested on their iPhone with the IPA of GitHub run 44953904172 (head commit e151655): DEV-01 to DEV-11 are ALL PASS (no per-check notes were given). The earlier statement 'the table came back with all eleven results blank' (job 7, 2026-11-21, commit 80fb867) was true when written and stays as history (header.decisionsJob7.deviceChecks). The owner's rule: mark the items covered only by these checks as 'verified on device' (COND-ELEV-01 needs DEV-04 and DEV-10, DLG-FINITE-01 needs DEV-05 and DEV-11; the other fixed-ui-unverified items stay as they are and are carried into the next device pack). Result: COND-ELEV-01, COND-STYLE-02 (DEV-03), DLG-FINITE-01 and COND-M08 (DEV-09) are fixed now (deviceVerified, statusBeforeDeviceCheck); LP-24 and LP-22 (DEV-06) and EXP-12 and EXP-16 (DEV-08) keep their status and carry deviceVerified; the two device bugs of 2026-11-20 (DEV-01 transparent meshes, fix aef35d8; DEV-02 Delete selection, fix 34e14c9; no item id) are verified on device; COND-PLACE-01 stays fixed-ui-unverified (DEV-07 covers only the Image-layer half; the other half is carried into the next device pack). Counts 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 4 no-longer-divergent, 1 cannot-reproduce, 0 blocked-needs-decision (= 220); tests 1760 (1769 with Manifold) unchanged; owner notes unchanged (32 entries, 4 resolved, 2 informational, 26 open; DEV-10 observed on device PASS for note l, which stays open). The merge into main was requested by the owner (job 8) and is recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md]. The last CI-verified code state stays e151655 (run 44953904172)."
+   "JOB 8, STEP 0 (2026-11-21, owner message of job 8): documents only, no code, test or behaviour changed. The owner tested on their iPhone with the IPA of GitHub run 44953904172 (head commit e151655): DEV-01 to DEV-11 are ALL PASS (no per-check notes were given). The earlier statement 'the table came back with all eleven results blank' (job 7, 2026-11-21, commit 80fb867) was true when written and stays as history (header.decisionsJob7.deviceChecks). The owner's rule: mark the items covered only by these checks as 'verified on device' (COND-ELEV-01 needs DEV-04 and DEV-10, DLG-FINITE-01 needs DEV-05 and DEV-11; the other fixed-ui-unverified items stay as they are and are carried into the next device pack). Result: COND-ELEV-01, COND-STYLE-02 (DEV-03), DLG-FINITE-01 and COND-M08 (DEV-09) are fixed now (deviceVerified, statusBeforeDeviceCheck); LP-24 and LP-22 (DEV-06) and EXP-12 and EXP-16 (DEV-08) keep their status and carry deviceVerified; the two device bugs of 2026-11-20 (DEV-01 transparent meshes, fix aef35d8; DEV-02 Delete selection, fix 34e14c9; no item id) are verified on device; COND-PLACE-01 stays fixed-ui-unverified (DEV-07 covers only the Image-layer half; the other half is carried into the next device pack). Counts 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 4 no-longer-divergent, 1 cannot-reproduce, 0 blocked-needs-decision (= 220); tests 1760 (1769 with Manifold) unchanged; owner notes unchanged (32 entries, 4 resolved, 2 informational, 26 open; DEV-10 observed on device PASS for note l, which stays open). The merge into main was requested by the owner (job 8) and is recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md]. The last CI-verified code state stays e151655 (run 44953904172).",
+   "PARITY PASS 3 (2026-11-27): Windows d26893c..d1c430a (one commit, 49 files). iOS branch ios-parity-sync-2 (start c7163c6, code tip b36f2f6; 9469fa1 is the review-fix commit and the last change of production code, b36f2f6 a test-only fix of two -Wvexing-parse warnings; GitHub run 46092053772 on 9469fa1 was the first run (success; its host-test compile showed two -Wvexing-parse warnings in test_layer_sheet_rules.cpp, fixed in b36f2f6); the final run is 46093496040 on b36f2f6). Three statuses changed, wont-fix -> no-longer-divergent: EXP-13 (alias MSH-M02), EXP-M02 and GEO-15 (Windows holds outward meshes everywhere); counts are now fixed 176, fixed-ui-unverified 23, blocked-needs-decision 0, wont-fix 13, cannot-reproduce 1, no-longer-divergent 7 (220); the values before are in counts.beforePass3. EXP-17 stays wont-fix for byte and triangulation order only. Windows fixes ported or confirmed: shared layer toggle (owner note b), Delete Condition text, Unknown (N) quantity entry, undo/redo refusal, metric width; pins for winding and the last page. The records of the pass are in the top-level key parity3 and in PARITY_MAP.md \"Parity pass 3: Windows d26893c..d1c430a (2026-11-27)\"."
   ],
   "counts": {
    "total": 220,
@@ -55,16 +56,16 @@
     "cannot-reproduce": 1,
     "fix": 199,
     "needs-decision": 0,
-    "no-longer-divergent": 4,
-    "wont-fix": 16
+    "no-longer-divergent": 7,
+    "wont-fix": 13
    },
    "byStatus": {
     "fixed": 176,
     "fixed-ui-unverified": 23,
     "blocked-needs-decision": 0,
-    "wont-fix": 16,
+    "wont-fix": 13,
     "cannot-reproduce": 1,
-    "no-longer-divergent": 4
+    "no-longer-divergent": 7
    },
    "byImpactAndStatus": {
     "wrong-numbers": {
@@ -81,8 +82,8 @@
     "behavior": {
      "fixed": 63,
      "fixed-ui-unverified": 13,
-     "wont-fix": 11,
-     "no-longer-divergent": 3,
+     "wont-fix": 8,
+     "no-longer-divergent": 6,
      "total": 90
     },
     "ui-cosmetic": {
@@ -110,9 +111,9 @@
     "export-formats": {
      "fixed": 16,
      "fixed-ui-unverified": 1,
-     "wont-fix": 3,
-     "no-longer-divergent": 1,
+     "wont-fix": 2,
      "cannot-reproduce": 1,
+     "no-longer-divergent": 2,
      "total": 22
     },
     "geometry": {
@@ -133,8 +134,8 @@
     },
     "meshing": {
      "fixed": 18,
-     "wont-fix": 3,
-     "no-longer-divergent": 1,
+     "wont-fix": 1,
+     "no-longer-divergent": 3,
      "total": 22
     },
     "parsers-units": {
@@ -171,8 +172,8 @@
     "fixed": 26,
     "fixed-ui-unverified": 4,
     "blocked-needs-decision": 0,
-    "wont-fix": 13,
-    "no-longer-divergent": 1
+    "wont-fix": 11,
+    "no-longer-divergent": 3
    },
    "decidedOn2026_11_19": {
     "items": 23,
@@ -363,7 +364,33 @@
     },
     "note": "The totals before job 8 (the values of this block at the end of job 7, 2026-11-21). Job 8 (step 0) changed four statuses, fixed-ui-unverified -> fixed, because the owner's device checks passed: COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08; the dispositions did not change (fix 199, wont-fix 16, no-longer-divergent 4, cannot-reproduce 1). The outcome of the 44 decisions of 2026-11-16 is now 26 fixed, 4 fixed-ui-unverified, 13 wont-fix and 1 no-longer-divergent (COND-STYLE-02 and COND-M08 are two of the 44)."
    },
-   "m1Note": "Updated 2026-11-24 (job 8, M1): these counts cover the 220 parity items only; the eight M1 records are in m1Items and are not counted here; no status of the 220 items changed in M1."
+   "m1Note": "Updated 2026-11-24 (job 8, M1): these counts cover the 220 parity items only; the eight M1 records are in m1Items and are not counted here; no status of the 220 items changed in M1.",
+   "beforePass3": {
+    "date": "2026-11-27",
+    "byStatus": {
+     "fixed": 176,
+     "fixed-ui-unverified": 23,
+     "blocked-needs-decision": 0,
+     "wont-fix": 16,
+     "cannot-reproduce": 1,
+     "no-longer-divergent": 4
+    },
+    "byDisposition": {
+     "cannot-reproduce": 1,
+     "fix": 199,
+     "needs-decision": 0,
+     "no-longer-divergent": 4,
+     "wont-fix": 16
+    },
+    "decidedByStatus": {
+     "fixed": 26,
+     "fixed-ui-unverified": 4,
+     "blocked-needs-decision": 0,
+     "wont-fix": 13,
+     "no-longer-divergent": 1
+    },
+    "note": "The totals before parity pass 3 (the values of this block at the end of pass 2, 2026-11-27). Pass 3 moved THREE statuses, wont-fix -> no-longer-divergent: EXP-13 (alias MSH-M02), EXP-M02 and GEO-15 (Windows d1c430a holds outward meshes everywhere); fixed 176, fixed-ui-unverified 23 and the other statuses are unchanged; fixed + fixed-ui-unverified is still 199 items ported."
+   }
   },
   "decisions2026_11_19": {
    "date": "2026-11-19",
@@ -1922,7 +1949,12 @@
       "ost_visualizer/infrastructure/mdb/components/layer_operations.py:43-55"
      ],
      "iosMeanwhile": "iOS writes the other bid's row too (ost_store::set_layer_visibility is unchanged) and leaves memory and the Layers sheet stale until the bid is reloaded; nothing refuses it.",
-     "ask": "Refuse the single toggle of a shared row, or update merged_layers[].show on success?"
+     "ask": "Refuse the single toggle of a shared row, or update merged_layers[].show on success?",
+     "updatedPass3": {
+      "date": "2026-11-27",
+      "status": "resolved (closed)",
+      "text": "Resolved 2026-11-27 (parity pass 3): Windows d1c430a refuses the single toggle in the UI layer and iOS refuses it in Core and in the store (P3-002); the default \"iOS writes the other bid's row and leaves memory stale\" is gone."
+     }
     },
     {
      "id": "FYI-01",
@@ -2910,6 +2942,18 @@
     },
     "reading": "fixed + fixed-ui-unverified = 199 items ported (172 + 27); blocked-needs-decision = 0 (the 8 items kept for the user's decision were decided on 2026-11-19; four of them are fixed or no-longer-divergent since job 5); wont-fix = 16 (12 by the decisions of 2026-11-16 and 4 by those of 2026-11-19) and cannot-reproduce = 1 are left divergent on purpose; no-longer-divergent = 4 (MSH-19 and, since 2026-11-20, DBP-04, EXP-16 and LP-22: Windows converged on the iOS behaviour). 28 entries of needsMyDecision.open are still current: 26 notes and questions are open (1 question, 18 FYI notes, 7 cross-cluster issues) and 2 (notes j and o, FYI-19 and FYI-24) are informational; owner notes a, e, g and k are resolved (closed); the counting rule is in needsMyDecision.note. [Updated 2026-11-21 (job 6): COND-M08 moved from fixed to fixed-ui-unverified (172 + 27 = 199, unchanged); previousFinalOutcome2026_11_20 holds the figures of job 5.] [Updated 2026-11-21 (job 7): documents only, no status changed (172 + 27 = 199 ported, unchanged); owner note k (FYI-20) was closed by the owner's decision; the device-check table of the owner came back blank (header.decisionsJob7); readingJob6 holds the reading of job 6.]",
     "note": "The figures at the end of job 7 (before job 8 moved four items to fixed because the owner's device checks passed)."
+   },
+   "updatePass3": {
+    "date": "2026-11-27",
+    "statusCounts": {
+     "fixed": 176,
+     "fixed-ui-unverified": 23,
+     "blocked-needs-decision": 0,
+     "wont-fix": 13,
+     "cannot-reproduce": 1,
+     "no-longer-divergent": 7
+    },
+    "text": "Parity pass 3: wont-fix 16 -> 13 and no-longer-divergent 4 -> 7 (EXP-13 with alias MSH-M02, EXP-M02 and GEO-15: Windows d1c430a made every mesh outward-facing, so the decisions \"iOS stays outward unlike Windows\" are no longer a deliberate difference); fixed 176 and fixed-ui-unverified 23 are unchanged (199 ported). The previous figures of this object are history."
    }
   },
   "deviceChecksJob8": {
@@ -9169,7 +9213,7 @@
    "owner": "meshing",
    "title": "OBJ face winding is inside-out for cylinders (circle/ellipse count) and curved walls",
    "impact": "behavior",
-   "disposition": "wont-fix",
+   "disposition": "no-longer-divergent",
    "dispositionPhase1": "fix",
    "testable": "core-cpp",
    "windows": {
@@ -9186,11 +9230,11 @@
    "testPlan": "Same values as the mapper plan, with no negative takeoff in the project. Circle width 24, height 48 gives +21467.487; curved wall [0,200,100,200,50,230] curve 0 height 96 thickness 6 gives +70478.256; straight wall +57600. Do not copy the Windows triangle prism quirk (-6912). [Rebaselined 2026-11-16] Unchanged: keep 'no negative takeoff in the project' for every winding assertion (circle width 24 height 48 +21467.487; curved wall +70478.256; straight wall +57600).",
    "note": "Rebaselined 2026-11-20 (job 5): Windows b9902e6 no longer flips every positive when the export holds a negative: Windows b9902e6 (boolean_operations.py:37-111): a positive whose bounding box does not strictly overlap any same-type negative bounding box (touching counts as apart) is returned as the ORIGINAL mesh with its generator winding (:96-98); only the native result of a positive that may be cut is flipped (:99); an empty positive counts as may-be-cut (:63), empty negatives are ignored (:56), boolean_union still flips (:121). So no untouched positive changes winding because of a negative of another type any more. The 'positive signed volume' oracle therefore also holds for an untouched positive next to a negative; the boolean_applied flag that the 2026-11-19 assessment suggested was not used. | Earlier note (superseded where it conflicts with this one): Rebaselined 2026-11-16: Plan caveat only: the Windows OBJ face winding of an untouched positive depends on whether the export contains a negative mesh (apply_boolean_operations flips every positive when one exists, and the OBJ writer flips again), so the 'positive signed volume' oracle holds only for exports without negative takeoffs (the existing plan already says so). | Earlier note (Phase 1, superseded where it conflicts with the re-baseline): The root cause is in the meshing area. It is visible in OBJ viewers with backface culling, where the cylinders look empty or black. Windows itself writes the isosceles triangle prism inside-out (signed volume -6912 for w=24,d=12,h=48), so do not copy that quirk when triangle prisms are ported. Root cause is in gen_count.cpp / gen_curved.cpp face tables. When triangle/rhombus prisms are ported (MSH-09/MSH-10) Windows writes them inward; do not copy that quirk (Windows has no winding contract).",
    "verdict": "CONFIRMED",
-   "status": "wont-fix",
+   "status": "no-longer-divergent",
    "statusBefore": "open",
    "statusCluster": "core: export-writers",
    "statusWhere": "Core/Meshing/gen_count.cpp, Core/Meshing/gen_curved.cpp",
-   "statusNote": "Cylinders and curved walls are outward-facing (positive volume) and wired. Every exported mesh stays outward-facing, with or without a negative. DECIDED 2026-11-19 (keep iOS, no code change; alias MSH-M02 follows; same line as EXP-M02 / GEO-15 / EXP-17) and CONFIRMED 2026-11-20 (job 5) after Windows changed the rule differently than the 2026-11-19 text assumed: Windows b9902e6 (boolean_operations.py:37-111): a positive whose bounding box does not strictly overlap any same-type negative bounding box (touching counts as apart) is returned as the ORIGINAL mesh with its generator winding (:96-98); only the native result of a positive that may be cut is flipped (:99); an empty positive counts as may-be-cut (:63), empty negatives are ignored (:56), boolean_union still flips (:121). So no untouched positive changes winding because of a negative of another type any more. The generator winding split of EXP-17 remains (Windows pins it with its own integration test, test_uncut_winding_with_negatives.py:226). iOS keeps EVERY mesh outward-facing, with or without a negative (nothing in iOS consumes or inverts the old flip: BooleanPass never touches faces, there is no culling, the shaders light two-sided and the writers write faces as stored); the bounding-box pre-check is NOT ported (only the vertex / face-list identity and the speed of an uncut same-type positive differ, since iOS sends it through the boolean difference). Pinned by ObjWinding.BooleanDifferenceResultsAreOutwardFacing (renamed: it tests boolean_difference_batch only), BooleanRule.Winding_ThePassNeverReversesTheFacesOfAPositive, ExportRule.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacing (with its Manifold twin ExportRuleManifold.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacingWithManifold) and ObjWinding.ExportedMeshesHaveThePositiveSignedVolumeOfTheWindowsObj. Windows classification: partly fixed on Windows, decided on iOS.",
+   "statusNote": "NO LONGER DIVERGENT since 2026-11-27 (parity pass 3, Windows d1c430a): The winding premise of this decision is gone since Windows d1c430a (alias MSH-M02 follows). Windows d1c430a (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\") made every 3D mesh outward-facing: outward_faces (ost_visualizer/presentation/visualization/utils/mesh.py:62) on every generator, the face flip removed from the boolean pass and from the OBJ writer (obj_writer.py:23-25), the FBX writer in mesh order; the HTML scene normals follow the outward windings. iOS already stored every mesh outward, so there is NO code change on iOS; the pins are the tests of P3-011 (OutwardWindingPerShape.*, OutwardWindingPerShapeManifold.*). | earlier text (history, the premise of it is gone): Cylinders and curved walls are outward-facing (positive volume) and wired. Every exported mesh stays outward-facing, with or without a negative. DECIDED 2026-11-19 (keep iOS, no code change; alias MSH-M02 follows; same line as EXP-M02 / GEO-15 / EXP-17) and CONFIRMED 2026-11-20 (job 5) after Windows changed the rule differently than the 2026-11-19 text assumed: Windows b9902e6 (boolean_operations.py:37-111): a positive whose bounding box does not strictly overlap any same-type negative bounding box (touching counts as apart) is returned as the ORIGINAL mesh with its generator winding (:96-98); only the native result of a positive that may be cut is flipped (:99); an empty positive counts as may-be-cut (:63), empty negatives are ignored (:56), boolean_union still flips (:121). So no untouched positive changes winding because of a negative of another type any more. The generator winding split of EXP-17 remains (Windows pins it with its own integration test, test_uncut_winding_with_negatives.py:226). iOS keeps EVERY mesh outward-facing, with or without a negative (nothing in iOS consumes or inverts the old flip: BooleanPass never touches faces, there is no culling, the shaders light two-sided and the writers write faces as stored); the bounding-box pre-check is NOT ported (only the vertex / face-list identity and the speed of an uncut same-type positive differ, since iOS sends it through the boolean difference). Pinned by ObjWinding.BooleanDifferenceResultsAreOutwardFacing (renamed: it tests boolean_difference_batch only), BooleanRule.Winding_ThePassNeverReversesTheFacesOfAPositive, ExportRule.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacing (with its Manifold twin ExportRuleManifold.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacingWithManifold) and ObjWinding.ExportedMeshesHaveThePositiveSignedVolumeOfTheWindowsObj. Windows classification: partly fixed on Windows, decided on iOS.",
    "sourceArea": "export-formats",
    "files": [
     "Core/Meshing/gen_count.cpp",
@@ -9336,7 +9380,20 @@
      "windowsWhere": "ost_visualizer/presentation/visualization/core/boolean_operations.py:49-54,58-61 (unflipped without negatives, flipped with); ost_visualizer/presentation/visualization/exporters/adapters/obj_writer.py:32-43 (faces written as (f0,f2,f1), unchanged)",
      "windowsBehavior": "Every box-like, cylinder and curved mesh comes out outward-facing (positive signed volume) after the vertex rotation and face swap. Verified: circle d=24 h=48 gives +21467.487; curved wall (0,200)-(100,200) via (50,230), curve=0, h=96, t=6 gives +70478.256; straight/sloped wall, rotated box, area flat and sloped, and attachment all positive. [Rebaselined 2026-11-16] Unchanged without negatives: wall [0,0,100,0] height 96 thickness 6 -> OBJ signed volume +57600 (verified again, 8 vertices, 12 faces); slab 100x100x6 +60000. With any negative mesh in the export the untouched positives come out with the opposite sign (-57600, -60000)."
     }
-   }
+   },
+   "statusBeforePass3": "wont-fix",
+   "dispositionBeforePass3": "wont-fix",
+   "updatedPass3": {
+    "date": "2026-11-27",
+    "windowsHead": "d1c430a",
+    "statusBefore": "wont-fix",
+    "status": "no-longer-divergent",
+    "text": "The winding premise of this decision is gone since Windows d1c430a (alias MSH-M02 follows). Windows d1c430a (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\") made every 3D mesh outward-facing: outward_faces (ost_visualizer/presentation/visualization/utils/mesh.py:62) on every generator, the face flip removed from the boolean pass and from the OBJ writer (obj_writer.py:23-25), the FBX writer in mesh order; the HTML scene normals follow the outward windings. iOS already stored every mesh outward, so there is NO code change on iOS; the pins are the tests of P3-011 (OutwardWindingPerShape.*, OutwardWindingPerShapeManifold.*).",
+    "item": "P3-010",
+    "codeChange": false,
+    "staleCommentsToFix": "Core/Meshing/BooleanPass.hpp:59-66, Config/Tests/Export/test_boolean_rule.cpp:11,164-171,270, Config/Tests/Export/test_obj_writer.cpp:503-509,598-640, Config/Tests/Export/test_export_mesh_set.cpp:559-568, Core/Meshing/mesh_helpers.hpp:34-38, Core/Meshing/gen_count.cpp:147, Config/Tests/Meshing/test_takeoff_meshes.cpp:200, Config/Tests/README.md:70 (comment-only edits; find the current lines with grep)"
+   },
+   "windowsFixedPass3": "Fixed on Windows in d1c430a (see updatedPass3)."
   },
   {
    "id": "EXP-11",
@@ -13013,6 +13070,23 @@
      "CondUpd02_ConditionToSave.ATouchedSlotIsNormalisedAsBefore"
     ],
     "supersedes": "the job 7 decision of the quantity reset (not ported) and possibleWindowsDefectsJob6[0] and [1] of this record"
+   },
+   "updatedPass3": {
+    "date": "2026-11-27",
+    "windowsHead": "d1c430a",
+    "item": "P3-005",
+    "status": "fixed-ui-unverified (unchanged)",
+    "text": "The stored quantity that the style does not offer now shows as a disabled \"Unknown (N)\" entry in the quantity Results row and the Quantity picker; \"(none)\" clears it; a notes-only save keeps it (Windows d1c430a, edit_condition_dialog.py). The Windows defect \"an unoffered quantity cannot be cleared\" (WD-X1) is fixed on Windows. Device check P3-03.",
+    "tests": [
+     "CondQtyChoices.AQuantityTheStyleDoesNotOfferIsUnknown",
+     "CondQtyChoices.AnOfferedQuantityOrNoneIsNotUnknown",
+     "CondQtyChoices.TheEntryTextIsUnknownWithTheStoredNumber",
+     "CondQtyChoices.TheRowLabelNamesTheQuantity"
+    ],
+    "commits": [
+     "8a94d2c",
+     "dbff589"
+    ]
    }
   },
   {
@@ -13475,7 +13549,7 @@
    "statusBefore": "decided",
    "statusCluster": "core: meshing2",
    "statusWhere": "Core/Meshing/mesh_helpers.hpp, Core/Meshing/gen_count.cpp, Core/Meshing/gen_linear.cpp, Core/Meshing/gen_curved.cpp",
-   "statusNote": "Closed by user decision: Won't fix for byte-identical vertex/face order parity. User decision 2026-11-16, option (a): \"geometric equivalence is enough; keep outward-facing meshes; fix the triangulation sets only (GEO-14); no byte-identical vertex/face order\". Item reason: Geometric equivalence (same vertex set, same bounding box, positive signed volume) is enough; byte-identical OBJ vertex and face order would nee... [text cut in the source] | UPDATED 2026-11-20 (job 5): Windows b9902e6 did not change the generator winding split (box, radial and area prisms inward; triangle and rhombus prisms outward): boolean_operations.py (:96-98) now returns an uncut positive with its generator winding, so the split is the same with or without negatives, and Windows pins it with its own integration test (tests/integration/geometry/test_uncut_winding_with_negatives.py:226: the 3D view and HTML mesh data of the test scene give wall -800 and rhombus +1150, its OBJ wall +800 and rhombus -1150, in the identity frame of the test; the OBJ writer swaps every face, adapters/obj_writer.py:38-43). Vertex order and triangulation are unchanged. The decision stands (geometric equivalence; iOS keeps every mesh outward); no code change.",
+   "statusNote": "STILL WON'T-FIX, now for byte and triangulation ORDER only (parity pass 3, Windows d1c430a): the winding split by shape of Windows is gone (every Windows generator is outward), so the winding half of the premise is history; what remains is that iOS has no bounding-box shortcut, so an uncut positive of a type that has a negative is rebuilt by the difference (same geometry, the triangle order may differ). | earlier text (history, the premise of it is gone): Closed by user decision: Won't fix for byte-identical vertex/face order parity. User decision 2026-11-16, option (a): \"geometric equivalence is enough; keep outward-facing meshes; fix the triangulation sets only (GEO-14); no byte-identical vertex/face order\". Item reason: Geometric equivalence (same vertex set, same bounding box, positive signed volume) is enough; byte-identical OBJ vertex and face order would nee... [text cut in the source] | UPDATED 2026-11-20 (job 5): Windows b9902e6 did not change the generator winding split (box, radial and area prisms inward; triangle and rhombus prisms outward): boolean_operations.py (:96-98) now returns an uncut positive with its generator winding, so the split is the same with or without negatives, and Windows pins it with its own integration test (tests/integration/geometry/test_uncut_winding_with_negatives.py:226: the 3D view and HTML mesh data of the test scene give wall -800 and rhombus +1150, its OBJ wall +800 and rhombus -1150, in the identity frame of the test; the OBJ writer swaps every face, adapters/obj_writer.py:38-43). Vertex order and triangulation are unchanged. The decision stands (geometric equivalence; iOS keeps every mesh outward); no code change.",
    "sourceArea": "export-formats",
    "files": [
     "Core/Meshing/gen_linear.cpp",
@@ -13559,7 +13633,17 @@
     "citationOnly": false,
     "dispositionNow": "wont-fix",
     "iosNow": "Unchanged."
-   }
+   },
+   "updatedPass3": {
+    "date": "2026-11-27",
+    "windowsHead": "d1c430a",
+    "status": "wont-fix (unchanged)",
+    "scope": "byte and triangulation order only",
+    "item": "P3-008",
+    "text": "Windows d1c430a made every generator outward (outward_faces, mesh.py:62), removed the face flip from the boolean pass and from the OBJ writer: the winding half of the decision is parity. The decision \"geometric equivalence is enough, no byte-identical vertex/face order\" stands for the order of vertices and triangles only. Pins: P3-011 (OutwardWindingPerShape.*).",
+    "codeChange": false
+   },
+   "windowsFixedPass3": "The mixed windings are fixed on Windows in d1c430a; the order difference (bounding-box shortcut) is not a Windows defect."
   },
   {
    "id": "EXP-18",
@@ -13741,7 +13825,7 @@
    "owner": "export-formats",
    "title": "HTML scene winding and normal sign: Windows sends inward-facing meshes and inward normals, and the viewer lights with the raw normal",
    "impact": "behavior",
-   "disposition": "wont-fix",
+   "disposition": "no-longer-divergent",
    "testable": "core-cpp",
    "windows": {
     "where": "ost_visualizer/presentation/visualization/core/boolean_operations.py:10-12 (_flip_manifold_faces), :37-67 (bounds and cut flags), :70-111 (apply_boolean_operations; an uncut positive is returned as the original mesh :96-98, the native result of a possibly cut positive is flipped :99), :121 (flip in boolean_union); ost_visualizer/presentation/visualization/renderers/threejs/adapters/threejs_mesh_adapter.py:160-178, ost_visualizer/presentation/visualization/utils/mesh.py:115-200 and ost_visualizer/presentation/visualization/renderers/threejs/templates/viewer.html:2256-2310 (the last three files are unchanged in b9902e6)",
@@ -13759,11 +13843,11 @@
    "testPlan": "After the EXP-01 fix, feed ThreeJSWriter an outward-wound unit box and check the normal sign against the chosen convention. Windows reference for a 100x96x6 wall without negatives: signed volume of the emitted geometry is -57600 and the top-face normal points down (viewer -Y). [Rebaselined 2026-11-16] Unchanged decision item. If 'reproduce Windows' is chosen, the reference numbers above (+57600 / -57600 for the wall without/with a cross-type negative, +60000 / -60000 for the slab) are the oracle; if outward normals are kept, assert +volume in every case. Do not assert winding in the MSH-16 / EXP-22 tests. [Superseded / updated 2026-11-20 (job 5): the Windows reference numbers (+57600 / -57600 for the wall without / with a cross-type negative, +60000 / -60000 for the slab) are the 6d4786f values; since Windows b9902e6 an untouched positive keeps its winding next to a negative (boolean_operations.py:96-98).]",
    "note": "Rebaselined 2026-11-20 (job 5): Windows b9902e6 no longer flips every positive when the export holds a negative; the HTML path uses the same boolean pass, so the winding and the lighting normals of an untouched positive no longer depend on a negative of another type (Windows b9902e6 (boolean_operations.py:37-111): a positive whose bounding box does not strictly overlap any same-type negative bounding box (touching counts as apart) is returned as the ORIGINAL mesh with its generator winding (:96-98); only the native result of a positive that may be cut is flipped (:99); an empty positive counts as may-be-cut (:63), empty negatives are ignored (:56), boolean_union still flips (:121). So no untouched positive changes winding because of a negative of another type any more.) | Earlier note (superseded where it conflicts with this one): Rebaselined 2026-11-16: The citation 'core/boolean_operations.py:10-13,60-65' was already off (the flip of every returned positive is in apply_boolean_operations, not at :60-65), and boolean_operations.py gained 12 lines. The flip-when-any-negative-exists behavior now matters for OBJ and DXF too, because every format shares the pass and the writers only read its results. | Earlier note (Phase 1, superseded where it conflicts with the re-baseline): Only matters if the Windows shader or normal data is adopted (EXP-19 and EXP-20 decision). Windows' flip-when-negatives-exist behavior is itself inconsistent, so do not guess which sign convention to reproduce.",
    "verdict": "CONFIRMED (verifier-added)",
-   "status": "wont-fix",
+   "status": "no-longer-divergent",
    "statusBefore": "decided",
    "statusCluster": "owner: export-formats",
    "statusWhere": "Core/Export/threejs_writer.cpp:109-144",
-   "statusNote": "Closed by user decision: Won't fix. User decision 2026-11-16, option (b): \"keep outward normals\". Item reason: the sign only matters if the Windows shader or normal data is adopted; EXP-19 adopts constants only and EXP-20 excludes crease-split normals, so outward normals stay. UPDATED 2026-11-20 (job 5): the reason 'Windows flips winding only when the export holds a negative' described 6d4786f; since Windows b9902e6 (boolean_operations.py:37-111): a positive whose bounding box does not strictly overlap any same-type negative bounding box (touching counts as apart) is returned as the ORIGINAL mesh with its generator winding (:96-98); only the native result of a positive that may be cut is flipped (:99); an empty positive counts as may-be-cut (:63), empty negatives are ignored (:56), boolean_union still flips (:121). So no untouched positive changes winding because of a negative of another type any more. The decision stands (iOS keeps outward meshes and outward normals); nothing in iOS consumes or inverts the old flip; no code change. Pinned by BooleanRule.Winding_ThePassNeverReversesTheFacesOfAPositive and ExportRule.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacing.",
+   "statusNote": "NO LONGER DIVERGENT since 2026-11-27 (parity pass 3, Windows d1c430a): The winding premise of this decision is gone since Windows d1c430a (the HTML scene normals follow the outward windings). Windows d1c430a (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\") made every 3D mesh outward-facing: outward_faces (ost_visualizer/presentation/visualization/utils/mesh.py:62) on every generator, the face flip removed from the boolean pass and from the OBJ writer (obj_writer.py:23-25), the FBX writer in mesh order; the HTML scene normals follow the outward windings. iOS already stored every mesh outward, so there is NO code change on iOS; the pins are the tests of P3-011 (OutwardWindingPerShape.*, OutwardWindingPerShapeManifold.*). | earlier text (history, the premise of it is gone): Closed by user decision: Won't fix. User decision 2026-11-16, option (b): \"keep outward normals\". Item reason: the sign only matters if the Windows shader or normal data is adopted; EXP-19 adopts constants only and EXP-20 excludes crease-split normals, so outward normals stay. UPDATED 2026-11-20 (job 5): the reason 'Windows flips winding only when the export holds a negative' described 6d4786f; since Windows b9902e6 (boolean_operations.py:37-111): a positive whose bounding box does not strictly overlap any same-type negative bounding box (touching counts as apart) is returned as the ORIGINAL mesh with its generator winding (:96-98); only the native result of a positive that may be cut is flipped (:99); an empty positive counts as may-be-cut (:63), empty negatives are ignored (:56), boolean_union still flips (:121). So no untouched positive changes winding because of a negative of another type any more. The decision stands (iOS keeps outward meshes and outward normals); nothing in iOS consumes or inverts the old flip; no code change. Pinned by BooleanRule.Winding_ThePassNeverReversesTheFacesOfAPositive and ExportRule.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacing.",
    "sourceArea": "export-formats",
    "files": [
     "Core/Export/threejs_writer.cpp"
@@ -13877,7 +13961,20 @@
      "windowsWhere": "ost_visualizer/presentation/visualization/core/boolean_operations.py:10-13 (_flip_manifold_faces), :58-61 (flip of every positive returned by the native call), :49-54 (no negative mesh -> positives returned unflipped), :81 (flip in boolean_union); ost_visualizer/presentation/visualization/renderers/threejs/adapters/threejs_mesh_adapter.py:160-178, ost_visualizer/presentation/visualization/utils/mesh.py:115-200 and ost_visualizer/presentation/visualization/renderers/threejs/templates/viewer.html:2256-2310 (all unchanged)",
      "windowsBehavior": "Measured on real Windows HTML scenes: signed volume of wall -57600, column -13824, circle -21467.487, slab -57600, and mean(outward . normal) is negative for all of them, so normals point inward. When the export contains any negative takeoff, apply_boolean_operations flips every returned positive, including ones untouched because the negative has another condition type: that slab came out +60000 (outward). The Windows shader computes diffuse as max(dot(normal, lightDir), 0) from the raw normal attribute, so the normal sign changes the lighting. [Rebaselined 2026-11-16] Unchanged for HTML. Measured for OBJ with the real OSTCoordinateSystem (default page): wall [0,0,100,0] height 96 thickness 6 -> OBJ signed volume +57600 with no negative in the export, -57600 when the export also holds a negative takeoff of another condition type (a far-away negative slab) although the wall is untouched; slab [0,0,100,0,100,100,0,100] thickness 6 z 0: +60000 alone, -60000 next to a cross-type negative; a same-type cut piece comes out outward (+54144 for the wall with a crossing same-type negative). With the identity test coordinate system the same effect shows as +4000 / -4000 for the 20x20x10 count box (OBJ). So untouched positives flip orientation as soon as any negative mesh exists, cut pieces do not: Windows is inconsistent within one file. The new Windows tests only read x spans, never the winding."
     }
-   }
+   },
+   "statusBeforePass3": "wont-fix",
+   "dispositionBeforePass3": "wont-fix",
+   "updatedPass3": {
+    "date": "2026-11-27",
+    "windowsHead": "d1c430a",
+    "statusBefore": "wont-fix",
+    "status": "no-longer-divergent",
+    "text": "The winding premise of this decision is gone since Windows d1c430a (the HTML scene normals follow the outward windings). Windows d1c430a (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\") made every 3D mesh outward-facing: outward_faces (ost_visualizer/presentation/visualization/utils/mesh.py:62) on every generator, the face flip removed from the boolean pass and from the OBJ writer (obj_writer.py:23-25), the FBX writer in mesh order; the HTML scene normals follow the outward windings. iOS already stored every mesh outward, so there is NO code change on iOS; the pins are the tests of P3-011 (OutwardWindingPerShape.*, OutwardWindingPerShapeManifold.*).",
+    "item": "P3-010",
+    "codeChange": false,
+    "staleCommentsToFix": "Core/Meshing/BooleanPass.hpp:59-66, Config/Tests/Export/test_boolean_rule.cpp:11,164-171,270, Config/Tests/Export/test_obj_writer.cpp:503-509,598-640, Config/Tests/Export/test_export_mesh_set.cpp:559-568, Core/Meshing/mesh_helpers.hpp:34-38, Core/Meshing/gen_count.cpp:147, Config/Tests/Meshing/test_takeoff_meshes.cpp:200, Config/Tests/README.md:70 (comment-only edits; find the current lines with grep)"
+   },
+   "windowsFixedPass3": "Fixed on Windows in d1c430a (see updatedPass3)."
   },
   {
    "id": "GEO-15",
@@ -13886,7 +13983,7 @@
    "owner": "meshing",
    "title": "Face winding sense is opposite to Windows for every area mesh (outward on iOS, inward on Windows)",
    "impact": "behavior",
-   "disposition": "wont-fix",
+   "disposition": "no-longer-divergent",
    "testable": "core-cpp",
    "windows": {
     "where": "ost_visualizer/presentation/visualization/core/geometry/area.py:69-135; cpp_extensions/src/boolean/boolean_ops.cpp:148-227 (fix_face_winding flips negative-volume meshes)",
@@ -13902,11 +13999,11 @@
    "testPlan": "Decision needed: keep outward-facing iOS meshes (positive volume, safe for Manifold booleans and viewers) vs reproduce Windows' index order exactly for byte-identical exports. If reproducing Windows is required, test: iOS face list for the 4x4x1 CCW square equals Windows [(1,0,3),(3,2,1),(7,4,5),(5,6,7),(0,1,5),(0,5,4),(1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)] (after GEO-14). If outward faces are kept, test signed volume = +16 for the square, +15 for the 4x4 minus 1x1 hole, +12 for the L-shape, +87 for two holes.",
    "note": "The negative-volume outcome on Windows looks like a side effect of negating X without reversing winding, not necessarily intent. Windows renderers and exporters evidently tolerate it. A project-wide decision belongs to the meshing mapper; flagged here because the area/earcut winding is in scope. Verifier: The difference is real: Windows area meshes have negative signed volume (-16 square, -15 with hole, -6 for L [0,0,4,0,4,1,1,1,1,3,0,3] at thickness 1); iOS gives +16, +15, +6 (outward in its right-handed Y-up frame). Windows does not pin inward vs outward: test_flip_keeps_top_face_winding_direction picks its sign from the unflipped baseline. The iOS bgfx renderer sets no cull state, and MeshLoader derives lighting normals from winding, so Windows' literal winding could light faces inside-out there. Whether to keep outward faces or copy Windows index order exactly is a user decision, as the mapper said. The mapper's L-shape volumes (+/-12) do not match the stated polygon at thickness 1 (6).",
    "verdict": "AMBIGUOUS",
-   "status": "wont-fix",
+   "status": "no-longer-divergent",
    "statusBefore": "decided",
    "statusCluster": "owner: meshing",
    "statusWhere": "Core/Meshing/gen_area.cpp:160-201",
-   "statusNote": "Closed by user decision: Won't fix for winding parity. User decision 2026-11-16, option (a): \"keep outward-facing iOS meshes (no winding change); fix the triangulation sets only (GEO-14)\". Item reason: Windows area meshes are inward-facing (negative signed volume, a side effect of negating X without reversing winding); iOS meshes stay outward-facing (positive volume, safe for Manifold and viewers). No winding chan...",
+   "statusNote": "NO LONGER DIVERGENT since 2026-11-27 (parity pass 3, Windows d1c430a): Windows area meshes are outward-facing now (positive signed volume), like iOS. Windows d1c430a (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\") made every 3D mesh outward-facing: outward_faces (ost_visualizer/presentation/visualization/utils/mesh.py:62) on every generator, the face flip removed from the boolean pass and from the OBJ writer (obj_writer.py:23-25), the FBX writer in mesh order; the HTML scene normals follow the outward windings. iOS already stored every mesh outward, so there is NO code change on iOS; the pins are the tests of P3-011 (OutwardWindingPerShape.*, OutwardWindingPerShapeManifold.*). | earlier text (history, the premise of it is gone): Closed by user decision: Won't fix for winding parity. User decision 2026-11-16, option (a): \"keep outward-facing iOS meshes (no winding change); fix the triangulation sets only (GEO-14)\". Item reason: Windows area meshes are inward-facing (negative signed volume, a side effect of negating X without reversing winding); iOS meshes stay outward-facing (positive volume, safe for Manifold and viewers). No winding chan...",
    "sourceArea": "geometry",
    "files": [
     "Core/Meshing/gen_area.cpp"
@@ -13924,7 +14021,20 @@
     "decidedOn": "2026-11-16"
    },
    "closedReason": "Won't fix for winding parity. User decision 2026-11-16, option (a): \"keep outward-facing iOS meshes (no winding change); fix the triangulation sets only (GEO-14)\". Item reason: Windows area meshes are inward-facing (negative signed volume, a side effect of negating X without reversing winding); iOS meshes stay outward-facing (positive volume, safe for Manifold and viewers). No winding change (the \"wall rule flipped consistently\" clause of option (a) is superseded by the user note \"no winding change\"); only the triangulation sets are fixed, under GEO-14.",
-   "crossReference": "triangulation sets are fixed by GEO-14 (stays a fix item; add equivalence tests, no ordering/winding change)"
+   "crossReference": "triangulation sets are fixed by GEO-14 (stays a fix item; add equivalence tests, no ordering/winding change)",
+   "statusBeforePass3": "wont-fix",
+   "dispositionBeforePass3": "wont-fix",
+   "updatedPass3": {
+    "date": "2026-11-27",
+    "windowsHead": "d1c430a",
+    "statusBefore": "wont-fix",
+    "status": "no-longer-divergent",
+    "text": "Windows area meshes are outward-facing now (positive signed volume), like iOS. Windows d1c430a (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\") made every 3D mesh outward-facing: outward_faces (ost_visualizer/presentation/visualization/utils/mesh.py:62) on every generator, the face flip removed from the boolean pass and from the OBJ writer (obj_writer.py:23-25), the FBX writer in mesh order; the HTML scene normals follow the outward windings. iOS already stored every mesh outward, so there is NO code change on iOS; the pins are the tests of P3-011 (OutwardWindingPerShape.*, OutwardWindingPerShapeManifold.*).",
+    "item": "P3-010",
+    "codeChange": false,
+    "staleCommentsToFix": "Core/Meshing/BooleanPass.hpp:59-66, Config/Tests/Export/test_boolean_rule.cpp:11,164-171,270, Config/Tests/Export/test_obj_writer.cpp:503-509,598-640, Config/Tests/Export/test_export_mesh_set.cpp:559-568, Core/Meshing/mesh_helpers.hpp:34-38, Core/Meshing/gen_count.cpp:147, Config/Tests/Meshing/test_takeoff_meshes.cpp:200, Config/Tests/README.md:70 (comment-only edits; find the current lines with grep)"
+   },
+   "windowsFixedPass3": "Fixed on Windows in d1c430a (see updatedPass3)."
   },
   {
    "id": "IMP-15",
@@ -15118,7 +15228,15 @@
    "decisionTests": [],
    "decisionTestGap": "Not host-testable: the shaders cannot be compiled or run here (no shaderc, no Metal device); the look was never compared on a device.",
    "dispositionBeforeDecision": "needs-decision",
-   "closedReason": "Won't fix. User decision 2026-11-19 (keep iOS, no code change): The view-dependent normal flip towards the viewer in the 3D lighting stays (option a of the earlier options); the shaders are not changed. No code change."
+   "closedReason": "Won't fix. User decision 2026-11-19 (keep iOS, no code change): The view-dependent normal flip towards the viewer in the 3D lighting stays (option a of the earlier options); the shaders are not changed. No code change.",
+   "updatedPass3": {
+    "date": "2026-11-27",
+    "windowsHead": "d1c430a",
+    "status": "wont-fix (unchanged, KEEP-iOS)",
+    "item": "P3-012",
+    "codeChange": false,
+    "text": "The premise \"the visible effect comes from the winding differences recorded as EXP-13 / EXP-17\" is resolved: Windows lights with vertex normals (nz >= 0 forced, 60 degree smoothing, no view flip) and the outward windings fix its side faces; iOS lights the visible face (flat viewer-facing normal in the HTML writer, view-flipped normal in the 3D view); for closed outward meshes both light the visible side from the side facing the light. Residual: back faces and undersides, smoothing (MSH-21, EXP-20 kept). Not host-testable, device look never compared; M3 note only."
+   }
   },
   {
    "id": "RPV-32",
@@ -15695,6 +15813,25 @@
     "result": "PASS",
     "device": "owner's iPhone",
     "build": "run 44953904172 (head e151655)"
+   },
+   "updatedPass3": {
+    "date": "2026-11-27",
+    "windowsHead": "d1c430a",
+    "item": "P3-002",
+    "status": "fixed (unchanged), owner note b resolved",
+    "text": "Owner note b (single toggle of another bid's locked template row) is RESOLVED: Windows d1c430a refuses it in the UI layer (is_shared_template_layer; title \"Layer Visibility\"), and iOS refuses it in Core (ost_domain::single_layer_visibility_refusal) and, fail-closed, in the store (ost_store::set_layer_visibility); the pass-2 text \"Failed to update layer visibility.\" is gone. Show All / Hide All are unchanged. Device check P3-01.",
+    "tests": [
+     "LayerSheet.SingleToggleOfASharedTemplateLayerIsRefusedWithTheTextAndTheTitle",
+     "LayerSheet.SingleToggleOfASharedTemplateLayerTextsAreTheWindowsTexts",
+     "LayerSheet.SingleToggleOfAnyOtherRowIsNotRefused",
+     "Lp24_SingleToggle.AnotherBidsLockedTemplateRowIsRefusedByTheStoreAndNothingIsWritten",
+     "Lp24_SingleToggle.TheBidsOwnLockedCopyAndPlainLayersAreStillWritten"
+    ],
+    "commits": [
+     "14f4a20",
+     "8741d88",
+     "466a9b9"
+    ]
    }
   },
   {
@@ -16147,7 +16284,8 @@
      "windows": "A metric bid starts from imperial values (no metric branch in build_spec) while the dialog shows 100 / 150 / 300 mm after a style change.",
      "ios": "A metric bid starts with the metric defaults (100 / 150 / 300 mm, uom 13 / 14) from style_dimension_defaults and apply_style_change (no second copy of TYPE_DEFAULTS); an imperial bid equals Windows (N-M1-08).",
      "status": "safe-deviation-ui-unverified",
-     "why": "Matches what the dialog itself shows after a style change (see COND-STYLE-02, COND-METRIC-01)."
+     "why": "Matches what the dialog itself shows after a style change (see COND-STYLE-02, COND-METRIC-01).",
+     "updatePass3": "Updated 2026-11-27 (parity pass 3, Windows d1c430a): Windows build_spec now passes the form width (300 mm = 11.811023622047244 in in a metric bid, 12.0 otherwise), so a metric new condition starts with the metric width for EVERY style; iOS follows (new_condition_form form.width and build_create_spec spec.width = form.width; test CondCreateSpec.TheNewConditionIsCreatedWithTheWidthTheFormShowsForEveryStyle). The width of a Linear or Area condition is not visible. (P3-014, P3-015)"
     },
     {
      "id": "NC-8",
@@ -16714,7 +16852,8 @@
      "windows": "Select a row, then press New / Delete / Move.",
      "ios": "'+' (end), swipe and long-press menu; a tap still toggles visibility; 'New Layer Below' works for every row, locked and shared included, as Windows New does with any row selected (N-M1-19).",
      "status": "touch-adaptation-ui-unverified",
-     "why": "The tap already has a meaning."
+     "why": "The tap already has a meaning.",
+     "updatePass3": "Updated 2026-11-27 (parity pass 3): a tap on the check mark of a locked template layer that other bids share is refused with the alert \"Layer Visibility\" (Windows text); every other row still toggles. (P3-002)"
     },
     {
      "id": "LY-UI-3",
@@ -17059,7 +17198,8 @@
      "windows": "The last-page rule is UI-only; the writer would delete every page.",
      "ios": "Core refuses when the bid would be left without a page ('Cannot delete the last page in the bid.', title 'Delete Page'); the menu item is disabled with one page.",
      "status": "safe-deviation",
-     "why": "A bid without a page cannot be opened."
+     "why": "A bid without a page cannot be opened.",
+     "updatePass3": "Updated 2026-11-27 (parity pass 3, Windows d1c430a): Windows no longer counts the pseudo page NO_PAGE_ID in the last-page rule (WD-081 fixed on Windows) but the rule is still memory-based and the writer unguarded (WD3-02); iOS keeps the store-level rule and now has a pin for a bid with ONE real page plus takeoffs without a page (DelPageRefusals.TheOnlyPageIsRefusedAlthoughTakeoffsWithoutAPageRemain). (P3-013)"
     },
     {
      "id": "DP-6",
@@ -17083,7 +17223,8 @@
      "windows": "The undo history is not cleared by a local page delete; stale entries are refused later.",
      "ios": "The history is cleared on success (the reload clears it, N-M1-06).",
      "status": "safe-deviation",
-     "why": "No stale undo entries."
+     "why": "No stale undo entries.",
+     "updatePass3": "Updated 2026-11-27 (parity pass 3, Windows d1c430a): Windows now refuses a stale undo/redo entry (missing page or item) and keeps it in its stack; iOS has the same refusal rule (UndoRedoRules) although the case is practically unreachable on iOS because the history is cleared. (P3-004)"
     },
     {
      "id": "DP-9",
@@ -17333,7 +17474,8 @@
      "windows": "_page_scale_for_page_uid answers (1.0, 1.0) for an unknown page, which the replay turns into 48.",
      "ios": "Nothing captured: the replay factor is 1; an unknown page at replay refuses the undo / redo (tests named '..._DeliberateDifferenceFromWindows'). Entries that captured nothing and entries whose page scale did not change replay unchanged.",
      "status": "safe-deviation-ui-unverified",
-     "why": "Never write old-unit positions into a rescaled page."
+     "why": "Never write old-unit positions into a rescaled page.",
+     "updatePass3": "Updated 2026-11-27 (parity pass 3, Windows d1c430a): the replay of an undo/redo whose page is gone is refused on Windows too (HistoryTargetUnavailableError); the CAPTURE side still uses _page_scale_for_page_uid with (1.0, 1.0) for a missing page and a plain ValueError (WD3-03). iOS alerts with the Windows texts (UndoRefusal.*). (P3-004)"
     },
     {
      "id": "SS-UI-1",
@@ -17593,7 +17735,8 @@
     "ElevationTextValue/MetresBeyondTheFloatRangeAreInfinite": "ElevationTextValue.MetresBeyondTheFloatRangeRaiseLikeAnUnreadableText"
    },
    "iosRefsNote": "iosRefs are repo-relative paths, with a line or line range (path:12 or path:12-30) where one place is meant: the lines are those of 8019a8b for the items that were not changed, and for ported items the files that the port changed (lines moved). A remark that used to be written after the path or line is in iosRefNotes of the item (in the order of the entries that carried one); an item with no iOS counterpart for a part of its change has that sentence there too. Normalised on 2026-11-27 in the documents review: before, about 45 entries had free text after the path, a list of lines in one string, a bare file name, or a sentence, and 5 of them were cut off in the middle of a word (their notes say so).",
-   "classVocabulary": "PORT | WORDING | SAME | KEEP-iOS | WINDOWS-ONLY | DEFECT-NOT-COPIED; result: ported | already same | kept | not ported (open) | windows-only"
+   "classVocabulary": "PORT | WORDING | SAME | KEEP-iOS | WINDOWS-ONLY | DEFECT-NOT-COPIED; result: ported | already same | kept | not ported (open) | windows-only",
+   "updatedInPass3": "Parity pass 3 (2026-11-27, Windows d1c430a): the results of P2-021, P2-035, P2-051, P2-081, P2-085, P2-089, P2-107 changed; P2-106, P2-115, P2-068, P2-017 and P2-050 got a note; owner questions 2, 3, 8 and 10 are resolved; WD-035, WD-051, WD-081, WD-089, WD-107, WD-X1 and WD-X2 are fixed on Windows. Each changed entry carries updatedInPass3; the original fields are history. See the top-level key parity3."
   },
   "items": [
    {
@@ -18151,7 +18294,14 @@
     "analystClasses": [
      "SAME"
     ],
-    "note": "iOS never ported the reset (owner decision job 7); pin tests added; closes owner note k as parity."
+    "note": "iOS never ported the reset (owner decision job 7); pin tests added; closes owner note k as parity.",
+    "updatedInPass3": {
+     "result": "same (unchanged)",
+     "item": "P3-005",
+     "text": "The stored quantity that the style does not offer survives an unrelated save; since pass 3 it is also SHOWN as a disabled \"Unknown (N)\" entry and \"(none)\" clears it.",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-018",
@@ -18291,7 +18441,24 @@
     "analystClasses": [
      "WORDING"
     ],
-    "note": "Partly ported on purpose (review R9-04): sentence case yes, Windows grammar slip and question sentence no. Owner question 3."
+    "note": "Partly ported on purpose (review R9-04): sentence case yes, Windows grammar slip and question sentence no. Owner question 3.",
+    "updatedInPass3": {
+     "result": "ported (now follows Windows)",
+     "item": "P3-003",
+     "commits": [
+      "588f376",
+      "dbff589"
+     ],
+     "tests": [
+      "ConditionDeleteText.OneConditionIsAskedAboutWithTheSingularSentence",
+      "ConditionDeleteText.SeveralConditionsAreAskedAboutWithThePluralSentenceAndTheCount",
+      "ConditionDeleteText.OnlyExactlyOneConditionIsSingular",
+      "ConditionDeleteText.TheTitleQuotesTheNameAndIsUnchanged"
+     ],
+     "text": "The keep decision of pass 2 (plural \"takeoffs\" kept, no closing question) is replaced: Windows d1c430a says \"all its takeoffs\" and has both closing sentences, and iOS now has both (the closing \"Are you sure you want to delete this condition?\" is new on iOS; the Delete and Cancel buttons stay). Owner question 3 is resolved. Device check P3-02.",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-022",
@@ -18782,7 +18949,22 @@
      "DEFECT-NOT-COPIED",
      "KEEP-iOS"
     ],
-    "note": "Possible Windows defect (new, medium confidence, derived from code, not run on Windows). iOS keeps form width 12.0."
+    "note": "Possible Windows defect (new, medium confidence, derived from code, not run on Windows). iOS keeps form width 12.0.",
+    "updatedInPass3": {
+     "class": "DEFECT-NOT-COPIED -> fixed on Windows",
+     "result": "iOS equal (ported)",
+     "item": "P3-015",
+     "commits": [
+      "e65c8be"
+     ],
+     "tests": [
+      "CondCreateSpec.TheNewConditionIsCreatedWithTheWidthTheFormShowsForEveryStyle",
+      "CondCreateForm.OnlyThicknessSpacingWidthAndFirstUnitFollowTheMeasurementSystem"
+     ],
+     "text": "Fixed on Windows in d1c430a (width=synthetic.width: 300 mm in a metric bid, 12.0 otherwise); iOS now creates a new metric condition with the 300 mm width for every style (form width and spec width). The pass-2 \"possible Windows defect\" A2-14 / A9-X1 was a Windows bug.",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-036",
@@ -19340,7 +19522,14 @@
     "note": "Possible Windows defect (new, SQL Server only).",
     "iosRefNotes": [
      "11-table rule everywhere"
-    ]
+    ],
+    "updatedInPass3": {
+     "result": "kept (unchanged)",
+     "item": "P3-016",
+     "text": "Windows d1c430a counts a layer used by a condition without takeoffs as in use on SQL Server; iOS (Access only) already did.",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-051",
@@ -19369,7 +19558,27 @@
     ],
     "iosRefNotes": [
      "set_layer_visibility"
-    ]
+    ],
+    "updatedInPass3": {
+     "class": "DEFECT-NOT-COPIED -> fixed on Windows (UI layer)",
+     "result": "iOS refuses in Core and in the store",
+     "item": "P3-002",
+     "commits": [
+      "14f4a20",
+      "8741d88",
+      "466a9b9"
+     ],
+     "tests": [
+      "LayerSheet.SingleToggleOfASharedTemplateLayerIsRefusedWithTheTextAndTheTitle",
+      "LayerSheet.SingleToggleOfASharedTemplateLayerTextsAreTheWindowsTexts",
+      "LayerSheet.SingleToggleOfAnyOtherRowIsNotRefused",
+      "Lp24_SingleToggle.AnotherBidsLockedTemplateRowIsRefusedByTheStoreAndNothingIsWritten",
+      "Lp24_SingleToggle.TheBidsOwnLockedCopyAndPlainLayersAreStillWritten"
+     ],
+     "text": "Windows d1c430a refuses the single toggle of a shared locked template layer in the UI layer only (residual WD3-01: no scope guard in layer_operations.update_layer_show); iOS refuses in Core and, fail-closed, in the store. Owner note b resolved. Device check P3-01.",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-052",
@@ -20028,7 +20237,14 @@
     "analystClasses": [
      "KEEP-iOS"
     ],
-    "note": "Conflict: A8-44 KEEP-iOS vs SAME rows for the no-block result: two items."
+    "note": "Conflict: A8-44 KEEP-iOS vs SAME rows for the no-block result: two items.",
+    "updatedInPass3": {
+     "result": "kept (unchanged)",
+     "item": "P3-018",
+     "text": "Legends: Windows latin-1 + &#N; references, iOS raw UTF-8 today; the M3 round trip must know this and the annotation text rule of P2-115.",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-069",
@@ -20501,7 +20717,23 @@
     "analystClasses": [
      "DEFECT-NOT-COPIED"
     ],
-    "note": "Possible Windows defect (new)."
+    "note": "Possible Windows defect (new).",
+    "updatedInPass3": {
+     "class": "DEFECT-NOT-COPIED -> fixed on Windows (pseudo page part)",
+     "result": "iOS equal; pin added",
+     "item": "P3-013",
+     "commits": [
+      "535f6d6",
+      "4d0b9a9"
+     ],
+     "tests": [
+      "DelPageRefusals.TheOnlyPageIsRefusedAlthoughTakeoffsWithoutAPageRemain",
+      "DelPageRefusals.ABidWithTwoPagesAndTakeoffsWithoutAPageDeletesOnePageAndKeepsThePagelessTakeoffs"
+     ],
+     "text": "Windows d1c430a excludes the pseudo page NO_PAGE_ID from the loaded set; iOS counts BidPages rows inside the transaction (same text). The memory-based UI rule and the unguarded writer stay a note (WD3-02).",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-082",
@@ -20651,7 +20883,41 @@
     "analystClasses": [
      "PORT"
     ],
-    "note": "Optional UI addition (N-M1-03 style); open: owner question 2."
+    "note": "Optional UI addition (N-M1-03 style); open: owner question 2.",
+    "updatedInPass3": {
+     "result": "ported",
+     "item": "P3-004",
+     "commits": [
+      "8d14468",
+      "1a160f8",
+      "14253e5",
+      "9469fa1"
+     ],
+     "tests": [
+      "UndoRefusal.TheFourTextsAndTheTitlesAreTheWindowsOnes",
+      "UndoRefusal.AProgrammaticCallShowsNothing",
+      "UndoRefusal.TheTargetsOfEachEntryKindAndDirection",
+      "UndoRefusal.ATakeoffAndItsPageThatExistAreNotStale",
+      "UndoRefusal.NothingToCheckIsNotStale",
+      "UndoRefusal.ATakeoffThatIsGoneIsStale_CrossSystemMoveUndo",
+      "UndoRefusal.ATakeoffOnAPageThatIsGoneIsStale",
+      "UndoRefusal.APageThatIsGoneIsStale_CrossSystemDeleteUndo",
+      "UndoRefusal.AnEmptyUidDoesNotExist",
+      "UndoRefusal.AStaleDeleteUndoIsRefusedAndTheEntryStays",
+      "UndoRefusal.AStaleMoveUndoIsRefusedAndTheEntryStays",
+      "UndoRefusal.AStaleRedoIsRefusedAndTheEntryStaysOnTheRedoStack",
+      "UndoRefusal.ARemovalReplayIsNotStale",
+      "UndoRefusal.AFailingUserUndoAndRedoGiveTheGenericTextAndTheEntryStays",
+      "UndoRefusal.AnActionThatThrowsIsAGenericFailure",
+      "UndoRefusal.AProgrammaticRefusalOnlyReportsAndShowsNothing",
+      "UndoRefusal.ANormalUndoAndRedoStillWork",
+      "UndoRefusal.AnEmptyHistoryIsNotAFailure",
+      "UndoRefusal.TheStaleCheckRunsBeforeTheWrite"
+     ],
+     "text": "Ported in pass 3 (owner decision \"port\"): the four Windows texts, the stale rule per entry kind, a refused or failed step leaves both stacks unchanged, a user call alerts and a programmatic call only logs; the refusal asks the lock helper first, so a locked bid would say \"This bid is locked.\" (9469fa1), but takeoff writes are not lock-guarded on iOS yet (open M1 point N-M1-01), so an undo in a locked bid simply works and that path is practically unreachable. Owner question 2 is resolved. Device checks P3-04 and P3-05 (the stale and generic alerts are host-test only).",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-086",
@@ -20808,7 +21074,26 @@
     ],
     "analystClasses": [
      "DEFECT-NOT-COPIED"
-    ]
+    ],
+    "updatedInPass3": {
+     "class": "DEFECT-NOT-COPIED -> fixed on Windows",
+     "result": "parity (EXP-13, EXP-M02, GEO-15 no-longer-divergent; EXP-17 order only)",
+     "item": "P3-006",
+     "commits": [
+      "30e3663",
+      "4d0b9a9"
+     ],
+     "tests": [
+      "OutwardWindingPerShape.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithTheStandIn",
+      "OutwardWindingPerShape.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithTheStandIn",
+      "OutwardWindingPerShapeManifold.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithManifold",
+      "OutwardWindingPerShapeManifold.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithManifold",
+      "OutwardWindingPerShapeManifold.TheDropWallUnionIsOutwardForEveryAngleSlopeAndDropDirection"
+     ],
+     "text": "Windows d1c430a (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\") made every 3D mesh outward-facing: outward_faces (ost_visualizer/presentation/visualization/utils/mesh.py:62) on every generator, the face flip removed from the boolean pass and from the OBJ writer (obj_writer.py:23-25), the FBX writer in mesh order; the HTML scene normals follow the outward windings. iOS already stored every mesh outward, so there is NO code change on iOS; the pins are the tests of P3-011 (OutwardWindingPerShape.*, OutwardWindingPerShapeManifold.*).",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-090",
@@ -21345,7 +21630,14 @@
      "DEFECT-NOT-COPIED",
      "PORT"
     ],
-    "note": "M2 plan inputs; CB-3 first half (uid maps sorted as text) still present. Cite tests by name: stale Windows test line numbers in plan 5.7."
+    "note": "M2 plan inputs; CB-3 first half (uid maps sorted as text) still present. Cite tests by name: stale Windows test line numbers in plan 5.7.",
+    "updatedInPass3": {
+     "result": "unchanged (open, M2)",
+     "item": "P3-019",
+     "text": "The snap statuses of the clipboard group were re-read at d1c430a: CB-12 is the only change (fixed on Windows, see P2-107).",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-107",
@@ -21373,7 +21665,15 @@
     "analystClasses": [
      "DEFECT-NOT-COPIED"
     ],
-    "note": "Derived from code, not run: possible Windows defect (new)."
+    "note": "Derived from code, not run: possible Windows defect (new).",
+    "updatedInPass3": {
+     "class": "DEFECT-NOT-COPIED -> fixed on Windows",
+     "result": "M2 input, rule recorded",
+     "item": "P3-019",
+     "text": "CB-12 is fixed on Windows in d1c430a: with snap on the axis that the paste guides aligned is never rounded to the snap increment (rule and test numbers in P3-019, P3-020 and in NEW_FEATURES_PLAN.md section 5.7). Not implemented on iOS (no clipboard yet).",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-108",
@@ -21645,7 +21945,15 @@
     ],
     "analystClasses": [
      "DEFECT-NOT-COPIED"
-    ]
+    ],
+    "updatedInPass3": {
+     "class": "DEFECT-NOT-COPIED",
+     "result": "kept (M4 rule detailed)",
+     "item": "P3-017",
+     "text": "Detail of the Windows rule at d1c430a: latin-1 = exactly U+0000..U+00FF storable (NOT cp1252: euro, curly quotes, dashes and emoji are refused), the first offending character is named, title \"Annotation Text\", text and callout only, Access only, plan-view insert and edit paths only (WD3-04). For M3 and M4 an Access file must keep the latin-1 limit; legends are a different mechanism (P2-068, SS-10).",
+     "date": "2026-11-27",
+     "windowsHead": "d1c430a"
+    }
    },
    {
     "id": "P2-116",
@@ -21843,7 +22151,12 @@
      "X1"
     ],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-035).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "FIXED ON WINDOWS (d1c430a)",
+     "text": "Metric Count/Attachment created with width 12.0 in instead of 300 mm: Windows now passes the form width (300 mm in a metric bid) for every style; iOS equal (P3-014, P3-015)."
+    }
    },
    {
     "id": "WD-045",
@@ -21911,7 +22224,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-050).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "still present (partly changed)",
+     "text": "On SQL Server the sidebar layer delete decides \"in use\" from the loaded memory; since d1c430a a layer used by a condition without takeoffs counts as in use (B1-16); iOS has the single 11-table rule."
+    }
    },
    {
     "id": "WD-051",
@@ -21924,7 +22242,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-051).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "FIXED ON WINDOWS in the UI layer (d1c430a); residual WD3-01",
+     "text": "A single toggle of a shared locked template layer is refused by the Windows UI layer; iOS refuses in Core and in the store (P3-002). Residual: WD3-01."
+    }
    },
    {
     "id": "WD-058",
@@ -21957,7 +22280,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-070).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "still present",
+     "text": "Undo/redo replay rescales with the lenient range-free transform: page_scale_transform.py is unchanged in d1c430a; the replay now refuses a missing page or item (P3-004) but not an out-of-range factor."
+    }
    },
    {
     "id": "WD-071",
@@ -21987,7 +22315,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-081).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "FIXED ON WINDOWS (pseudo page part, d1c430a); residual WD3-02",
+     "text": "The last-page rule no longer counts the pseudo page NO_PAGE_ID; iOS already counted real BidPages rows in the transaction; pin added (P3-013). Residual: WD3-02."
+    }
    },
    {
     "id": "WD-083",
@@ -22030,7 +22363,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-089).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "FIXED ON WINDOWS (d1c430a)",
+     "text": "OBJ and HTML winding: Windows now holds outward meshes everywhere (outward_faces, no flip, mesh order in OBJ and FBX); parity with iOS (P3-006..P3-008, P3-011)."
+    }
    },
    {
     "id": "WD-091",
@@ -22083,7 +22421,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-107).",
-    "milestone": "M2"
+    "milestone": "M2",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "FIXED ON WINDOWS (d1c430a)",
+     "text": "A paste group dropped on the guides with snap on landed off by up to half an increment: the guided axis is no longer rounded (P3-019, P3-020; M2 input)."
+    }
    },
    {
     "id": "WD-115",
@@ -22096,7 +22439,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps its safe behaviour (see item P2-115).",
-    "milestone": "M4"
+    "milestone": "M4",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "still present (partly changed)",
+     "text": "Annotation text and callout names are latin-1 encoded and a character outside it cannot be saved; since d1c430a the plan-view insert and edit paths refuse it with a named character (B1-17), other Access paths are unverified."
+    }
    },
    {
     "id": "WD-X1",
@@ -22108,7 +22456,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS writes a cleared unknown-type quantity (documented deviation).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "FIXED ON WINDOWS (d1c430a)",
+     "text": "A stored quantity the style does not offer is shown as a disabled Unknown (N) entry and \"(none)\" clears it; iOS ported (P3-005)."
+    }
    },
    {
     "id": "WD-X2",
@@ -22120,7 +22473,12 @@
     ],
     "registerIds": [],
     "iosBehaviour": "iOS keeps the plural \"takeoffs\" (review R9-04).",
-    "milestone": ""
+    "milestone": "",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "FIXED ON WINDOWS (d1c430a)",
+     "text": "The condition delete confirmation says \"all its takeoffs\" now; iOS follows Windows (P3-003)."
+    }
    }
   ],
   "ownerQuestions": [
@@ -22134,13 +22492,23 @@
     "n": 2,
     "question": "Undo/redo failure alert: Windows now shows \"The change could not be undone. It is still in the undo history.\" when a user undo/redo cannot be submitted. iOS undo is local and silent. Add the alert (optional UI addition), or keep silent?",
     "area": "undo",
-    "defaultIfUndecided": "keep silent"
+    "defaultIfUndecided": "keep silent",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "RESOLVED",
+     "text": "Undo / redo failure alert: ported (owner decision \"port\", P3-004)."
+    }
    },
    {
     "n": 3,
     "question": "Condition delete confirmation (review R9-04): iOS uses sentence case but keeps the plural \"takeoffs\" and has no closing \"Are you sure you want to delete this condition?\" sentence; Windows says \"all its takeoff\" (a grammar slip). Keep the iOS text, or copy the Windows text exactly?",
     "area": "condition-edit",
-    "defaultIfUndecided": "keep the iOS text"
+    "defaultIfUndecided": "keep the iOS text",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "RESOLVED",
+     "text": "Condition delete wording: iOS now follows Windows (P3-003; the pass-2 keep decision is replaced). Note: the facts of the pass call this question \"Q2\" in an older numbering; in this file, PORTING_BLOCKERS.md and parity2.ownerQuestions it is number 3 and the undo alert is number 2."
+    }
    },
    {
     "n": 4,
@@ -22170,7 +22538,12 @@
     "n": 8,
     "question": "A2-14 / A9-X1: report to the Windows side? A metric Count or Attachment created through New Condition keeps the spec default width 12.0 in (304.8 mm) instead of 300 mm (read from the code, not run on Windows); also the new possible Windows defects \"an unoffered stored quantity cannot be cleared\", the \"takeoff\" grammar slip and CB-12 (the group drag rounds the delta, M2). Report any of them?",
     "area": "windows-report",
-    "defaultIfUndecided": "iOS keeps its behaviour in all four; nothing is reported"
+    "defaultIfUndecided": "iOS keeps its behaviour in all four; nothing is reported",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "RESOLVED (nothing to report)",
+     "text": "A2-14 / A9-X1, \"unoffered quantity cannot be cleared\", the \"takeoff\" grammar slip and CB-12 were all fixed by Windows in d1c430a; nothing is reported to the Windows side for these four."
+    }
    },
    {
     "n": 9,
@@ -22182,7 +22555,12 @@
     "n": 10,
     "question": "Owner note b (open since job 5): a single toggle of another bid's locked template row. Refuse it, or update the merged list on success?",
     "area": "layers",
-    "defaultIfUndecided": "iOS writes the other bid's row and leaves memory stale until a reload"
+    "defaultIfUndecided": "iOS writes the other bid's row and leaves memory stale until a reload",
+    "updatedInPass3": {
+     "date": "2026-11-27",
+     "state": "RESOLVED",
+     "text": "Owner note b (single toggle of another bid's locked template row): iOS refuses in Core and in the store, Windows in the UI layer (P3-002)."
+    }
    },
    {
     "n": 11,
@@ -22201,6 +22579,1366 @@
     "question": "Withdrawal of the job-7 decision on the stray quote (COND-ELEV-01): Windows fixed the quirk, so iOS now refuses it, and the decision \"ported as is\" (2026-11-21) is void. Confirm?",
     "area": "condition-edit",
     "defaultIfUndecided": "the Windows rule is ported (the job-7 decision is withdrawn)"
+   }
+  ]
+ },
+ "parity3": {
+  "header": {
+   "title": "Parity pass 3: Windows d26893c..d1c430a (2026-11-27)",
+   "date": "2026-11-27",
+   "job": "job 10 (parity-sync-2, pass 3)",
+   "windowsHead": "d1c430a",
+   "windowsRange": "d26893c..d1c430a",
+   "windowsCommits": [
+    "d1c430a"
+   ],
+   "windowsNote": "Windows OSTVisualizerLicense, read-only git, clean tree at d1c430a; ONE commit on top of d26893c (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\"), 49 files (production code, tests, AGENTS.md, CHANGELOG.md, the two quality JSON files); no new tag; no tower-crane change.",
+   "iosStart": "c7163c6 (pass-2 docs tip; contains all of M1 and pass 2)",
+   "iosHeads": {
+    "branch": "ios-parity-sync-2",
+    "codeTip": "b36f2f6 (docs commits [skip ci] follow); 9469fa1 is the review-fix commit and the last change of production code; b36f2f6 is the last CI-verified code state and after it only comment-only edits of source files exist: 426e89b (before b36f2f6, inside its tree) and one lock comment in undoRedoPresentRefusalWithTitle:message: of Controllers/ViewController/ViewController.mm (committed together with the documents, [skip ci], no run of its own, no hash recorded here)",
+    "worktreeBranches": [
+     "ios-parity-sync-2-p3layer",
+     "ios-parity-sync-2-p3undo",
+     "ios-parity-sync-2-p3qty",
+     "ios-parity-sync-2-p3misc"
+    ],
+    "mergeCommits": [
+     "466a9b9 p3layer",
+     "14253e5 p3undo",
+     "dbff589 p3qty",
+     "4d0b9a9 p3misc"
+    ],
+    "reviewFix": "9469fa1",
+    "main": "06d8d69 (untouched)",
+    "iosFeatureM1": "8019a8b (untouched)",
+    "pullRequest": "none; no merge into main; no force push",
+    "testFix": "b36f2f6 (test-only: the two -Wvexing-parse warnings of SCOPED_CONTEXT(uid) in Config/Tests/Persistence/test_layer_sheet_rules.cpp; 426e89b before it is comment-only [skip ci])"
+   },
+   "iosCommits": [
+    "8d14468",
+    "1a160f8",
+    "14253e5",
+    "14f4a20",
+    "8741d88",
+    "466a9b9",
+    "588f376",
+    "8a94d2c",
+    "dbff589",
+    "30e3663",
+    "535f6d6",
+    "e65c8be",
+    "4d0b9a9",
+    "9469fa1",
+    "426e89b",
+    "b36f2f6",
+    "later comment-only commit of the integrator after b36f2f6 (the lock comment in undoRedoPresentRefusalWithTitle:message: of ViewController.mm, committed together with the documents, [skip ci]; no hash recorded here)"
+   ],
+   "ci": {
+    "run": "46093496040",
+    "head": "b36f2f6",
+    "result": "success on the first attempt of the final run (created 2026-11-28 01:31:05 UTC, finished 01:42:02 UTC, 10 min 57 s; host tests 12 of 12, BUILD SUCCEEDED, the 9 first-party warnings of the baseline and none in the host-test compile)",
+    "ipaCheck": "IPA 2,164,239 bytes, executable 5,684,112 bytes, checked locally: ALL CHECKS PASSED (bundle id com.fabian.ostvisualizer, MinimumOSVersion 16.0, thin arm64 minos 16.0.0, ldid ad-hoc signature with all 1371 page hashes, entitlements get-task-allowed only, the pass-3 strings present)",
+    "note": "GitHub Build IPA run on b36f2f6 (the code tip of pass 3, the FINAL run). The only change of a source file after b36f2f6 is a comment-only edit of the lock comment in undoRedoPresentRefusalWithTitle:message: in Controllers/ViewController/ViewController.mm, committed together with the documents ([skip ci], no run of its own, no code change); the comment-only commit 426e89b is before b36f2f6 and so inside the CI-verified tree.",
+    "firstRun": {
+     "run": "46092053772",
+     "head": "9469fa1",
+     "result": "success",
+     "note": "The first run (success; its host-test compile showed two -Wvexing-parse warnings in test_layer_sheet_rules.cpp, fixed in b36f2f6); the final run is 46093496040 on b36f2f6: the host-test compile of the first run showed two -Wvexing-parse warnings in test_layer_sheet_rules.cpp, fixed in b36f2f6 (test-only)."
+    }
+   },
+   "tests": {
+    "msvcBefore": 2938,
+    "msvcAfter": 2975,
+    "msvcDelta": 37,
+    "manifoldBefore": 2947,
+    "manifoldAfter": 2987,
+    "manifoldDelta": 40,
+    "perAreaBeforeAfter": {
+     "Conditions": "567->576 (+9: 8 quantity and delete text, 1 metric width)",
+     "Export": "108->110 (+2 winding pins; with Manifold 114->119, +5)",
+     "Persistence": "950->957 (+7: 5 layer toggle, 2 last-page pin)",
+     "Settings": "122->141 (+19 undo refusal)"
+    },
+    "unchangedAreas": "Browser 67, Formatting 151, Geometry 266, Harness 10, Import 307, Meshing 107 (110 with Manifold), Parsers 149, Quantities 134",
+    "checkObjc": "42/42 ok, 0 errors, 4 baseline warnings after every .mm change; selector scan = 6 baseline undeclared selectors",
+    "clangFma": "12/12 (zig clang x86-64 -mfma -ffp-contract=on; 2938 passed at c7163c6)",
+    "renamedTest": "CondCreateForm.OnlyThicknessSpacingAndFirstUnitFollowTheMeasurementSystem -> CondCreateForm.OnlyThicknessSpacingWidthAndFirstUnitFollowTheMeasurementSystem (the metric width pin changed first, red)",
+    "renamedTests": {
+     "CondCreateForm.OnlyThicknessSpacingAndFirstUnitFollowTheMeasurementSystem": "CondCreateForm.OnlyThicknessSpacingWidthAndFirstUnitFollowTheMeasurementSystem"
+    }
+   },
+   "counts": {
+    "unique_items": 27,
+    "filesMapped": 49,
+    "by_class": {
+     "PORT": 7,
+     "WORDING": 1,
+     "SAME": 7,
+     "KEEP-iOS": 2,
+     "WINDOWS-ONLY": 9,
+     "DEFECT-NOT-COPIED": 1
+    },
+    "by_result": {
+     "windows-only": 9,
+     "ported": 6,
+     "already same": 7,
+     "kept": 3,
+     "not ported (open)": 2
+    },
+    "ported_items": 6,
+    "device_checks_new": 5,
+    "windows_defects_fixed_on_windows": 7,
+    "windows_defects_still_open": 18,
+    "owner_questions": 13,
+    "owner_questions_resolved": 4,
+    "owner_questions_open": 9,
+    "status_changes_in_register": 3,
+    "owner_notes": {
+     "entries": 32,
+     "resolved_or_closed": 8,
+     "informational": 2,
+     "open": 22,
+     "resolvedOrClosedIds": "a, b, c, d, e, f, g, k",
+     "informationalIds": "j, o",
+     "note": "Counting rule of PORTING_BLOCKERS.md (Still open): 15 owner notes (a to o) + 10 notes for information + 7 iOS-internal leftovers = 32; owner note b is resolved in pass 3 (it was 7 / 2 / 23 after pass 2). Of the owner notes only n still asks the owner something."
+    }
+   },
+   "countsNote": "The 27 rows (B1-01..B1-27 of the analysis, P3-001..P3-027) cover all 49 files of d1c430a (row P3-001 is the index). The sum by class equals unique_items. WP1 to WP4 (shared layer toggle, delete condition text, undo/redo refusal, Unknown (N) quantity entry), the metric width and the winding and last-page pins were PORTED by the pass-3 port agents (code and tests first; ported rows P3-002, P3-003, P3-004, P3-005, P3-011, P3-015); the paste snap rows (P3-019, P3-020) are M2 inputs, not ported. device_checks_new = the rows P3-01..P3-05 of DEVICE_CHECKS.md (never run on a device); 59 rows to test on the one IPA (20 M1 + 23 carried + 11 P2 + 5 P3).",
+   "review": "one independent read-only reviewer: 0 blocker, 0 major, 5 minor, 6 nit. Fixed in 9469fa1: R3 (the delete alert title is built from the std::string name: an invalid-UTF-8 name made the NSString nil), R5 (the refusal asks the lock helper first, so a locked bid would say \"This bid is locked.\" instead of \"could not be undone\"; practically unreachable today because takeoff writes are not lock-guarded yet, open M1 point N-M1-01, so an undo in a locked bid simply works), R1 (the stale check builds one uid -> page map, O(k+N)). Not changed: R2 (SetNegative also requires the takeoff's page to exist: practically unreachable on iOS; Windows does not check the page there), R4 (the Objective-C replayTargets mapping has no host test; read and correct), and the nits (no discard path for a stale top undo entry, same as Windows for non-AI entries; a stale \"width 12.0\" comment in ConditionCreate.hpp; the Unknown (N) entry vanishes after \"(none)\" in the same session while Windows keeps it disabled until save (cosmetic); the winding tests pin unchanged code and with Manifold OFF the cut slab and the drop-wall union are not exercised (the -Boolean run does); the layer refusal runs before the lock outcome).",
+   "deviceChecks": "P3-01 single toggle of a shared locked template layer (alert; check mark returns; rows Image, Annotation, Default of the M1 fixture \"M1-02-layers\"; own layer and \"M1 Locked Copy\" still toggle; Hide All / Show All as P2-04); P3-02 delete condition alert text; P3-03 Unknown (N) quantity entry (needs a bid whose condition has a stored quantity the style does not offer, e.g. Count with calc_type1=11 or a type-7 condition); P3-04 undo/redo smoke (the stale and generic alerts are host-test only); P3-05 undo in a locked bid simply works, NO alert is expected (takeoff writes are not lock-guarded on iOS today, N-M1-01; the \"This bid is locked.\" text of the refusal path is practically unreachable; not run if no fixture). No device check for the metric width, the winding pins or the last-page pin. The M1 / DEV rows about a single tap on a shared row must be re-read: the text \"Failed to update layer visibility.\" is gone.",
+   "statusChanges": [
+    "EXP-13 (alias MSH-M02): wont-fix -> no-longer-divergent",
+    "EXP-M02: wont-fix -> no-longer-divergent",
+    "GEO-15: wont-fix -> no-longer-divergent"
+   ],
+   "m2Input": "CB-12 (paste snap) is FIXED on Windows (WD-107); NOT implemented on iOS (M2 input). Rule: with snap on, the axis that the paste guides aligned is never rounded to the snap increment; group drag: per axis delta = exact aligned delta if guided, else round(delta/inc)*inc; single item or anchor move: exact delta if guided, else round((anchor+delta)/inc)*inc - anchor; one-point handle as the anchor move; items with two or more points keep rounding the absolute handle position on both axes. Windows test numbers: inc 10, source anchor (10,20), anchor start (51,75): raw (-35,0) -> (-41,0), vertical guides x = 10 and 48 (old 11 and 49); raw (0,-50) -> (0,-55), horizontal guides y = 20 and 49 (old 15 and 44); IntelligentPasteSnapIncrementTests increments 1, 7, 12, 25. The ready text is the rule of NEW_FEATURES_PLAN.md section 5.7.",
+   "latin1Note": "For M3 and M4: Windows Access stores annotation text and callout text as latin-1 = exactly U+0000..U+00FF (NOT cp1252: euro, curly quotes, dashes and emoji are refused); the first offending character is named; title \"Annotation Text\", text \"The annotation text was not saved because this database cannot store the character \\\"\\u20ac\\\" (U+20AC). Remove or replace that character, then try again.\"; text and callout only, Access only. A Windows Access file must keep that limit: the OST/OSP round trip and any annotation text iOS writes must obey it. Legends are a different mechanism (SS-10: Windows latin-1 + &#N; references, iOS raw UTF-8 today)."
+  },
+  "items": [
+   {
+    "id": "P3-001",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "git diff d26893c..d1c430a (49 files)"
+    ],
+    "change": "Commit-level map of the single Windows commit `d1c430a` (\"Fix parity defects: metric width, shared layer toggle, paste snap, stale undo, outward winding\"): 49 files (production code, tests, AGENTS.md, CHANGELOG.md, the two quality JSON files) mapped to rows P3-002..P3-027 (index row).",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-01"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "Index row only: the 49 files are mapped to the other 26 rows. Windows range d26893c..d1c430a, one commit, no new tag, no tower-crane change."
+   },
+   {
+    "id": "P3-002",
+    "area": "layers",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/coordinators/ui_event_coordinator.py:6525-6542,6561-6573",
+     "ost_visualizer/presentation/dialogs/layers_dialog.py:677-683",
+     "ost_visualizer/presentation/texts.py:1337-1340"
+    ],
+    "change": "A single tap on a locked template layer that other bids share (IsTemplate and IsLocked and BidUID not this bid; no Image exemption) is refused with title \"Layer Visibility\" and \"This layer is a locked template layer that other bids share, so it cannot be shown or hidden from this bid.\"; nothing is written and the sheet reloads so the check mark returns.",
+    "class": "PORT",
+    "iosRefs": [
+     "Core/Domain/LayerSheet.hpp",
+     "Core/Domain/LayerSheet.cpp",
+     "Core/Domain/LayerEdit.hpp",
+     "Core/Persistence/ProjectStore/Components/ProjectStore+Takeoffs.cpp",
+     "Controllers/ViewController/Components/ViewController+Layers.mm",
+     "Config/Tests/Persistence/test_layer_sheet_rules.cpp",
+     "Config/Tests/Persistence/test_layer_visibility.cpp"
+    ],
+    "result": "ported",
+    "tests": [
+     "LayerSheet.SingleToggleOfASharedTemplateLayerIsRefusedWithTheTextAndTheTitle",
+     "LayerSheet.SingleToggleOfASharedTemplateLayerTextsAreTheWindowsTexts",
+     "LayerSheet.SingleToggleOfAnyOtherRowIsNotRefused",
+     "Lp24_SingleToggle.AnotherBidsLockedTemplateRowIsRefusedByTheStoreAndNothingIsWritten",
+     "Lp24_SingleToggle.TheBidsOwnLockedCopyAndPlainLayersAreStillWritten"
+    ],
+    "commits": [
+     "14f4a20",
+     "8741d88",
+     "466a9b9"
+    ],
+    "needsDeviceCheck": true,
+    "deviceChecks": "P3-01",
+    "milestone": "",
+    "analystRows": [
+     "B1-02"
+    ],
+    "analystClasses": [
+     "PORT"
+    ],
+    "note": "Ported (WP1) with an iOS fail-closed store guard that Windows does not have at service level: ost_store::set_layer_visibility refuses a locked template row of another bid (own locked copy, unlocked template rows and plain layers are still written; Hide All and Show All use another function and are unchanged). Closes owner note b: iOS refuses in Core and in the store, Windows only in the UI layer. Red first: the store test failed on all 5 checks.",
+    "windowsTests": "test_ui_event_coordinator.py::test_a_single_toggle_of_a_shared_locked_template_layer_is_refused (uids '23','1'; no deferred call; shows unchanged) and ::test_the_sidebar_shows_the_shared_layer_refusal_and_restores_the_tick (title 'Layer Visibility'); test_layers_dialog.py::test_a_single_toggle_refused_with_a_reason_shows_that_reason"
+   },
+   {
+    "id": "P3-003",
+    "area": "conditions",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/utils/messagebox.py:349-358",
+     "ost_visualizer/presentation/texts.py:1205-1214"
+    ],
+    "change": "Delete Condition text: one condition \"Deleting this condition will delete all its takeoffs on all pages within this bid.\\n\\nThis cannot be undone.\\n\\nAre you sure you want to delete this condition?\"; several: \"You are deleting N conditions. Deleting a condition will delete all its takeoffs on all pages within this bid.\\n\\nThis cannot be undone.\\n\\nAre you sure you want to delete this condition?\"; the title Delete \"name\"? is unchanged.",
+    "class": "WORDING",
+    "iosRefs": [
+     "Core/Domain/ConditionDeleteText.hpp",
+     "Core/Domain/ConditionDeleteText.cpp",
+     "Controllers/ConditionsViewController.mm",
+     "Config/Tests/Conditions/test_condition_delete_text.cpp"
+    ],
+    "result": "ported",
+    "tests": [
+     "ConditionDeleteText.OneConditionIsAskedAboutWithTheSingularSentence",
+     "ConditionDeleteText.SeveralConditionsAreAskedAboutWithThePluralSentenceAndTheCount",
+     "ConditionDeleteText.OnlyExactlyOneConditionIsSingular",
+     "ConditionDeleteText.TheTitleQuotesTheNameAndIsUnchanged"
+    ],
+    "commits": [
+     "588f376",
+     "dbff589"
+    ],
+    "needsDeviceCheck": true,
+    "deviceChecks": "P3-02",
+    "milestone": "",
+    "analystRows": [
+     "B1-03"
+    ],
+    "analystClasses": [
+     "WORDING"
+    ],
+    "note": "Ported (WP2). The pass-2 keep decision (plural \"takeoffs\" kept, no closing question) is replaced: iOS now follows Windows, which has both closing sentences and says \"takeoffs\" (the grammar slip WD-X2 is gone). iOS deletes one condition at a time, so only the singular text is reachable; Core condition_delete_message(count) also returns the plural (host-tested). Resolves owner question 3 of pass 2.",
+    "windowsTests": "test_messagebox.py::ConfirmDeleteConditionsChoiceTests::test_one_condition_is_asked_about_with_the_singular_sentence / ::test_several_conditions_are_asked_about_with_the_plural_sentence"
+   },
+   {
+    "id": "P3-004",
+    "area": "undo / redo",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/services/undo_redo_service.py:25-27,235-236,570-582",
+     "ost_visualizer/presentation/handlers/plan_view_action_handler.py:1595,1716-1736,1798-1883",
+     "ost_visualizer/presentation/services/annotation_history.py:24,66",
+     "ost_visualizer/presentation/texts.py:1760-1767"
+    ],
+    "change": "An undo or redo whose page, takeoff or annotation is gone is refused (HistoryTargetUnavailableError): no write, the entry stays in its stack, title \"Undo\" / \"Redo\" with \"The change could not be undone because the page or item it belongs to no longer exists. It is still in the undo history.\" (redo twin); generic failure texts \"The change could not be undone. It is still in the undo history.\" (redo twin).",
+    "class": "PORT",
+    "iosRefs": [
+     "Core/Domain/UndoRedoRules.hpp",
+     "Core/Domain/UndoRedoRules.cpp",
+     "Controllers/ViewController/Components/UndoRedoController.h",
+     "Controllers/ViewController/Components/UndoRedoController.mm",
+     "Controllers/ViewController/ViewController.mm",
+     "Config/Tests/Settings/test_undo_refusal.cpp"
+    ],
+    "result": "ported",
+    "tests": [
+     "UndoRefusal.TheFourTextsAndTheTitlesAreTheWindowsOnes",
+     "UndoRefusal.AProgrammaticCallShowsNothing",
+     "UndoRefusal.TheTargetsOfEachEntryKindAndDirection",
+     "UndoRefusal.ATakeoffAndItsPageThatExistAreNotStale",
+     "UndoRefusal.NothingToCheckIsNotStale",
+     "UndoRefusal.ATakeoffThatIsGoneIsStale_CrossSystemMoveUndo",
+     "UndoRefusal.ATakeoffOnAPageThatIsGoneIsStale",
+     "UndoRefusal.APageThatIsGoneIsStale_CrossSystemDeleteUndo",
+     "UndoRefusal.AnEmptyUidDoesNotExist",
+     "UndoRefusal.AStaleDeleteUndoIsRefusedAndTheEntryStays",
+     "UndoRefusal.AStaleMoveUndoIsRefusedAndTheEntryStays",
+     "UndoRefusal.AStaleRedoIsRefusedAndTheEntryStaysOnTheRedoStack",
+     "UndoRefusal.ARemovalReplayIsNotStale",
+     "UndoRefusal.AFailingUserUndoAndRedoGiveTheGenericTextAndTheEntryStays",
+     "UndoRefusal.AnActionThatThrowsIsAGenericFailure",
+     "UndoRefusal.AProgrammaticRefusalOnlyReportsAndShowsNothing",
+     "UndoRefusal.ANormalUndoAndRedoStillWork",
+     "UndoRefusal.AnEmptyHistoryIsNotAFailure",
+     "UndoRefusal.TheStaleCheckRunsBeforeTheWrite"
+    ],
+    "commits": [
+     "8d14468",
+     "1a160f8",
+     "14253e5",
+     "9469fa1"
+    ],
+    "needsDeviceCheck": true,
+    "deviceChecks": "P3-04, P3-05",
+    "milestone": "",
+    "analystRows": [
+     "B1-04"
+    ],
+    "analystClasses": [
+     "PORT"
+    ],
+    "note": "Ported (WP3; owner decision \"port\"; also closes pass-2 item P2-085 and owner question 2). Stale rule per entry kind: Move, MoveGroup and SetNegative need every takeoff and its page; Delete-undo and Place-redo need the page of each restored takeoff; Place-undo and Delete-redo only remove (no check); run_history_step leaves both stacks unchanged when a step is stale or fails; an empty history is no refusal; a user-initiated call shows the alert, a programmatic call only logs. iOS alerts on every user undo/redo that does not advance (wider than Windows, which alerts only when the submit raises: owner decision). The stale case is practically unreachable on iOS (deleting a page or a condition clears the whole undo history); the generic alert is reachable on a failed database write or an unusable page scale; a locked bid would say \"This bid is locked.\" (review fix 9469fa1: the refusal asks the lock helper first), but that path is practically unreachable today because takeoff writes are not lock-guarded yet (N-M1-01). Red first: 13 of 19 tests.",
+    "windowsTests": "test_cross_system_workflows.py::test_a_delete_undo_whose_page_is_gone_is_refused_and_kept and ::test_a_move_undo_whose_takeoff_is_gone_is_refused_and_kept; test_annotation_lifetimes.py (two detached-text tests: undo() False, show_error once, can_undo True); test_property_lifetimes.py (undo False, can_undo True, error text 'The property history Takeoff no longer owns its Page.')"
+   },
+   {
+    "id": "P3-005",
+    "area": "conditions",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/dialogs/edit_condition_dialog.py:1037,1074-1097",
+     "ost_visualizer/presentation/texts.py:354"
+    ],
+    "change": "A stored quantity (calculation) that the style does not offer shows as \"Unknown (N)\" (N = the stored calc type) in the quantity Results row and as a DISABLED, selected entry in the Quantity picker; \"(none)\" is a change (calc_type 0, uom -1); a notes-only save keeps the stored value.",
+    "class": "PORT",
+    "iosRefs": [
+     "Core/Domain/ConditionQuantityChoices.hpp",
+     "Core/Domain/ConditionQuantityChoices.cpp",
+     "Controllers/EditConditionViewController/Components/EditConditionViewController+Pickers.mm",
+     "Controllers/EditConditionViewController/Components/EditConditionViewController+TableView.mm",
+     "Config/Tests/Conditions/test_condition_quantity_choices.cpp"
+    ],
+    "result": "ported",
+    "tests": [
+     "CondQtyChoices.AQuantityTheStyleDoesNotOfferIsUnknown",
+     "CondQtyChoices.AnOfferedQuantityOrNoneIsNotUnknown",
+     "CondQtyChoices.TheEntryTextIsUnknownWithTheStoredNumber",
+     "CondQtyChoices.TheRowLabelNamesTheQuantity"
+    ],
+    "commits": [
+     "8a94d2c",
+     "dbff589"
+    ],
+    "needsDeviceCheck": true,
+    "deviceChecks": "P3-03",
+    "milestone": "",
+    "analystRows": [
+     "B1-05"
+    ],
+    "analystClasses": [
+     "PORT"
+    ],
+    "note": "Ported (WP4). Closes the Windows defect \"an unoffered quantity cannot be cleared\" (WD-X1, found in pass 2): fixed on Windows. Cosmetic deviation: the iOS entry is computed from the current form value, Windows keeps a combo item until save; after \"(none)\" the Unknown (N) entry vanishes on iOS in the same session (it can never be chosen again). Needs a bid with such a stored value (database edit or import; it cannot be created in the UI).",
+    "windowsTests": "test_edit_condition_dialog.py::EditConditionSaveFidelityTests::test_a_stored_quantity_the_type_does_not_offer_is_shown_as_unknown ('Unknown (11)', data 11, item disabled, Apply disabled; cases unknown type 7 and Count with calc_type1=11 uom1=5) and ::test_a_stored_quantity_the_type_does_not_offer_can_be_cleared_with_none (saved [{'calc_type1': 0, 'uom1': -1}], Apply enabled, no 11 left in the combo)"
+   },
+   {
+    "id": "P3-006",
+    "area": "winding",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/visualization/utils/mesh.py:46-65 (signed_volume, outward_faces)",
+     "ost_visualizer/presentation/visualization/core/mesh_generator.py:93,139,227,314,369,405,448,493,538,579,617"
+    ],
+    "change": "Every mesh generator now returns an outward-facing mesh (positive signed volume; outward_faces in utils/mesh.py:62 on every generator, curved wall, area, box, count shapes).",
+    "class": "SAME",
+    "iosRefs": [
+     "Core/Meshing/mesh_helpers.hpp:34-61 (add_box_faces stores (a,c,b) of the Windows table = Windows outward_faces result)",
+     "Core/Meshing/gen_count.cpp:90-106,147 (radial outward), :223-232 triangle table, :249-261 rhombus table (identical to utils/mesh.py:354-365 and :321-336)",
+     "Core/Meshing/gen_curved.cpp:14-15",
+     "Core/Meshing/gen_area.cpp:119-120",
+     "Core/Meshing/TakeoffMeshBuilder.cpp:152,176 (exactly one page flip reverses the faces)",
+     "Config/Tests/Meshing/test_geometric_equivalence.cpp:150-175,192-320 (Expect.outward true by default for every count shape incl. triangle, rhombus, hexagon, octagon, walls, drop stubs)",
+     "Config/Tests/Meshing/test_count_shapes.cpp:104-109",
+     "Config/Tests/Meshing/test_takeoff_meshes.cpp:180,200,228-237"
+    ],
+    "result": "already same",
+    "tests": [
+     "OutwardWindingPerShape.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithTheStandIn",
+     "OutwardWindingPerShape.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithTheStandIn",
+     "OutwardWindingPerShapeManifold.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithManifold",
+     "OutwardWindingPerShapeManifold.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithManifold",
+     "OutwardWindingPerShapeManifold.TheDropWallUnionIsOutwardForEveryAngleSlopeAndDropDirection"
+    ],
+    "commits": [
+     "30e3663",
+     "4d0b9a9"
+    ],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-06"
+    ],
+    "analystClasses": [
+     "SAME"
+    ],
+    "note": "iOS already stored every mesh outward (box, radial, triangle and rhombus tables, curved, area, drop stubs; an odd page flip reverses the faces; Manifold results untouched). Windows converged on the iOS behaviour: parity. Pinned in this pass (P3-011).",
+    "windowsTests": "tests/integration/geometry/test_outward_winding_per_shape.py::OutwardWindingPerShapeTests::test_every_shape_is_a_closed_outward_mesh_in_the_3d_view (15 shapes x 3 scenes: closed consistent edges, signed volume > 0)"
+   },
+   {
+    "id": "P3-007",
+    "area": "winding",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/visualization/exporters/adapters/obj_writer.py:12-28 (faces :23-25; _transform_vertices :32-34)"
+    ],
+    "change": "OBJ writer: faces are written in mesh order, the (f0,f2,f1) swap is gone; the vertex transform (x,z,-y) is a rotation and stays.",
+    "class": "SAME",
+    "iosRefs": [
+     "Core/Export/obj_writer.cpp"
+    ],
+    "result": "already same",
+    "tests": [
+     "OutwardWindingPerShape.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithTheStandIn",
+     "OutwardWindingPerShape.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithTheStandIn",
+     "OutwardWindingPerShapeManifold.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithManifold",
+     "OutwardWindingPerShapeManifold.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithManifold",
+     "OutwardWindingPerShapeManifold.TheDropWallUnionIsOutwardForEveryAngleSlopeAndDropDirection"
+    ],
+    "commits": [
+     "30e3663"
+    ],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-07"
+    ],
+    "analystClasses": [
+     "SAME"
+    ],
+    "note": "iOS writes faces as stored (OBJWriter::add_group). Read back in the pins.",
+    "windowsTests": "test_obj_writer.py::OBJMeshWriterTests::test_faces_keep_the_mesh_winding_and_multi_mesh_indices_advance ('f 1 2 3' / 'f 4 5 6'); test_obj_exporter.py ('f 1 2 3'); test_uncut_winding_with_negatives.py::test_uncut_meshes_are_outward_in_the_3d_view_obj_and_html (OBJ: Unknown_wall_wall (800.0,8,8), Unknown_rhombus_rhombus (1150.0,12,12); view and html: wall (800.0,8,8), rhombus (1150.0,8,8))"
+   },
+   {
+    "id": "P3-008",
+    "area": "winding",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/visualization/core/boolean_operations.py:56-111 (may_be_cut :61, uncut return :94-95), :113-125 (boolean_union)"
+    ],
+    "change": "Boolean pass: the face flip is removed from apply_boolean_operations and boolean_union; the native result is outward and kept; a positive whose bounds do not strictly overlap any same-type negative is returned as is.",
+    "class": "SAME",
+    "iosRefs": [
+     "Core/Meshing/BooleanPass.hpp"
+    ],
+    "result": "already same",
+    "tests": [
+     "OutwardWindingPerShape.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithTheStandIn",
+     "OutwardWindingPerShape.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithTheStandIn",
+     "OutwardWindingPerShapeManifold.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithManifold",
+     "OutwardWindingPerShapeManifold.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithManifold",
+     "OutwardWindingPerShapeManifold.TheDropWallUnionIsOutwardForEveryAngleSlopeAndDropDirection"
+    ],
+    "commits": [
+     "30e3663"
+    ],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-08"
+    ],
+    "analystClasses": [
+     "SAME"
+    ],
+    "note": "iOS never reverses the faces of a positive. Only difference left: iOS has no bounding-box shortcut, so an uncut positive of a type that has a negative is rebuilt by the difference (same geometry, the triangle order may differ): EXP-17 stays won't-fix for byte and triangulation ORDER only.",
+    "windowsTests": "test_boolean_operations.py::BooleanMeshMetadataTests (faces [[0,1,2]] instead of [[0,2,1]]), ::UncutPositiveWindingTests::test_a_cut_positive_comes_out_outward (0 < cut < uncut volume), last-positive assertGreater(volume, 0)"
+   },
+   {
+    "id": "P3-009",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/visualization/exporters/adapters/fbx_writer.py:166-172,203-206,216-219"
+    ],
+    "change": "FBX writer: faces written as (a, b, -(c+1)) in mesh order, normals from (v0,v1,v2) in face order.",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-09"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "No FBX export on iOS.",
+    "windowsTests": "test_fbx_writer.py (index text '0,1,-3' instead of '0,2,-2'; normals +1 instead of -1 for face (0,1,2)); test_outward_winding_per_shape.py::test_every_shape_is_outward_in_the_fbx_export"
+   },
+   {
+    "id": "P3-010",
+    "area": "winding",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "AGENTS.md (HEAD d1c430a) 'Mesh winding' bullet replaces 'Boolean winding'"
+    ],
+    "change": "Decision texts that become parity: the keep decisions \"iOS stays outward unlike Windows\" (EXP-13 alias MSH-M02, EXP-M02, GEO-15) are no longer a deliberate difference; Windows holds outward meshes in the 3D view, HTML, OBJ and FBX.",
+    "class": "SAME",
+    "iosRefs": [
+     "PARITY_DIVERGENCES.json",
+     "PARITY_MAP.md"
+    ],
+    "result": "already same",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-10"
+    ],
+    "analystClasses": [
+     "SAME"
+    ],
+    "note": "Docs only: EXP-13 (alias MSH-M02), EXP-M02 and GEO-15 are now no-longer-divergent (winding sign); EXP-17 stays won't-fix for byte and triangulation order only; WD-089 / P2-089 is fixed on Windows. EXP-13, EXP-17 and EXP-M02 leave the list of defects that are still present on Windows. Counts of header.counts changed (see \"Register entries updated\")."
+   },
+   {
+    "id": "P3-011",
+    "area": "winding",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "tests/integration/geometry/test_outward_winding_per_shape.py:26-257",
+     "tests/integration/geometry/test_uncut_winding_with_negatives.py:223-240"
+    ],
+    "change": "Pin test: outward winding of every 3D shape (14 shapes: wall, curved wall, drop wall, slab, sloped slab, square, rectangle, circle, ellipse, triangle, rhombus, hexagon, octagon, attachment) x 3 scenes (no negative; a negative of another type apart; a same-type negative cutting the slab), through the 3D view meshes, the HTML export and the OBJ file: signed volume > 0 and closed and consistent.",
+    "class": "PORT",
+    "iosRefs": [
+     "Config/Tests/Export/test_outward_winding_per_shape.cpp"
+    ],
+    "result": "ported",
+    "tests": [
+     "OutwardWindingPerShape.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithTheStandIn",
+     "OutwardWindingPerShape.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithTheStandIn",
+     "OutwardWindingPerShapeManifold.EveryShapeIsAClosedOutwardMeshInTheViewHtmlAndObjWithManifold",
+     "OutwardWindingPerShapeManifold.TheUncutWallAndRhombusAreOutwardWithANegativeElsewhereWithManifold",
+     "OutwardWindingPerShapeManifold.TheDropWallUnionIsOutwardForEveryAngleSlopeAndDropDirection"
+    ],
+    "commits": [
+     "30e3663",
+     "4d0b9a9"
+    ],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-11"
+    ],
+    "analystClasses": [
+     "PORT"
+    ],
+    "note": "Pins only, no behaviour change (red-first not applicable: nothing was red). 2 plain tests (Export 108 -> 110) and 3 Manifold-only tests including the drop-wall union (with -Boolean 114 -> 119); the uncut tuples of the Windows test (wall (800,8,8), rhombus (1150,8,8) view/HTML; OBJ wall (800,8,8), rhombus (1150,12,12)) are ported. Four mutants on scratch copies (flip the box faces, flip one rhombus face, swap the obj_writer order, reverse the drop-stub union) each fail the tests. The drop-wall union is outward (the open question of the analysis). With Manifold OFF the cut slab and the drop-wall union are not exercised (the -Boolean run does).",
+    "windowsTests": "test_outward_winding_per_shape.py (5 tests) and test_uncut_winding_with_negatives.py::test_uncut_meshes_are_outward_in_the_3d_view_obj_and_html (view {'w': (800.0,8,8), 'r': (1150.0,8,8)} = (signed volume, outward faces, faces) for the wall and rhombus)"
+   },
+   {
+    "id": "P3-012",
+    "area": "winding",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/visualization/utils/mesh.py:92-104 (_normalize_vector), :107-215 (prepare_vertices_for_shading)",
+     "ost_visualizer/presentation/visualization/renderers/threejs/adapters/threejs_mesh_adapter.py:176-182",
+     "ost_visualizer/presentation/visualization/renderers/threejs/templates/viewer.html:2268-2300",
+     "AGENTS.md Mesh winding bullet"
+    ],
+    "change": "3D lighting: Windows lights with vertex normals (nz >= 0 forced, 60 degree smoothing, no view flip); with the outward windings the side faces of walls, slabs, boxes and cylinders now carry the outward normal.",
+    "class": "KEEP-iOS",
+    "iosRefs": [
+     "Core/Export/threejs_writer.cpp",
+     "Rendering/Shaders/src/fs_mesh.sc"
+    ],
+    "result": "kept",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "M3",
+    "analystRows": [
+     "B1-12"
+    ],
+    "analystClasses": [
+     "KEEP-iOS"
+    ],
+    "note": "RPV-29 stays KEEP-iOS, no port: iOS lights the face the viewer sees (a viewer-facing flat normal in the HTML writer, N flipped toward the viewer in the 3D view); for closed outward meshes both light the visible side from the side facing the light. Residual: back faces and undersides (Windows forces nz >= 0, iOS flips to the viewer) and smoothing (MSH-21, EXP-20 kept). Not host-testable; device look never compared. M3 note only.",
+    "windowsTests": "winding pinned by test_outward_winding_per_shape.py; the lighting normals only by the 'lighting' dict of test_uncut_winding_with_negatives.py (len(lighting['w']) == 12)"
+   },
+   {
+    "id": "P3-013",
+    "area": "pages",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/application/services/project_write_service.py:7212-7240",
+     "ost_visualizer/domain/entities/page.py:241,249,284-288",
+     "ost_visualizer/presentation/coordinators/ui_event_coordinator.py:6005-6017 (can_delete_current_page: len(sidebar page order) > 1, unchanged), :6100",
+     "ost_visualizer/presentation/texts.py:1294"
+    ],
+    "change": "The last real page of a bid can no longer be deleted when the bid also has items without a page: Windows excludes the pseudo page NO_PAGE_ID from the loaded set; text \"Cannot delete the last page in the bid.\".",
+    "class": "SAME",
+    "iosRefs": [
+     "Core/Persistence/ProjectStore/Components/ProjectStore+PageDelete.cpp:232-246",
+     "Config/Tests/Persistence/test_delete_page_refusals.cpp"
+    ],
+    "result": "already same",
+    "tests": [
+     "DelPageRefusals.TheOnlyPageIsRefusedAlthoughTakeoffsWithoutAPageRemain",
+     "DelPageRefusals.ABidWithTwoPagesAndTakeoffsWithoutAPageDeletesOnePageAndKeepsThePagelessTakeoffs"
+    ],
+    "commits": [
+     "535f6d6",
+     "4d0b9a9"
+    ],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-13"
+    ],
+    "analystClasses": [
+     "SAME"
+    ],
+    "note": "iOS has no pseudo page and counts the BidPages rows inside the store transaction: same result and same text. WD-081 / DP-5 \"counts the pseudo page\" is fixed on Windows; the memory-based part stays a residual weakness. Pin added (the only real page refused although takeoffs without a page remain, database byte-identical; control with a second page; mutant \"<= 0\" -> \"< 0\" fails 6 of 31 tests).",
+    "windowsTests": "test_project_write_service.py::BidLockPermissionTests::test_the_last_real_page_is_refused_although_items_without_page_remain (pages 'page-1' + 'NO_PAGE_ID', delete ['page-1'] -> (write_success False, failure_reason PAGE_DELETE_WOULD_LEAVE_NO_PAGE, delete calls []))"
+   },
+   {
+    "id": "P3-014",
+    "area": "metric width",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/handlers/condition_action_handler.py:637,681",
+     "ost_visualizer/presentation/dialogs/edit_condition_dialog.py:1466-1480,1746-1752"
+    ],
+    "change": "New condition width: build_spec passes width=synthetic.width (300 mm = 11.811023622047244 in in a metric bid, 12.0 otherwise) because the dialog writes only values that differ from the start.",
+    "class": "SAME",
+    "iosRefs": [
+     "Core/Domain/ConditionCreate.cpp"
+    ],
+    "result": "already same",
+    "tests": [
+     "CondCreateSpec.TheNewConditionIsCreatedWithTheWidthTheFormShowsForEveryStyle"
+    ],
+    "commits": [
+     "e65c8be"
+    ],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-14"
+    ],
+    "analystClasses": [
+     "SAME"
+    ],
+    "note": "Count and Attachment were already the same on iOS (the style pick sets 11.811 in and differs from the form start, so Width is written). Fixed on Windows: the pass-2 \"possible Windows defect\" A2-14 / A9-X1 (WD-035) was a Windows bug.",
+    "windowsTests": "test_condition_action_handler.py::ConditionActionHandlerNewConditionFormTests::test_a_metric_count_or_attachment_is_created_with_the_shown_300_mm_width (form text '300', spec.width == mm_to_inches(300.0), Count and Attachment) and ::test_an_imperial_count_is_created_with_the_shown_12_inch_width (12.0)"
+   },
+   {
+    "id": "P3-015",
+    "area": "metric width",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/handlers/condition_action_handler.py:637,681",
+     "AGENTS.md (HEAD d1c430a) New Condition bullet"
+    ],
+    "change": "Side effect of the same Windows change: in a metric bid EVERY new condition (also Linear and Area, whose width field is hidden) is stored with width 11.811023622047244 in.",
+    "class": "PORT",
+    "iosRefs": [
+     "Core/Domain/ConditionCreate.cpp",
+     "Core/Domain/ConditionCreate.hpp",
+     "Config/Tests/Conditions/test_condition_create_form.cpp"
+    ],
+    "result": "ported",
+    "tests": [
+     "CondCreateSpec.TheNewConditionIsCreatedWithTheWidthTheFormShowsForEveryStyle",
+     "CondCreateForm.OnlyThicknessSpacingWidthAndFirstUnitFollowTheMeasurementSystem"
+    ],
+    "commits": [
+     "e65c8be",
+     "4d0b9a9"
+    ],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-15"
+    ],
+    "analystClasses": [
+     "PORT"
+    ],
+    "note": "Ported for exact parity (two edits together: new_condition_form form.width = metric ? mm_to_inches(300.0) : 12.0 and build_create_spec starts with spec.width = form.width). The width is used only by count-like meshes and quantities: no visible effect, only NEW conditions, no device check. The old pin was changed first (red).",
+    "windowsTests": "no Windows test for Linear/Area width; the Count/Attachment test above fixes the form-start rule"
+   },
+   {
+    "id": "P3-016",
+    "area": "layers",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/domain/services/project_data_service.py:565-575"
+    ],
+    "change": "SQL Server in-memory layer usage: a layer used by a condition without takeoffs now counts as in use (project_data_service.py, test_layer_delete_usage.py), like the Access path.",
+    "class": "SAME",
+    "iosRefs": [
+     "Core/Persistence/ProjectStore/Components/ProjectStore+Layers.cpp:551-596"
+    ],
+    "result": "already same",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-16"
+    ],
+    "analystClasses": [
+     "SAME"
+    ],
+    "note": "iOS is Access only and already counts BidConditions.BidLayerUID without takeoffs (zones included): nothing to port. Windows WD-050 (SQL Server layer delete from memory) is changed by this on Windows; iOS keeps the single 11-table rule.",
+    "windowsTests": "test_project_data_service.py::TakeoffHydrationContractTests::test_layer_usage_counts_every_condition_layer_like_the_database ({'25','30','unused-layer'}), ::ProjectDataServiceLayerStateTests::test_layer_usage_collects_every_condition_and_annotation_layer ({'L1','L3','L9'}); test_layer_delete_usage.py (cases ([takeoff],'layer-1',True), ([],'layer-1',True), ([],'layer-2',False))"
+   },
+   {
+    "id": "P3-017",
+    "area": "annotation text",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/domain/services/annotation_text_storage.py:1-26",
+     "ost_visualizer/infrastructure/mdb/components/serialization.py:72,80",
+     "ost_visualizer/presentation/handlers/plan_view_action_handler.py:845-855,2363-2368,3568-3574",
+     "ost_visualizer/presentation/texts.py:977-982"
+    ],
+    "change": "Annotation text storage rule: Access stores annotation text and callout text as latin-1 (exactly U+0000..U+00FF storable, NOT cp1252: euro, curly quotes, dashes and emoji are refused); the first offending character is named; title \"Annotation Text\", text \"The annotation text was not saved because this database cannot store the character \\\"\\u20ac\\\" (U+20AC). Remove or replace that character, then try again.\"; text and callout only; Access only.",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "M4",
+    "analystRows": [
+     "B1-17"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "M4 input (iOS has no annotations yet). A Windows Access file must keep the latin-1 limit: any annotation text that iOS writes (OST/OSP round trip) must obey it, in ONE writer-level place (Windows guards only the plan-view insert and edit paths).",
+    "windowsTests": "tests/domain/services/test_annotation_text_storage.py (storable: '', None, 'Café ° ÿ', 'plain'; first unstorable: 'Cost 5 €' -> '€', '‘quoted’' -> '‘', 'aα€' -> 'α', U+1F4CD; only text/callout checked: rect and namedview with '€' -> None; ('callout','Ω') -> 'Ω'); test_plan_view_action_handler.py::PlanViewActionHandlerUnstorableAnnotationTextTests (3 tests: insert refused for text and callout with 'Cost 5 €' -> [] and insert_calls [], edit refused and restored, 'Café °' still saved)"
+   },
+   {
+    "id": "P3-018",
+    "area": "annotation text",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/infrastructure/mdb/components/legend_position.py:24-42",
+     "ost_visualizer/infrastructure/mdb/components/serialization.py:5-9,55-83"
+    ],
+    "change": "Relation to the legend bytes (SS-10): Windows re-encodes the legend XML as latin-1 with &#N; character references (legend_position.py:40-42), iOS writes the legend raw UTF-8; legends are a different mechanism from annotation text.",
+    "class": "KEEP-iOS",
+    "iosRefs": [
+     "Core/Persistence/ProjectStore/Components/ProjectStore+ImportWriter.cpp:188-207"
+    ],
+    "result": "kept",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "M3",
+    "analystRows": [
+     "B1-18"
+    ],
+    "analystClasses": [
+     "KEEP-iOS"
+    ],
+    "note": "KEEP-iOS (P2-068 unchanged). M3 note: the OST/OSP round trip must know both rules (annotation text latin-1 with a refusal, legends latin-1 + references).",
+    "windowsTests": "legend/serialization tests unchanged by d1c430a"
+   },
+   {
+    "id": "P3-019",
+    "area": "paste snap",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/components/plan_view/view.py:533,3779,3874-3893 (_snapped_intelligent_paste_delta records _intelligent_paste_guided_ost_axes = (snap_y_axis, snap_x_axis); intelligent_paste_guided_axes)",
+     "ost_visualizer/presentation/components/plan_view/components/drag_handler.py:266-277 (default (False,False); _snapped_anchor_move), :307-309 (handle -1 anchor move), :346-350 (n_pairs == 1 handle)",
+     "ost_visualizer/presentation/components/plan_view/components/input_handler.py:1714-1716 (ink / anchor), :1741-1747 (_snapped_group_translation_delta; used :1810, :1855, :1892)",
+     "view.py:218 _INTELLIGENT_PASTE_AXIS_SNAP_PX = 8"
+    ],
+    "change": "CB-12 FIXED on Windows: with snap on, the axis that the paste guides aligned is never rounded to the snap increment (group drag: exact aligned delta if guided, else round(delta/inc)*inc; single item or anchor move: exact delta if guided, else round((anchor+delta)/inc)*inc - anchor; one-point handle as the anchor move; items with two or more points keep rounding the absolute handle position on both axes).",
+    "class": "PORT",
+    "iosRefs": [
+     "NEW_FEATURES_PLAN.md (section 5.7)"
+    ],
+    "result": "not ported (open)",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "M2",
+    "analystRows": [
+     "B1-19"
+    ],
+    "analystClasses": [
+     "PORT"
+    ],
+    "note": "M2 INPUT, not implemented (iOS has no clipboard, paste or paste guides yet; the plan already matches). The rule is recorded as the rule of section 5.7 of NEW_FEATURES_PLAN.md. WD-107 is fixed on Windows.",
+    "windowsTests": "tests/integration/placement/test_intelligent_paste_guides.py::IntelligentPasteSnapIncrementTests (increments 1, 7, 12, 25; screen offsets (0,0), (0,60), (60,0), (3,-4); a horizontal guide -> landed scene dy == 0 (6 places), a vertical guide -> scene dx == 0, at least one guide at every offset): test_a_single_pasted_count_lands_aligned_with_snap_on (['50']), test_a_pasted_area_and_line_land_aligned_with_snap_on (['70','40']), test_a_pasted_mixed_group_lands_aligned_with_snap_on (['40','50','70','a1','a3']), test_rotated_and_flipped_pages_land_aligned_with_snap_on (rotation 90/180/270 x flip_x, ['40','50']); test_view.py three guide-bounds tests"
+   },
+   {
+    "id": "P3-020",
+    "area": "paste snap",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/components/plan_view/view.py:3809-3830 (guide bounds from _compute_group_translation_positions)",
+     "tests/presentation/components/plan_view/test_view.py (ViewPreferenceTests ::test_intelligent_paste_multi_object_{y_axis,x_axis,both_axis}_guides_use_the_aligned_bounds)",
+     "tests/presentation/windows/components/test_window.py (DetachedPageViewWindowQueueExceptionCleanupTests)"
+    ],
+    "change": "Guide-line positions of the Windows view tests changed with the same fix (they used the rounded preview before): inc 10, source anchor (10,20), anchor start (51,75), raw (-35,0) -> (-41,0), vertical guides x = 10 and 48 (old 11 and 49); raw (0,-50) -> (0,-55), horizontal guides y = 20 and 49 (old 15 and 44); IntelligentPasteSnapIncrementTests: increments 1, 7, 12, 25 x offsets (0,0), (0,60), (60,0), (3,-4): a horizontal guide -> landed dy = 0, a vertical guide -> landed dx = 0.",
+    "class": "PORT",
+    "iosRefs": [
+     "NEW_FEATURES_PLAN.md (section 5.7)"
+    ],
+    "result": "not ported (open)",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "M2",
+    "analystRows": [
+     "B1-20"
+    ],
+    "analystClasses": [
+     "PORT"
+    ],
+    "note": "M2 input: the numbers are the acceptance cases for the iOS port (iOS example: inc 1.0, source anchor (10,30), pasted start (13.37,42.8), raw delta (-3.2,-12.6): flags (T,T) -> anchor exactly (10,30) (old Windows (10.37,29.8)); flags (F,F) -> (-3,-13)).",
+    "windowsTests": "test_view.py::test_intelligent_paste_multi_object_y_axis_guides_use_the_aligned_bounds / ..._x_axis_... / ..._both_axis_... (numbers above)"
+   },
+   {
+    "id": "P3-021",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "AGENTS.md:557-575 (Mesh winding), :595-601, :620-626, :669-672, :1617-1623, :1678-1690, :1969-1974, :2058-2062"
+    ],
+    "change": "AGENTS.md (+53 lines changed): the \"Boolean winding\" bullet becomes \"Mesh winding\" and rules are added for the stored-quantity Unknown (N) entry, build_spec width, the pseudo page in the last-page rule, the history replay error (HistoryTargetUnavailableError), the paste snap guided axes, \"Layer visibility and usage\" and the annotation text encoding (the documentation of the behaviours of the other rows).",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-21"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "Windows documentation only."
+   },
+   {
+    "id": "P3-022",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "CHANGELOG.md:87-122"
+    ],
+    "change": "CHANGELOG.md, Unreleased / Fixed: six new top bullets (Conditions; Pages and layers; Paste with snap on; Undo and redo of changes whose page or item is gone; 3D export winding; Annotation text the database cannot store).",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-22"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "Windows documentation only."
+   },
+   {
+    "id": "P3-023",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/presentation/texts.py:354,977-982,1205-1214,1337-1340,1760-1767"
+    ],
+    "change": "texts.py and shared texts: new constants only for the behaviours above (UNKNOWN_QUANTITY, ANNOTATION_TEXT title and message, LOCKED_TEMPLATE, UNDONE / REDONE_BECAUSE, DELETING_THIS_CONDITION and YOU_ARE_DELETING_CONDITIONS replacing DELETING_A_CONDITION); no other wording changed.",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-23"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "The texts are copied where iOS ported the behaviour (P3-002..P3-005)."
+   },
+   {
+    "id": "P3-024",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/infrastructure/mdb/components/serialization.py:2-8",
+     "ost_visualizer/domain/entities/page.py:241"
+    ],
+    "change": "serialization.py: ANNOTATION_TEXT_ENCODING moved to annotation_text_storage.py (import only); page.py: NO_PAGE_UID is a named constant for \"NO_PAGE_ID\" (value unchanged); project_write_service.py imports it.",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-24"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "Windows internals (test_window.py gets 6 test lines for the paste guides: rows P3-019 and P3-020)."
+   },
+   {
+    "id": "P3-025",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "tests/quality_inventory.json",
+     "tests/quality_review.json"
+    ],
+    "change": "tests/quality_inventory.json (about 5200 changed lines) and tests/quality_review.json (+247/-34): regenerated QA inventories of the Windows test suite.",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-25"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "Windows only."
+   },
+   {
+    "id": "P3-026",
+    "area": "commit map",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "AGENTS.md:669-674 (context)"
+    ],
+    "change": "Tower crane and other text changes: d1c430a has NO tower-crane change (the \"Tower crane\" lines in the AGENTS.md hunk are unchanged context); no wording change outside the strings of the rows P3-002..P3-005 and P3-017.",
+    "class": "WINDOWS-ONLY",
+    "iosRefs": [],
+    "result": "windows-only",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "",
+    "analystRows": [
+     "B1-26"
+    ],
+    "analystClasses": [
+     "WINDOWS-ONLY"
+    ],
+    "note": "Nothing to port."
+   },
+   {
+    "id": "P3-027",
+    "area": "residual Windows defects",
+    "windowsCommits": [
+     "d1c430a"
+    ],
+    "windowsRefs": [
+     "ost_visualizer/application/services/project_write_service.py:7222-7233",
+     "ost_visualizer/presentation/coordinators/ui_event_coordinator.py:6017,6544",
+     "ost_visualizer/presentation/components/plan_view/components/input_handler.py:1741-1747",
+     "ost_visualizer/presentation/components/plan_view/components/drag_handler.py:266-277",
+     "ost_visualizer/presentation/visualization/utils/mesh.py:92-104"
+    ],
+    "change": "Windows defects and residuals seen at d1c430a (not copied): the last-page rule is memory-based; the annotation text refusal covers only the plan-view insert and edit on Access; update_layer_visibility_deferred is annotated -> bool but returns a WriteReloadResult; lighting forces nz >= 0 on every face; the group-drag delta rounds the DELTA while the anchor move rounds the ABSOLUTE position (see \"Windows defects still open\").",
+    "class": "DEFECT-NOT-COPIED",
+    "iosRefs": [
+     "Core/Persistence/ProjectStore/Components/ProjectStore+PageDelete.cpp:232-246"
+    ],
+    "result": "kept",
+    "tests": [],
+    "commits": [],
+    "needsDeviceCheck": false,
+    "deviceChecks": "",
+    "milestone": "M2, M4",
+    "analystRows": [
+     "B1-27"
+    ],
+    "analystClasses": [
+     "DEFECT-NOT-COPIED"
+    ],
+    "note": "DEFECT-NOT-COPIED: iOS keeps the store-level last-page rule (pinned), the layer toggle refusal in Core and in the store, and (M4) the latin-1 refusal belongs in one writer-level place. Items 3 to 5 are informational for M2 and M4."
+   }
+  ],
+  "windowsDefectsStillOpen": [
+   {
+    "id": "WD-045",
+    "item": "P2-045",
+    "status": "still present",
+    "what": "Batch layer delete stops at the first refused layer but commits the earlier deletes; iOS deletes all or nothing."
+   },
+   {
+    "id": "WD-046",
+    "item": "P2-046",
+    "status": "still present",
+    "what": "A sidebar layer move or rename that returns False without an exception is silent on Windows (reload only); iOS alerts on every refused change."
+   },
+   {
+    "id": "WD-047",
+    "item": "P2-047",
+    "status": "still present",
+    "what": "Layer register oddities unchanged (LY-5, LY-7, LY-8, LY-9, LY-10, LY-13, LY-14, LY-4b)."
+   },
+   {
+    "id": "WD-050",
+    "item": "P2-050",
+    "status": "still present (partly changed)",
+    "what": "On SQL Server the sidebar layer delete decides \"in use\" from the loaded memory; since d1c430a a layer used by a condition without takeoffs counts as in use (B1-16); iOS has the single 11-table rule."
+   },
+   {
+    "id": "WD-058",
+    "item": "P2-058",
+    "status": "still present",
+    "what": "Folder register oddities unchanged (CF-4, CF-6, CF-10, CF-12, CF-DEL, CF-LOCK-UID, CF-9, CF-MOVE)."
+   },
+   {
+    "id": "WD-070",
+    "item": "P2-070",
+    "status": "still present",
+    "what": "Undo/redo replay rescales with the lenient range-free transform: page_scale_transform.py is unchanged in d1c430a; the replay now refuses a missing page or item (P3-004) but not an out-of-range factor."
+   },
+   {
+    "id": "WD-071",
+    "item": "P2-071",
+    "status": "still present",
+    "what": "Set Scale register oddities unchanged (SS-1, SS-11, SS-12)."
+   },
+   {
+    "id": "WD-083",
+    "item": "P2-083",
+    "status": "still present",
+    "what": "Page rename/delete register oddities unchanged (RP-5..RP-9, RP-2b, DP-1, DP-3, DP-4, DP-6, DP-8, DP-9, DP-SCAN, RP-LOCK)."
+   },
+   {
+    "id": "WD-091",
+    "item": "P2-091",
+    "status": "still present",
+    "what": "Lock guard only for the ACTIVE bid and a refused write is silent; only RefNo is guarded at 2147483647."
+   },
+   {
+    "id": "WD-092",
+    "item": "P2-092",
+    "status": "still present",
+    "what": "New Condition register oddities unchanged (NC-4, NC-7, NC-8, NC-8b, NC-NUL, NC-COUNT)."
+   },
+   {
+    "id": "WD-115",
+    "item": "P2-115",
+    "status": "still present",
+    "what": "Annotation text and callout names are latin-1 encoded and a character outside it cannot be saved; since d1c430a the plan-view insert and edit paths refuse it with a named character (B1-17), other Access paths are unverified."
+   },
+   {
+    "id": "WD3-01",
+    "item": "P3-002",
+    "status": "residual of WD-051",
+    "what": "The single-toggle refusal of a shared locked template layer exists only in the UI layer; layer_operations.update_layer_show and the write service still have no scope guard.",
+    "windowsRefs": [
+     "ost_visualizer/infrastructure/mdb/components/layer_operations.py:47-60",
+     "ost_visualizer/presentation/coordinators/ui_event_coordinator.py:6525-6573",
+     "ost_visualizer/presentation/dialogs/layers_dialog.py:677-683"
+    ]
+   },
+   {
+    "id": "WD3-02",
+    "item": "P3-013",
+    "status": "residual of WD-081",
+    "what": "The last-page rule is memory-based: a non-empty loaded set of real pages that is a subset of the request is refused, a stale list or a direct writer call still deletes every page; the UI still enables Delete Page from len(sidebar order) > 1.",
+    "windowsRefs": [
+     "ost_visualizer/application/services/project_write_service.py:7222-7233",
+     "ost_visualizer/presentation/coordinators/ui_event_coordinator.py:6017",
+     "ost_visualizer/infrastructure/mdb/components/settings_operations.py (delete_pages: no guard)"
+    ]
+   },
+   {
+    "id": "WD3-03",
+    "item": "P3-004",
+    "status": "new",
+    "what": "Undo capture time: the capture-time check raises a plain ValueError and _page_scale_for_page_uid still answers (1.0, 1.0) for a missing page when CAPTURING (only the replay is guarded).",
+    "windowsRefs": [
+     "ost_visualizer/presentation/handlers/plan_view_action_handler.py:1577",
+     "ost_visualizer/presentation/handlers/plan_view_action_handler.py:1707-1710"
+    ]
+   },
+   {
+    "id": "WD3-04",
+    "item": "P3-017",
+    "status": "new (unverified)",
+    "what": "The annotation text refusal covers only the plan-view insert and edit paths on Access; undo/redo re-insert, raw OST import and detached-window paste were not seen guarded (the raw encode in serialization.py:72 would raise UnicodeEncodeError).",
+    "windowsRefs": [
+     "ost_visualizer/domain/services/annotation_text_storage.py",
+     "ost_visualizer/infrastructure/mdb/components/serialization.py:72"
+    ]
+   },
+   {
+    "id": "WD3-05",
+    "item": "P3-027",
+    "status": "new (type hint only)",
+    "what": "update_layer_visibility_deferred is annotated -> bool but returns a WriteReloadResult (falsy on refusal).",
+    "windowsRefs": [
+     "ost_visualizer/presentation/coordinators/ui_event_coordinator.py:6544"
+    ]
+   },
+   {
+    "id": "WD3-06",
+    "item": "P3-012",
+    "status": "new (informational)",
+    "what": "Lighting still forces nz >= 0 on every face, so sloped undersides are lit as if facing up.",
+    "windowsRefs": [
+     "ost_visualizer/presentation/visualization/utils/mesh.py:92-104"
+    ]
+   },
+   {
+    "id": "WD3-07",
+    "item": "P3-019",
+    "status": "new (informational, M2)",
+    "what": "The group drag rounds the DELTA while the anchor move rounds the ABSOLUTE position: different rounding of the same unguided axis (pre-existing).",
+    "windowsRefs": [
+     "ost_visualizer/presentation/components/plan_view/components/input_handler.py:1741-1747",
+     "ost_visualizer/presentation/components/plan_view/components/drag_handler.py:266-277"
+    ]
+   }
+  ],
+  "windowsDefectsFixedOnWindows": [
+   {
+    "id": "WD-035",
+    "item": "P2-035",
+    "alias": "A2-14 / A9-X1",
+    "fixedBy": "d1c430a",
+    "what": "Metric Count/Attachment created with width 12.0 in instead of 300 mm: Windows now passes the form width (300 mm in a metric bid) for every style; iOS equal (P3-014, P3-015)."
+   },
+   {
+    "id": "WD-051",
+    "item": "P2-051",
+    "alias": "owner note b",
+    "fixedBy": "d1c430a (UI layer only)",
+    "what": "A single toggle of a shared locked template layer is refused by the Windows UI layer; iOS refuses in Core and in the store (P3-002). Residual: WD3-01."
+   },
+   {
+    "id": "WD-081",
+    "item": "P2-081",
+    "alias": "DP-5",
+    "fixedBy": "d1c430a",
+    "what": "The last-page rule no longer counts the pseudo page NO_PAGE_ID; iOS already counted real BidPages rows in the transaction; pin added (P3-013). Residual: WD3-02."
+   },
+   {
+    "id": "WD-089",
+    "item": "P2-089",
+    "alias": "EXP-13 / EXP-17 / EXP-M02",
+    "fixedBy": "d1c430a",
+    "what": "OBJ and HTML winding: Windows now holds outward meshes everywhere (outward_faces, no flip, mesh order in OBJ and FBX); parity with iOS (P3-006..P3-008, P3-011)."
+   },
+   {
+    "id": "WD-107",
+    "item": "P2-107",
+    "alias": "CB-12",
+    "fixedBy": "d1c430a",
+    "what": "A paste group dropped on the guides with snap on landed off by up to half an increment: the guided axis is no longer rounded (P3-019, P3-020; M2 input)."
+   },
+   {
+    "id": "WD-X1",
+    "item": "",
+    "alias": "unoffered quantity cannot be cleared",
+    "fixedBy": "d1c430a",
+    "what": "A stored quantity the style does not offer is shown as a disabled Unknown (N) entry and \"(none)\" clears it; iOS ported (P3-005)."
+   },
+   {
+    "id": "WD-X2",
+    "item": "",
+    "alias": "condition delete grammar slip",
+    "fixedBy": "d1c430a",
+    "what": "The condition delete confirmation says \"all its takeoffs\" now; iOS follows Windows (P3-003)."
+   }
+  ],
+  "ownerQuestionChanges": [
+   {
+    "n": 1,
+    "state": "open (unchanged)",
+    "change": "EXP-21 (export and import alert wording): stays open, default kept."
+   },
+   {
+    "n": 2,
+    "state": "RESOLVED",
+    "change": "Undo / redo failure alert: ported (owner decision \"port\", P3-004)."
+   },
+   {
+    "n": 3,
+    "state": "RESOLVED",
+    "change": "Condition delete wording: iOS now follows Windows (P3-003; the pass-2 keep decision is replaced). Note: the facts of the pass call this question \"Q2\" in an older numbering; in this file, PORTING_BLOCKERS.md and parity2.ownerQuestions it is number 3 and the undo alert is number 2."
+   },
+   {
+    "n": 4,
+    "state": "open (unchanged)",
+    "change": "Folder-failure and layer-refresh titles: stay open, default kept."
+   },
+   {
+    "n": 5,
+    "state": "open (unchanged)",
+    "change": "M2 \"Count as Negative Quantity\" on a group: stays open, default kept (pressed takeoff only)."
+   },
+   {
+    "n": 6,
+    "state": "open (unchanged)",
+    "change": "Scale overflow text: stays open, default kept."
+   },
+   {
+    "n": 7,
+    "state": "open (unchanged)",
+    "change": "Merge order: stays open; the device results now also cover the five rows P3-01..P3-05 (59 rows on the one IPA of the pass-3 run)."
+   },
+   {
+    "n": 8,
+    "state": "RESOLVED (nothing to report)",
+    "change": "A2-14 / A9-X1, \"unoffered quantity cannot be cleared\", the \"takeoff\" grammar slip and CB-12 were all fixed by Windows in d1c430a; nothing is reported to the Windows side for these four."
+   },
+   {
+    "n": 9,
+    "state": "open (unchanged)",
+    "change": "Name length counting: stays open, default kept."
+   },
+   {
+    "n": 10,
+    "state": "RESOLVED",
+    "change": "Owner note b (single toggle of another bid's locked template row): iOS refuses in Core and in the store, Windows in the UI layer (P3-002)."
+   },
+   {
+    "n": 11,
+    "state": "open (unchanged)",
+    "change": "Owner note n (105 optional datetime fixture rows): stays open."
+   },
+   {
+    "n": 12,
+    "state": "open (unchanged)",
+    "change": "Title and wording of the \"no layers of its own\" alert: stays open, default kept."
+   },
+   {
+    "n": 13,
+    "state": "open (unchanged)",
+    "change": "Withdrawal of the job-7 stray-quote decision: stays open, default kept."
+   }
+  ],
+  "registerUpdates": [
+   {
+    "id": "EXP-13",
+    "aliases": [
+     "MSH-M02"
+    ],
+    "change": "wont-fix -> no-longer-divergent (winding sign)"
+   },
+   {
+    "id": "EXP-M02",
+    "change": "wont-fix -> no-longer-divergent (winding sign)"
+   },
+   {
+    "id": "GEO-15",
+    "change": "wont-fix -> no-longer-divergent (winding sign)"
+   },
+   {
+    "id": "EXP-17",
+    "change": "wont-fix unchanged, for byte and triangulation ORDER only; updatedPass3"
+   },
+   {
+    "id": "RPV-29",
+    "change": "wont-fix unchanged (KEEP-iOS); updatedPass3 note"
+   },
+   {
+    "id": "LP-24",
+    "change": "fixed unchanged; owner note b resolved; updatedPass3"
+   },
+   {
+    "id": "COND-M08",
+    "change": "fixed-ui-unverified unchanged; Unknown (N) quantity entry ported; updatedPass3"
+   },
+   {
+    "id": "header.needsMyDecision.open[LP-24]",
+    "change": "owner note b resolved"
+   },
+   {
+    "id": "m1Items",
+    "change": "updatePass3 on NC-6, DP-5, DP-8, SS-UNDO, LY-UI-2"
+   },
+   {
+    "id": "parity2",
+    "change": "updatedInPass3 on P2-021, P2-035, P2-051, P2-081, P2-085, P2-089, P2-107, P2-106, P2-115, P2-068, P2-017, P2-050; on windowsDefectsStillOpen WD-035, WD-050, WD-051, WD-070, WD-081, WD-089, WD-107, WD-115, WD-X1, WD-X2; on ownerQuestions 2, 3, 8, 10"
+   },
+   {
+    "id": "header.counts",
+    "change": "byStatus wont-fix 16 -> 13, no-longer-divergent 4 -> 7; byDisposition likewise; byImpactAndStatus behavior wont-fix 11 -> 8 and no-longer-divergent 3 -> 6; byOwnerAndStatus meshing wont-fix 3 -> 1 and no-longer-divergent 1 -> 3, export-formats wont-fix 3 -> 2 and no-longer-divergent 1 -> 2; decidedByStatus wont-fix 13 -> 11 and no-longer-divergent 1 -> 3; beforePass3 keeps the old values"
    }
   ]
  }
