@@ -1,6 +1,8 @@
 #import "SceneDelegate.h"
 #import "Controllers/DatabaseViewController.h"
 #import "Services/ImportService.h"
+#include "Core/Domain/FailureText.hpp"
+#include <string>
 
 @implementation SceneDelegate
 
@@ -48,20 +50,32 @@
     if (!ok) {
       NSLog(@"SceneDelegate: failed to import %@: %@", url.lastPathComponent,
             error.localizedDescription);
+      // The Windows "args" import (EXP-21): one line "<file name>: <sentence>" under "Import Error". The kind is the code of the
+      // ImportService error; anything that is not one of its errors is an unexpected failure.
+      const ost_domain::ImportFailureKind kind =
+          [error.domain isEqualToString:OSTImportErrorDomain]
+              ? static_cast<ost_domain::ImportFailureKind>(error.code)
+              : ost_domain::ImportFailureKind::Unexpected;
+      const ost_domain::DialogText text = ost_domain::import_failure_text(
+          kind, isOSP ? ost_domain::ImportFormat::Osp : ost_domain::ImportFormat::Ost,
+          ost_domain::ImportContext::OpenIn,
+          std::string(url.lastPathComponent.UTF8String ?: ""));
+      NSString *title = [NSString stringWithUTF8String:text.title.c_str()];
+      NSString *message = [NSString stringWithUTF8String:text.message.c_str()];
       dispatch_async(dispatch_get_main_queue(), ^{
-        [self _showImportError:error.localizedDescription ?: @"Unknown error"];
+        [self _showImportErrorWithTitle:title message:message];
       });
     }
   }
 }
 
-- (void)_showImportError:(NSString *)message {
+- (void)_showImportErrorWithTitle:(NSString *)title message:(NSString *)message {
   UIViewController *root = self.window.rootViewController;
   while (root.presentedViewController)
     root = root.presentedViewController;
 
   UIAlertController *alert =
-      [UIAlertController alertControllerWithTitle:@"Import Failed"
+      [UIAlertController alertControllerWithTitle:title
                                           message:message
                                    preferredStyle:UIAlertControllerStyleAlert];
   [alert addAction:[UIAlertAction actionWithTitle:@"OK"

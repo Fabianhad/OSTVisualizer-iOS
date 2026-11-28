@@ -4,6 +4,9 @@
 #import <Foundation/Foundation.h>
 #include "../Core/Data/ProjectData.hpp"
 
+// The domain of the NSError of a failed import. Its code is the ost_domain::ImportFailureKind (Core/Domain/FailureText.hpp) and its
+// localizedDescription is the one user sentence of the picker alert; the technical reason is only logged.
+extern NSErrorDomain const OSTImportErrorDomain;
 extern NSNotificationName const OSTProjectImportedNotification;
 extern NSNotificationName const OSTProjectDeletedNotification;
 extern NSNotificationName const OSTRenderConfigChangedNotification;
@@ -11,6 +14,8 @@ extern NSNotificationName const OSTRenderConfigChangedNotification;
 @interface ImportService : NSObject
 
 + (NSURL *)databaseURL;
+// NO with *error in OSTImportErrorDomain: the code is the ost_domain::ImportFailureKind and the description is the one user sentence of the
+// Windows local import (EXP-21). The parser / validation / store reason is only logged.
 + (BOOL)importOSTFile:(NSURL *)fileURL error:(NSError **)error;
 + (BOOL)importOSPFile:(NSURL *)fileURL error:(NSError **)error;
 
