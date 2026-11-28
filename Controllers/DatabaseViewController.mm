@@ -4,6 +4,7 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #include "../Core/Domain/BrowserRules.hpp"
 #include "../Core/Domain/DatabaseHierarchy.hpp"
+#include "../Core/Domain/FailureText.hpp"
 #include "../Core/Domain/RenderConfig.hpp"
 #include <string>
 
@@ -101,11 +102,12 @@ static NSString *OSTNS(const std::string &text) {
 #pragma mark - Data Loading
 
 - (void)_reloadHierarchy {
-  NSString *loadError = nil;
-  NSDictionary *hierarchy = [ImportService loadHierarchyWithError:&loadError];
+  // The store diagnostic is logged by ImportService; the alert shows the one user sentence (EXP-21).
+  NSDictionary *hierarchy = [ImportService loadHierarchyWithError:nil];
   // A project list that cannot be read completely is an error, never an empty list (DBP-M02).
-  self.loadError =
-      hierarchy ? nil : (loadError ?: @"The project list could not be read.");
+  self.loadError = hierarchy ? nil
+                             : OSTNS(ost_domain::load_failure_reason(
+                                   ost_domain::LoadTarget::Database));
   _folderGroups = hierarchy[@"folders"] ?: @[];
   _orphanBids = hierarchy[@"orphan_bids"] ?: @[];
   [_tableView reloadData];
@@ -216,10 +218,17 @@ static NSString *OSTNS(const std::string &text) {
       ok = [ImportService importOSTFile:url error:&error];
     }
     if (!ok) {
+      // One user sentence under "Import Error" (the Windows local import, EXP-21); ImportService logs the technical reason. An error
+      // without a description is an unexpected failure.
+      const ost_domain::DialogText fallback = ost_domain::import_failure_text(
+          ost_domain::ImportFailureKind::Unexpected,
+          [ext isEqualToString:@"osp"] ? ost_domain::ImportFormat::Osp
+                                       : ost_domain::ImportFormat::Ost,
+          ost_domain::ImportContext::Picker, std::string());
       UIAlertController *alert = [UIAlertController
-          alertControllerWithTitle:@"Import Failed"
+          alertControllerWithTitle:OSTNS(ost_domain::IMPORT_ERROR_TITLE)
                            message:error.localizedDescription
-                                       ?: @"Unknown error"
+                                       ?: OSTNS(fallback.message)
                     preferredStyle:UIAlertControllerStyleAlert];
       [alert addAction:[UIAlertAction actionWithTitle:@"OK"
                                                 style:UIAlertActionStyleDefault
@@ -335,12 +344,12 @@ static NSString *OSTNS(const std::string &text) {
 
   NSString *reason = nil;
   if (![ImportService canDeleteFolderWithUID:folderUID message:&reason]) {
-    if (reason) {
-      [self _presentAlertWithTitle:OSTNS(ost_domain::CANNOT_DELETE_FOLDER_TITLE)
-                           message:reason];
-    } else {
-      [self _presentFailure:ost_domain::BrowserFailure::DeleteFolders];
-    }
+    // Only "the project still has bids" is shown as the store words it; any other reason is the Windows "Delete Error" and is logged
+    // (EXP-21).
+    NSLog(@"DatabaseViewController: folder %@ cannot be deleted: %@", folderUID,
+          reason ?: @"(no reason)");
+    [self _presentDialogText:ost_domain::folder_delete_alert(
+                                 std::string(reason.UTF8String ?: ""))];
     return;
   }
 
@@ -356,16 +365,12 @@ static NSString *OSTNS(const std::string &text) {
                    NSString *deleteError = nil;
                    if (![ImportService deleteFolderWithUID:folderUID
                                                      error:&deleteError]) {
-                     if (deleteError) {
-                       [strongSelf
-                           _presentAlertWithTitle:
-                               OSTNS(ost_domain::CANNOT_DELETE_FOLDER_TITLE)
-                                          message:deleteError];
-                     } else {
-                       [strongSelf
-                           _presentFailure:ost_domain::BrowserFailure::
-                                               DeleteFolders];
-                     }
+                     NSLog(@"DatabaseViewController: folder %@ was not deleted: %@",
+                           folderUID, deleteError ?: @"(no reason)");
+                     [strongSelf
+                         _presentDialogText:ost_domain::folder_delete_alert(
+                                                std::string(deleteError.UTF8String
+                                                                ?: ""))];
                    }
                    [strongSelf _reloadHierarchy];
                  }
@@ -521,18 +526,16 @@ static NSString *OSTNS(const std::string &text) {
   NSDictionary *bid = [self _bidAtIndexPath:indexPath];
   if (bid) {
     NSString *bidUID = bid[@"uid"];
-    // A bid that cannot be read completely, or whose data is inconsistent, is not opened: the open fails with the cause (the missing
-    // reference, the takeoff UID, the cycle) instead of showing an empty plan (DBP-M02, DBP-31, BRW-16, POS-M01).
+    // A bid that cannot be read completely, or whose data is inconsistent, is not opened: the open fails with an alert instead of
+    // showing an empty plan (DBP-M02, DBP-31, BRW-16, POS-M01); the cause (the missing reference, the takeoff UID, the cycle) is only logged.
     {
       ost_data::ProjectData probe;
-      NSString *loadError = nil;
-      if (![ImportService loadProjectWithUID:bidUID
-                                     project:probe
-                                       error:&loadError]) {
+      // The diagnostic is logged by ImportService; the alert shows the one user sentence (EXP-21).
+      if (![ImportService loadProjectWithUID:bidUID project:probe error:nil]) {
         [self _presentDialogText:ost_domain::load_failure_text(
                                      std::string([[self _displayNameOfBid:bid] UTF8String]),
-                                     std::string([(loadError ?: @"The bid could not be read.")
-                                                     UTF8String]))];
+                                     ost_domain::load_failure_reason(
+                                         ost_domain::LoadTarget::Bid))];
         return;
       }
     }

@@ -1,5 +1,6 @@
 #include "../../Core/Data/PageNavigation.hpp"
 #include "../../Core/Domain/BrowserRules.hpp"
+#include "../../Core/Domain/FailureText.hpp"
 #include "../../Core/Domain/NegativeChange.hpp"
 #include "../../Core/Domain/QuantityPages.hpp"
 #include "../../Core/Domain/TakeoffSelection.hpp"
@@ -1390,12 +1391,15 @@ static const int kToolbar2DOnlyTag = 40000;
 
 - (void)_loadProjectFromDatabase:(NSString *)bidUID {
   // A bid that cannot be read completely or whose data is inconsistent is not
-  // entered: the reason is shown instead of an empty project (DBP-M02,
-  // DBP-31, BRW-16, POS-M01).
+  // entered: an alert is shown instead of an empty project (DBP-M02,
+  // DBP-31, BRW-16, POS-M01); the cause is only logged.
   ost_data::ProjectData proj;
-  NSString *error = nil;
-  if (![ImportService loadProjectWithUID:bidUID project:proj error:&error]) {
-    _loadErrorToPresent = error.length > 0 ? error : @"The bid could not be read.";
+  // ImportService logs the diagnostic; the alert shows the one user sentence (EXP-21).
+  if (![ImportService loadProjectWithUID:bidUID project:proj error:nil]) {
+    _loadErrorToPresent = [NSString
+        stringWithUTF8String:ost_domain::load_failure_reason(
+                                 ost_domain::LoadTarget::Bid)
+                                 .c_str()];
     return;
   }
   if (!proj.empty()) {

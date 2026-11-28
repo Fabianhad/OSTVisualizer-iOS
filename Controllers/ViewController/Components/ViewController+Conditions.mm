@@ -8,6 +8,7 @@
 #include "../../../Core/Domain/ConditionCreate.hpp"
 #include "../../../Core/Domain/ConditionFolderUi.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
+#include "../../../Core/Domain/FailureText.hpp"
 
 @interface ViewController (Conditions) <ConditionsViewControllerDelegate,
                                         EditConditionViewControllerDelegate,
@@ -220,19 +221,17 @@
   }
 
   // The duplicate is in the database; the project is read again to get its row. A bid that cannot be read again is left as it is
-  // and the cause is shown, the project is never replaced by an empty one (DBP-31, BRW-16, POS-M01, DBP-M02).
+  // and an alert is shown (the cause is only logged), the project is never replaced by an empty one (DBP-31, BRW-16, POS-M01, DBP-M02).
   ost_data::ProjectData fresh;
-  NSString *loadError = nil;
+  // ImportService logs the diagnostic; the alert shows the one user sentence (EXP-21).
   if (![ImportService loadProjectWithUID:self.bidUID
                                  project:fresh
-                                   error:&loadError]) {
+                                   error:nil]) {
     const ost_domain::DialogText text = ost_domain::load_failure_text(
         ost_domain::display_name_for_bid(
             std::string(self.bidUID.UTF8String),
             self.projectService.project.bid_name),
-        std::string((loadError.length > 0 ? loadError
-                                          : @"The bid could not be read.")
-                        .UTF8String));
+        ost_domain::load_failure_reason(ost_domain::LoadTarget::Bid));
     [self _presentConditionAlertWithTitle:[NSString
                                               stringWithUTF8String:text.title
                                                                        .c_str()]
