@@ -503,7 +503,7 @@ namespace
 TEST(ObjWinding, ExportedMeshesHaveThePositiveSignedVolumeOfTheWindowsObj)
 {
     // Port of exporters/adapters/obj_writer.py::test_coordinate_winding_and_multi_mesh_indices_without_mutating_input
-    // (faces written as (f0, f2, f1) of the inward-stored Windows meshes) with the signed volumes of the real Windows OBJ
+    // (faces written as stored: every Windows mesh is outward since d1c430a; before, written as (f0, f2, f1) of the inward-stored meshes) with the signed volumes of the real Windows OBJ
     // exports of the EXP-13 plan, no negative takeoff in the project: circle width 24 height 48 +21467.487, curved wall
     // [0,200,100,200,50,230] curve 0 height 96 thickness 6 +70478.256, wall [0,0,100,0] +57600, slab +60000. The iOS
     // writer writes the faces as the mesh stores them, so the meshes themselves must be outward-facing.
@@ -606,17 +606,15 @@ TEST(ObjWinding, BooleanDifferenceResultsAreOutwardFacing)
     // difference) and ExportRuleManifold.Winding_EveryMeshThatLeavesTheViewAndBothExportsIsOutwardFacingWithManifold (with
     // Manifold).
     //
-    // Windows apply_boolean_operations (core/boolean_operations.py:70-111, since b9902e6) flips (f0, f2, f1) the native result
-    // of a positive that MAY be cut (its bounding box strictly overlaps the bounding box of a negative of the same condition
-    // type; empty positives count as may-be-cut), and hands back the original mesh of every other positive. Before b9902e6
-    // it flipped EVERY positive as soon as the export held a negative mesh: the untouched wall of the EXP-13 plan came out
-    // with the volume -57600 instead of +57600 (and -60000 for the slab). Now an uncut positive keeps the winding its
-    // generator gives it (EXP-17: most prisms clockwise in the Windows frame, rhombus and triangle counter-clockwise), a cut
-    // piece comes out of the native pass outward and flipped inward for the 3D view / HTML, and the Windows OBJ writer swaps
-    // every face again, so one Windows OBJ can still mix both windings. That is not ported (EXP-13 / EXP-M02 / EXP-17 / GEO-15
-    // / MSH-21, kept by user decision, "keep outward normals"): iOS keeps every exported mesh outward-facing, cut or
-    // untouched, and so does the volume. Nothing in iOS depends on the flip (no renderer culls faces, the shaders light both
-    // sides, and the writers write the faces as stored).
+    // Windows (d1c430a, outward_faces in domain/mesh.py:62) made every shape outward: the generators, the boolean pass and the
+    // OBJ writer no longer flip anything. Before d1c430a (since b9902e6) apply_boolean_operations flipped (f0, f2, f1) the native
+    // result of a positive that MAY be cut (its bounding box strictly overlaps the bounding box of a negative of the same
+    // condition type; empty positives count as may-be-cut), and the Windows OBJ writer swapped every face again, so one Windows
+    // OBJ could mix both windings (the untouched wall of the EXP-13 plan came out with the volume -57600 instead of +57600, and
+    // -60000 for the slab). iOS already stored every exported mesh outward-facing, cut or untouched, and so does the volume:
+    // winding parity, nothing was ported (EXP-13 / EXP-M02 / GEO-15 / MSH-21). EXP-17 (the order of the triangles after the
+    // Windows bounding-box shortcut) stays a difference. Nothing in iOS depends on a flip (no renderer culls faces, the shaders
+    // light both sides, and the writers write the faces as stored).
     Mesh cylinder = ost_meshing::generate_cylinder_mesh(0.0, 0.0, 24.0, 48.0, 0.0);
     const double whole = signed_volume(cylinder);
     REQUIRE(whole > 0.0);

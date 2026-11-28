@@ -307,6 +307,35 @@ namespace ost_store
             return next_uid;
         }
 
+        bool next_uid_within_access_limit(ost_db::OstDatabase &db, const char *table, long long count, long long &first_out,
+                                          bool *no_identity_left)
+        {
+            first_out = 0;
+            if (no_identity_left)
+                *no_identity_left = false;
+            if (count < 1)
+                return false;
+            const long long first = next_uid_preserving_references(db, table);
+            if (first <= 0)
+                return false; // a failed statement, or a UID at the 63-bit limit with nothing above it
+            // first + count - 1 <= kAccessLongMax, rearranged so that no sum can overflow: count - 1 is in [0, LLONG_MAX - 1] and the
+            // limit minus it is never below -LLONG_MAX, while first >= 1.
+            const long long spare = count - 1;
+            if (spare >= kAccessLongMax || first > kAccessLongMax - spare)
+            {
+                if (no_identity_left)
+                    *no_identity_left = true;
+                return false;
+            }
+            first_out = first;
+            return true;
+        }
+
+        std::string no_identity_left_text(const std::string &noun)
+        {
+            return "Cannot add a " + noun + ": no identity is left below " + std::to_string(kAccessLongMax) + ".";
+        }
+
         std::string uid_list_problem(const std::vector<std::string> &uids, const char *table)
         {
             // Windows compares str(int(uid)); a UID beyond 63 bits cannot be stored in the INTEGER column and counts as malformed.

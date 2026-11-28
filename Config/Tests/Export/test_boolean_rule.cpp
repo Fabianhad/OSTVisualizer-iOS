@@ -5,10 +5,11 @@
 // cpp_extensions/src/module_geometry.cpp apply_boolean_operations_impl, run read-only (ExportRuleOracleData.hpp unit_cases).
 // The rule itself is tested with a stand-in for the boolean difference (the pass takes it as a parameter); the real
 // Manifold cases are under '#if OST_HAVE_BOOLEAN' (configure with -DOST_TEST_BOOLEAN=ON).
-// Since Windows b9902e6 apply_boolean_operations also returns the ORIGINAL mesh of a positive whose bounding box does not
-// strictly overlap the bounding box of any negative of its type (touching counts as apart) and reverses the faces of the
-// native result only for the positives that may be cut. iOS has no such bounding-box pre-check and never reverses a face
-// (every mesh stays outward by decision, see Winding_ThePassNeverReversesTheFacesOfAPositive): every positive of a type
+// Windows b9902e6 apply_boolean_operations also returns the ORIGINAL mesh of a positive whose bounding box does not
+// strictly overlap the bounding box of any negative of its type (touching counts as apart). Windows d1c430a made every shape
+// outward (outward_faces, domain/mesh.py:62) and removed the flip of the native result; iOS already stored every mesh outward
+// and never reverses a face (parity, see Winding_ThePassNeverReversesTheFacesOfAPositive). iOS has no bounding-box pre-check
+// (EXP-17, the order of the triangles after the shortcut, stays a difference): every positive of a type
 // that has a negative reaches the difference, so the tests below, whose boxes lie 100 apart, rely on that.
 #include "ExportRuleTestSupport.hpp"
 #include "ExportRuleOracleData.hpp"
@@ -163,9 +164,9 @@ TEST(BooleanRule, ACutPositiveIsTheDifferenceResultRepairedOfDegenerateFaces)
 
 TEST(BooleanRule, Winding_ThePassNeverReversesTheFacesOfAPositive)
 {
-    // PIN of a deliberate difference. Windows (b9902e6) reverses (f0, f2, f1) the native result of every positive that may be
-    // cut (bounding box strictly overlapping a same-type negative) and returns the original mesh of the others; iOS keeps
-    // every mesh outward-facing by decision (GEO-15 / EXP-13 / EXP-M02 / EXP-17 / MSH-21), so the faces that leave the pass
+    // PIN of winding parity. Windows d1c430a made every shape outward (outward_faces, domain/mesh.py:62) and removed the flip of
+    // the native result; iOS already stored every mesh outward-facing (GEO-15 / EXP-13 / EXP-M02 / MSH-21): parity. EXP-17 (the
+    // order after the bounding-box shortcut) stays a difference, so the faces that leave the pass
     // are exactly the faces that went in (untouched positive) or that the difference returned (cut positive), in the same
     // order and winding, and the volume stays positive. Nothing downstream consumes a flip either.
     const Mesh box = tagged_box(1);
@@ -266,8 +267,8 @@ TEST(BooleanRule, AFailingBooleanOperationReturnsEveryPositiveUnchangedAndLogsAn
         { throw std::runtime_error("manifold failed"); });
     CHECK_EQ(sources(results), (std::vector<size_t>{0, 2}));
     CHECK(results[0].mesh.vertices == tagged_box(1).vertices);
-    // Returned "as they are" includes the winding: the fallback never reverses the faces of a positive (the iOS decision
-    // EXP-13 / EXP-M02: every mesh stays outward-facing; mutation check of 2026-11-20 found this path unpinned).
+    // Returned "as they are" includes the winding: the fallback never reverses the faces of a positive (every mesh stays
+    // outward-facing, as on Windows since d1c430a: parity of EXP-13 / EXP-M02; mutation check of 2026-11-20 found this path unpinned).
     REQUIRE_EQ(results.size(), static_cast<size_t>(2));
     CHECK(results[0].mesh.faces == tagged_box(1).faces);
     CHECK(results[1].mesh.faces == tagged_box(3).faces);

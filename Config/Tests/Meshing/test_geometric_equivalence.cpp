@@ -3,7 +3,7 @@
 // or an area has
 //   - the SAME VERTEX SET as the Windows mesh (whatever the vertex order),
 //   - the same bounding box and the same absolute signed volume,
-//   - an outward-facing (positive) signed volume (GEO-15: iOS keeps its outward meshes; the cylinder and the curved walls
+//   - an outward-facing (positive) signed volume (GEO-15: parity since Windows d1c430a made every shape outward, iOS already stored outward meshes; the cylinder and the curved walls
 //     were inside-out until EXP-13 turned them outward, so the sign is asserted for every shape),
 //   - a closed, consistently oriented shell,
 //   - the same planar faces: the outline of every flat face (the edges that are not the diagonal of a coplanar pair of

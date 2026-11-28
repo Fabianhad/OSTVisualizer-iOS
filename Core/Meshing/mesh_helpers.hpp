@@ -32,8 +32,8 @@ namespace ost_meshing
     // The 12 triangles of a closed box whose bottom corners are vertices 0..3 and top corners 4..7, split along the same
     // diagonals as Windows (utils/mesh.py get_box_faces, used for the count box and for every straight wall) and facing
     // outward. `windows_to_ios[k]` is the iOS index of the vertex that sits where Windows vertex k sits: the Windows
-    // table is applied through that relabelling, and every face is stored (a, c, b), which is what the Windows OBJ writer
-    // writes (Windows stores the box inward). Vertex order and face order are those of the iOS generators; only the
+    // table is applied through that relabelling, and every face is stored (a, c, b), which makes the box outward (Windows d1c430a
+    // reaches the same outward faces through outward_faces, domain/mesh.py:62). Vertex order and face order are those of the iOS generators; only the
     // diagonal that splits each rectangular face is the Windows one (EXP-17: same triangle set as Windows).
     inline void add_box_faces(ost_geometry::CppMeshData &mesh, const std::array<uint32_t, 8> &windows_to_ios)
     {

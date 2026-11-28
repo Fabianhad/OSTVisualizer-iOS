@@ -550,3 +550,44 @@ TEST(Lp24_HideAllAgreement, OwnImageCopyIsHiddenInMemoryAndAfterAReload)
     CHECK_STR_EQ(sheet_states(reloaded), sheet_states(project));
     CHECK_STR_EQ(shows(db, "UID IN (1, 2, 13)"), "1=-1,2=0,13=0");
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Windows d1c430a, owner note b: the single toggle of ANOTHER bid's locked template row
+// ---------------------------------------------------------------------------------------------------------------
+
+// Windows refuses it in the UI layer (update_layer_visibility_deferred), the infrastructure update_layer_show still writes whatever bid owns the
+// row. iOS also refuses in the store, so that a caller that bypasses the sheet cannot change another bid's row either (fail closed, nothing
+// written, false). Rows: 61 = a locked template copy of bid 20, 62 = a locked template copy of bid 10 (the open bid's own), 63 = an unlocked
+// template row of bid 20, 70 / 90 = plain layers of bid 10 / 20 (seed_two_bids).
+TEST(Lp24_SingleToggle, AnotherBidsLockedTemplateRowIsRefusedByTheStoreAndNothingIsWritten)
+{
+    TempDb db("lp24_single_other_locked");
+    ost_ptest::seed_two_bids(db);
+    db.must("INSERT INTO BidLayers (UID, BidUID, IsTemplate, Name, Show, IsLocked, Sequence) VALUES (61, 20, -1, 'Callouts', -1, -1, 5)");
+    const std::string before = db.snapshot({"BidLayers"});
+    CHECK_FALSE(ost_store::set_layer_visibility(db.path(), "10", "61", false));
+    CHECK_FALSE(ost_store::set_layer_visibility(db.path(), "10", "61", true));
+    CHECK_FALSE(ost_store::set_layer_visibility(db.path(), "", "61", false)); // no bid named: still not the bid's row
+    CHECK_FALSE(ost_store::set_layer_visibility(db.path(), "abc", "61", false));
+    CHECK_EQ(db.snapshot({"BidLayers"}), before);
+    // the bid that owns the row can still write it (its own locked copy is not shared)
+    CHECK(ost_store::set_layer_visibility(db.path(), "20", "61", false));
+    CHECK_EQ(db.count("SELECT Show FROM BidLayers WHERE UID = 61"), 0);
+}
+
+TEST(Lp24_SingleToggle, TheBidsOwnLockedCopyAndPlainLayersAreStillWritten)
+{
+    TempDb db("lp24_single_own");
+    ost_ptest::seed_two_bids(db);
+    db.must("INSERT INTO BidLayers (UID, BidUID, IsTemplate, Name, Show, IsLocked, Sequence) VALUES (62, 10, -1, 'Annotation', -1, -1, 2)");
+    db.must("INSERT INTO BidLayers (UID, BidUID, IsTemplate, Name, Show, IsLocked, Sequence) VALUES (63, 20, -1, 'Unlocked', -1, 0, 6)");
+    CHECK(ost_store::set_layer_visibility(db.path(), "10", "62", false));
+    CHECK_EQ(db.count("SELECT Show FROM BidLayers WHERE UID = 62"), 0);
+    CHECK(ost_store::set_layer_visibility(db.path(), "10", "70", false));
+    CHECK_EQ(db.count("SELECT Show FROM BidLayers WHERE UID = 70"), 0);
+    // not changed by Windows d1c430a: an unlocked template row and a plain layer of another bid are written (no stricter scoping than Windows)
+    CHECK(ost_store::set_layer_visibility(db.path(), "10", "63", false));
+    CHECK_EQ(db.count("SELECT Show FROM BidLayers WHERE UID = 63"), 0);
+    CHECK(ost_store::set_layer_visibility(db.path(), "10", "90", false));
+    CHECK_EQ(db.count("SELECT Show FROM BidLayers WHERE UID = 90"), 0);
+}

@@ -17,6 +17,22 @@ static std::string OSTStdString(NSString *text) {
   return utf8 ? std::string(utf8) : std::string();
 }
 
+// The exact UTF-8 bytes of an NSString for Core, used by the CREATE mode only (the same conversion as the folder, page and layer bridges). nil is the
+// empty string. A NUL is kept, so that Core refuses the text (validate_create_spec, N-M1-13) and it is never cut at the NUL as -UTF8String does; text
+// with no UTF-8 form (a lone surrogate) becomes a byte that is not valid UTF-8, which Core refuses too: never an empty or a shortened name.
+static std::string OSTExactUTF8(NSString *text) {
+  if (!text)
+    return std::string();
+  if (![text isKindOfClass:[NSString class]])
+    return std::string("\xFF");
+  NSData *data = [text dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:NO];
+  if (!data)
+    return std::string("\xFF");
+  if (data.length == 0)
+    return std::string();
+  return std::string(static_cast<const char *>(data.bytes), (size_t)data.length);
+}
+
 // The dimension fields (feet-inch text, or millimetres in a metric bid), the ones that normalise their text when they lose focus
 // (Windows _DimensionLineEdit). The elevation is a plain field and keeps what was typed (COND-ELEV-01).
 static BOOL OSTIsDimensionTag(NSInteger tag) {
@@ -93,7 +109,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     _metric = metric;
     _condition = condition;
     [self _normalizeLoadedCondition];
-    _elevParts = parseElevation(condition.name);
+    _elevParts = ost_domain::parse_elevation(condition.name);
     _fieldTextCache = [[NSMutableDictionary alloc] init];
     _notesTextCache = @"";
 
@@ -125,9 +141,50 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   return self;
 }
 
+// Create mode (New Condition, plan 5.1; Windows reuses this dialog on a synthetic condition, condition_action_handler.py:552-587 and :721-759).
+// The synthetic condition, the default layer and the defaults of the bid's measurement system come from Core (new_condition_form,
+// default_new_condition_layer); the form has no neighbours (no Previous / Next, no takeoffs, so the style is never locked) and keeps no stored
+// condition: `_createForm` is what a Save is compared with. The Cond. No. is read-only text (N-M1-07, register NC-1).
+- (instancetype)initForNewConditionInFolder:(NSString *)folderUID
+                               mergedLayers:(const std::vector<ost_domain::BidLayer> &)mergedLayers
+                                     layers:(const std::unordered_map<std::string, ost_domain::Layer> &)layers
+                                   cdnTypes:(const std::unordered_map<std::string, ost_domain::CdnType> &)cdnTypes
+                                     metric:(BOOL)metric
+                                 nextNumber:(NSString *)nextNumberText {
+  self = [super initWithNibName:nil bundle:nil];
+  if (self) {
+    _createMode = YES;
+    _metric = metric;
+    _layers = layers;
+    _cdnTypes = cdnTypes;
+    _createFolderUID = OSTStdString(folderUID);
+    _nextNumberText = [nextNumberText copy] ?: @"";
+    _createDefaultLayerUID = ost_domain::default_new_condition_layer(mergedLayers, layers);
+    _createForm = ost_domain::new_condition_form(_createDefaultLayerUID, metric);
+    _condition = _createForm;
+    _unknownStyleType = std::nullopt;
+    _elevParts = ost_domain::parse_elevation(_condition.name);
+    _fieldTextCache = [[NSMutableDictionary alloc] init];
+    _notesTextCache = @"";
+    _styleDisabled = NO;
+    _currentIndex = -1;
+
+    // the layer list of Windows (COND-LAYER-01: the bid's own layers) and the type list in its case-insensitive order (COND-CDNPICK-01)
+    _sortedLayerUIDs = ost_domain::condition_layer_choices(mergedLayers, _layers);
+    _sortedCdnTypeUIDs = ost_domain::sorted_cdn_type_uids(_cdnTypes);
+
+    [self _syncFieldCacheFromCondition];
+    [self _rebuildDimRows];
+    [self _rebuildAdvRows];
+    // the baseline of "was this form touched": the dirty flag is NOT forced like Windows does (condition_action_handler.py:758, register NC-3)
+    [self _markFormSaved];
+  }
+  return self;
+}
+
 // What the form shows of a condition that is loaded into it (Windows _load_condition, edit_condition_dialog.py :839-847 of the
 // Windows 49a2d59): the stored style stays as it is (COND-M08). A type outside Linear / Area / Count /
-// Attachment adds the disabled "Unknown (N)" entry to the style choice (_unknownStyleType, replaced or removed at the next load) and
+// Attachment adds the disabled "Unknown (N)" entry to the style choice (_unknownStyleType, replaced or removed at the next load or by a save of a real style) and
 // is built Area-like, and a Save without a style choice keeps it. Trim and Curved Segment never show both (COND-TRIM-01). A Save
 // writes these values only when something else makes the form dirty.
 - (void)_normalizeLoadedCondition {
@@ -140,7 +197,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  self.title = @"Edit Condition";
+  self.title = _createMode ? @"New Condition" : @"Edit Condition";
   self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
 
   UIBarButtonItem *cancel = [[UIBarButtonItem alloc]
@@ -153,6 +210,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
       initWithBarButtonSystemItem:UIBarButtonSystemItemSave
                            target:self
                            action:@selector(_save)];
+  _saveButton = save;
 
   _prevButton = [[UIBarButtonItem alloc]
       initWithImage:[UIImage systemImageNamed:@"chevron.up"]
@@ -166,7 +224,9 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
              action:@selector(_next)];
   [self _updateNavButtons];
 
-  self.navigationItem.rightBarButtonItems = @[ save, _nextButton, _prevButton ];
+  // New Condition has Save only: there is no condition to walk to
+  self.navigationItem.rightBarButtonItems =
+      _createMode ? @[ save ] : @[ save, _nextButton, _prevButton ];
 
   _tableView = [[UITableView alloc] initWithFrame:CGRectZero
                                             style:UITableViewStyleInsetGrouped];
@@ -184,6 +244,15 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     [_tableView.trailingAnchor
         constraintEqualToAnchor:self.view.trailingAnchor],
   ]];
+}
+
+// Create mode: the Name field takes the focus the first time the form is on screen (the table has built its cells by then).
+- (void)viewDidAppear:(BOOL)animated {
+  [super viewDidAppear:animated];
+  if (_createMode && !_createFocused) {
+    _createFocused = YES;
+    [_nameField becomeFirstResponder];
+  }
 }
 
 #pragma mark - Data Builders
@@ -241,9 +310,9 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     _advRows.push_back({@"Tolerance", AdvRowType::Dimension, kTagTolerance,
                         false, _condition.connect_tolerance});
     _advRows.push_back(
-        {@"Display Name", AdvRowType::Toggle, 0, _condition.display_name, 0});
+        {kAdvLabelDisplayName, AdvRowType::Toggle, 0, _condition.display_name, 0});
   } else if (isLinear) {
-    _advRows.push_back({@"Round Quantity", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelRoundQuantity, AdvRowType::Toggle, 0,
                         _condition.round_quantity, 0});
     _advRows.push_back({@"Round to", AdvRowType::Dimension, kTagRoundTo, false,
                         _condition.round_up});
@@ -256,10 +325,10 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     _advRows.push_back({@"Tolerance", AdvRowType::Dimension, kTagTolerance,
                         false, _condition.connect_tolerance});
     _advRows.push_back({@"Trim", AdvRowType::Toggle, 0, _condition.trim, 0});
-    _advRows.push_back({@"Curved Segment", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelCurvedSegment, AdvRowType::Toggle, 0,
                         _condition.is_curved_segment, 0});
   } else {
-    _advRows.push_back({@"Round Quantity", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelRoundQuantity, AdvRowType::Toggle, 0,
                         _condition.round_quantity, 0});
     _advRows.push_back({@"Round to", AdvRowType::Dimension, kTagRoundTo, false,
                         _condition.round_up});
@@ -270,12 +339,12 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
                         _condition.grid_size2});
     _advRows.push_back(
         {@"Gap", AdvRowType::Dimension, kTagGap, false, _condition.gap});
-    _advRows.push_back({@"Display Pattern", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelDisplayPattern, AdvRowType::Toggle, 0,
                         _condition.display_grid_while_drawing, 0});
-    _advRows.push_back({@"Display Dimension", AdvRowType::Toggle, 0,
+    _advRows.push_back({kAdvLabelDisplayDimension, AdvRowType::Toggle, 0,
                         _condition.display_dimension, 0});
     _advRows.push_back(
-        {@"Display Name", AdvRowType::Toggle, 0, _condition.display_name, 0});
+        {kAdvLabelDisplayName, AdvRowType::Toggle, 0, _condition.display_name, 0});
     _advRows.push_back({@"Snap to Linear", AdvRowType::Toggle, 0,
                         _condition.snap_to_linear != -1, 0});
   }
@@ -285,6 +354,11 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
 - (void)_cancel {
   [self.view endEditing:YES];
+
+  if (_createMode) {
+    [self _cancelNewCondition];
+    return;
+  }
 
   if (_dirty) {
     UIAlertController *alert = [UIAlertController
@@ -320,6 +394,10 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
 - (void)_save {
   [self.view endEditing:YES];
+  if (_createMode) {
+    [self _saveNewCondition];
+    return;
+  }
   if (![self _applyChanges])
     return;
   [self dismissViewControllerAnimated:YES completion:nil];
@@ -352,6 +430,35 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 // back (or a focus change that changes nothing) leaves it clean.
 - (void)_updateDirty {
   _dirty = ![[self _formState] isEqualToArray:_savedFormState];
+  [self _updateInteractiveDismissal];
+}
+
+// New Condition (review of S1, M1-06): an EDITED form cannot be swiped away, the attempt asks the same question as Cancel
+// (presentationControllerDidAttemptToDismiss:); an untouched form still closes by swipe-down, silently. Only the interactive dismissal is blocked:
+// the form's own dismiss calls (Cancel, Discard, a created condition) are not. The Edit mode keeps its behaviour.
+- (void)_updateInteractiveDismissal {
+  if (!_createMode)
+    return;
+  self.modalInPresentation = _dirty;
+  self.navigationController.modalInPresentation = _dirty;
+}
+
+// UIAdaptivePresentationControllerDelegate: the second layer of the same guard (the first is _noticeTypingInField:, which keeps _dirty current
+// while a field is typed). The swipe-down is asked here before it starts: the Edit mode always answers YES (unchanged); a New Condition form ends
+// the editing first (so a text still being typed is in the form state) and answers NO when it is edited, which makes UIKit call
+// presentationControllerDidAttemptToDismiss: below. An untouched form answers YES and closes silently.
+- (BOOL)presentationControllerShouldDismiss:(UIPresentationController *)presentationController {
+  if (!_createMode)
+    return YES;
+  [self.view endEditing:YES];
+  return !_dirty;
+}
+
+// UIAdaptivePresentationControllerDelegate: the user swiped down an edited New Condition form (the navigation controller is the presented one,
+// ViewController+Conditions.mm sets this form as the delegate of its presentation).
+- (void)presentationControllerDidAttemptToDismiss:(UIPresentationController *)presentationController {
+  if (_createMode)
+    [self _cancel];
 }
 
 // Windows _apply_changes: YES when the form was saved or had nothing to save; NO when a value was refused or the save failed (the
@@ -390,6 +497,10 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
                                         toSave.ref_no);
   _conditionsMap[toSave.uid] = toSave;
   _condition = toSave;
+  // Windows _after_successful_save / _sync_unknown_style_item: once a real style is saved the disabled "Unknown (N)" entry is gone from
+  // the style choice (a save that keeps the unknown type keeps the entry)
+  _unknownStyleType =
+      ost_domain::unknown_style_type(_condition.condition_type);
   [self _syncFieldCacheFromCondition];
   [self _rebuildDimRows];
   [self _rebuildAdvRows];
@@ -460,7 +571,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 }
 
 - (void)_syncFieldCacheFromCondition {
-  _fieldTextCache[@(kTagName)] = OSTString(_elevParts.baseName);
+  _fieldTextCache[@(kTagName)] = OSTString(_elevParts.base_name);
   _fieldTextCache[@(kTagRefNo)] =
       [NSString stringWithFormat:@"%d", _condition.ref_no];
   _fieldTextCache[@(kTagElevVal)] = OSTString(_elevParts.value);
@@ -586,25 +697,33 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 - (BOOL)_validateAndCollectTextFields {
   ost_domain::Condition form = _condition;
 
+  // The texts that become the stored condition (the name with its elevation suffix, the notes): the CREATE mode hands them to Core as the exact
+  // bytes, so that a NUL in them is refused by Core (validate_create_spec, N-M1-13) and not cut off by -UTF8String. The Edit mode keeps
+  // OSTStdString and its behaviour.
+  const BOOL exactText = _createMode;
+  auto storedText = [exactText](NSString *text) {
+    return exactText ? OSTExactUTF8(text) : OSTStdString(text);
+  };
+
   std::string baseName;
   if (const auto issue = ost_domain::parse_condition_name(
-          OSTStdString([self _cachedTextForTag:kTagName]), baseName)) {
+          storedText([self _cachedTextForTag:kTagName]), baseName)) {
     return [self _refuseWithIssue:*issue focusTag:kTagName];
   }
 
   // The elevation text is kept as typed: it becomes the suffix of the name (COND-ELEV-01). It is validated with the loader's own
   // parser (parse_elevation_z calls elevation_text_inches, Windows b9902e6): a text the loader cannot read (a bare number, mm, units
   // of both systems, "5'" alone, a zero denominator) is refused with the forms that are accepted, like Windows. The dialog also
-  // refuses a text without a closing inch mark in which a letter or digit follows the foot mark ("5'6", "10'6", "5'abc"; "5'x" and
+  // refuses a text without a closing inch mark in which any non-blank character follows the foot mark ("5'6", "10'6", "5'abc", "5'x\""; "5'x" and
   // "5'6\"" pass), which the loader would read as the feet alone (elevation_text_needs_closing_inch_mark, called by parse_elevation_z;
-  // Windows 49a2d59, edit_condition_dialog.py :72, :1444); the alert is the same. The saved condition
+  // Windows d26893c, edit_condition_dialog.py :184-188, :1620-1646, rule widened in 0a24294); the alert is the same. The saved condition
   // does not take is_top or z from the form: condition_to_save derives both from the saved NAME like a reload does (decided
   // 2026-11-19); for a text that passed, the number checked here is the one that derivation gives, so memory equals a reload.
   const std::string elevValue = ost_import::text_rules::py_strip(
-      OSTStdString([self _cachedTextForTag:kTagElevVal]));
+      storedText([self _cachedTextForTag:kTagElevVal]));
   const int elevType =
       _elevTypeSeg ? (int)_elevTypeSeg.selectedSegmentIndex : _elevParts.type;
-  _elevParts.baseName = baseName;
+  _elevParts.base_name = baseName;
   _elevParts.type = elevType;
   _elevParts.value = elevValue;
 
@@ -613,12 +732,16 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
                                                        checkedElevation)) {
     return [self _refuseWithIssue:*issue focusTag:kTagElevVal];
   }
-  form.name = reassembleElevation(baseName, elevType, elevValue);
+  form.name = ost_domain::reassemble_elevation(baseName, elevType, elevValue);
 
   // Cond. No. is validated, never coerced (COND-REF-01). The layer stays as it is: an empty layer is no layer (COND-LAYER-01).
-  if (const auto issue = ost_domain::parse_condition_number(
-          OSTStdString([self _cachedTextForTag:kTagRefNo]), form.ref_no)) {
-    return [self _refuseWithIssue:*issue focusTag:kTagRefNo];
+  // The New Condition form has no Cond. No. field to read: Windows asks for a number and then drops it (register NC-1), here the writer
+  // gives the next one and the form only shows it.
+  if (!_createMode) {
+    if (const auto issue = ost_domain::parse_condition_number(
+            OSTStdString([self _cachedTextForTag:kTagRefNo]), form.ref_no)) {
+      return [self _refuseWithIssue:*issue focusTag:kTagRefNo];
+    }
   }
 
   // The fields to parse are those of the layout the editor built (a type outside the four is Area-like, COND-M08), so no field that
@@ -675,9 +798,118 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
     }
   }
 
-  form.notes = OSTStdString(_notesTextCache ?: @"");
+  form.notes = storedText(_notesTextCache ?: @"");
   _condition = form;
   return YES;
+}
+
+#pragma mark - Create mode (New Condition)
+
+// Cancel of the New Condition form: an untouched form closes silently (N-M1-09; Windows forces the dirty flag and asks, register NC-3), an
+// edited one asks whether to discard it. "Edited" is the dirty flag as the Edit mode computes it (a field changed and changed back is untouched).
+- (void)_cancelNewCondition {
+  if (_createDone || _createInFlight)
+    return;
+  if (!_dirty) {
+    [self dismissViewControllerAnimated:YES completion:nil];
+    return;
+  }
+  __weak typeof(self) weakSelf = self;
+  UIAlertController *alert = [UIAlertController
+      alertControllerWithTitle:OSTString(ost_domain::kDiscardNewConditionTitle)
+                       message:OSTString(ost_domain::kDiscardNewConditionMessage)
+                preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:OSTString(ost_domain::kKeepEditingTitle)
+                                            style:UIAlertActionStyleCancel
+                                          handler:nil]];
+  [alert addAction:[UIAlertAction
+                       actionWithTitle:@"Discard"
+                                 style:UIAlertActionStyleDestructive
+                               handler:^(UIAlertAction *a) {
+                                 [weakSelf dismissViewControllerAnimated:YES
+                                                              completion:nil];
+                               }]];
+  [self presentViewController:alert animated:YES completion:nil];
+}
+
+// Save of the New Condition form. It always runs the validation (an untouched form fails on the empty name with the Windows text: "Condition
+// name cannot be empty.", M1-20), then hands Core's spec to the delegate, which writes it. ONE condition per Save: a second tap while the write
+// runs or after it worked does nothing, and the Save button is disabled meanwhile (M1-03).
+- (void)_saveNewCondition {
+  if (_createDone || _createInFlight)
+    return;
+  if (![self _validateAndCollectTextFields])
+    return;
+
+  // Core builds the spec: the TYPE_DEFAULTS row of the style overlaid by what the dialog changed (condition_action_handler.py:593-619), in the
+  // folder this form was opened for. The limits and the guards of the store are checked first, so the user is told on the form.
+  const ost_domain::ConditionChanges changes =
+      ost_domain::condition_changes_for_save(_createForm, _condition, _metric);
+  const ost_domain::CreateConditionSpec spec = ost_domain::build_create_spec(
+      _createForm, changes, _createFolderUID, _createDefaultLayerUID, _metric);
+  if (const auto issue = ost_domain::validate_create_spec(spec)) {
+    [self _refuseWithIssue:*issue focusTag:kTagName];
+    return;
+  }
+  if (!_delegate ||
+      ![_delegate respondsToSelector:@selector(editConditionViewController:
+                                               didRequestCreateCondition:
+                                                                 message:)])
+    return;
+
+  _createInFlight = YES;
+  _saveButton.enabled = NO;
+  NSString *message = nil;
+  const EditConditionCreateOutcome outcome =
+      [_delegate editConditionViewController:self
+                   didRequestCreateCondition:spec
+                                     message:&message];
+  _createInFlight = NO;
+
+  switch (outcome) {
+  case EditConditionCreateOutcomeCreated: {
+    // the form is done: Save stays disabled and _createDone refuses a late tap while it slides away
+    _createDone = YES;
+    NSString *notice = message;
+    UIViewController *presenter = self.presentingViewController;
+    [self dismissViewControllerAnimated:YES
+                             completion:^{
+                               if (notice.length == 0 || !presenter)
+                                 return;
+                               UIAlertController *alert = [UIAlertController
+                                   alertControllerWithTitle:OSTString(ost_domain::kConditionCreatedRefreshFailedTitle)
+                                                    message:notice
+                                             preferredStyle:UIAlertControllerStyleAlert];
+                               [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                                                         style:UIAlertActionStyleDefault
+                                                                       handler:nil]];
+                               [presenter presentViewController:alert animated:YES completion:nil];
+                             }];
+    break;
+  }
+  case EditConditionCreateOutcomeReported:
+    _saveButton.enabled = YES;
+    break;
+  case EditConditionCreateOutcomeFailed:
+    _saveButton.enabled = YES;
+    [self _showCreateFailedAlertWithMessage:message];
+    break;
+  }
+}
+
+// "Save Failed" with the reason the store gave (the Windows text of a condition number past 2147483647, the name-length text, the limit text), or
+// "Failed to create condition." when it gave none; Core picks (condition_create_failed_issue, condition_action_handler.py:650-653).
+- (void)_showCreateFailedAlertWithMessage:(NSString *)message {
+  const ost_domain::FormIssue issue =
+      ost_domain::condition_create_failed_issue(OSTStdString(message));
+  UIAlertController *alert = [UIAlertController
+      alertControllerWithTitle:OSTString(issue.title)
+                       message:OSTString(issue.message)
+                preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                            style:UIAlertActionStyleDefault
+                                          handler:nil]];
+  [self presentViewController:alert animated:YES completion:nil];
 }
 
 #pragma mark - Navigation
@@ -697,7 +929,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
 
   _condition = it->second;
   [self _normalizeLoadedCondition];
-  _elevParts = parseElevation(_condition.name);
+  _elevParts = ost_domain::parse_elevation(_condition.name);
   _styleDisabled = [self _conditionHasTakeoffs:uid];
   _nameField = nil;
   _refNoField = nil;
@@ -798,6 +1030,26 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   [self _updateDirty];
 }
 
+// New Condition (review of the whole milestone, M1-06): the form notices a text WHILE it is typed, not only when the field loses focus. The
+// Name field has the focus from the start, so without this a typed name left the form "untouched" until the keyboard went away, and a swipe-down
+// closed it without the Discard question. The cache is what textFieldDidEndEditing: fills (that method still normalises the dimension texts when
+// the field is left). A UIAction with a weak self, so no selector is named. The Edit mode does not call this: its behaviour is unchanged.
+- (void)_noticeTypingInField:(UITextField *)field {
+  if (!_createMode)
+    return;
+  __weak EditConditionViewController *weakSelf = self;
+  __weak UITextField *weakField = field;
+  [field addAction:[UIAction actionWithHandler:^(__kindof UIAction *changed) {
+          EditConditionViewController *strongSelf = weakSelf;
+          UITextField *strongField = weakField;
+          if (!strongSelf || !strongField)
+            return;
+          strongSelf->_fieldTextCache[@(strongField.tag)] = strongField.text ?: @"";
+          [strongSelf _updateDirty];
+        }]
+      forControlEvents:UIControlEventEditingChanged];
+}
+
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
   [textField resignFirstResponder];
   return YES;
@@ -848,6 +1100,7 @@ static NSInteger OSTTagForStyleField(ost_domain::StyleField field) {
   field.translatesAutoresizingMaskIntoConstraints = NO;
   field.adjustsFontSizeToFitWidth = YES;
   field.minimumFontSize = 11;
+  [self _noticeTypingInField:field];
   [cell.contentView addSubview:field];
 
   [NSLayoutConstraint activateConstraints:@[

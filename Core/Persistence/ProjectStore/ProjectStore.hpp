@@ -66,7 +66,7 @@ namespace ost_store
     //   "BidTakeoffs.UID=<uid> does not satisfy the Takeoff domain contract"   (a non-finite position or rotation, an empty uid)
     //   "BidTakeoffs.UID=<uid> references missing BidConditions.UID=<n> through BidConditionUID."  (also BidPages / BidPageUID and,
     //                                                                          for a hole, BidTakeoffs / ParentUID)
-    //   "A Takeoff and its parent must belong to the same Page."
+    //   "A takeoff and its parent must belong to the same page."
     //   "BidTakeoffs.UID=<uid> participates in a ParentUID cycle."  (also BidConditionFolders and BidPageFolders)
     // A takeoff with an empty, unparsable or short position is kept (position []). `project.merged_layers` is the layer list
     // (the bid's layers and the locked template layers through ost_domain::merge_layers_for_bid); a list that cannot be read is
@@ -250,9 +250,12 @@ namespace ost_store
     // A copy whose number would pass the highest condition number, 2147483647, is refused BEFORE anything is written (no row, no UID;
     // Windows _allocate_condition_identities, ConditionNumberOverflowError, condition_operations.py :56-62 in Windows 49a2d59):
     // `error`, when given, is then ost_domain::refuse_new_condition_numbers(highest, 1), highest being MAX(RefNo) of the
-    // bid (NULL numbers ignored, 0 for a bid without numbers, read as 64 bit inside the transaction after the ownership check). Every
-    // other failure leaves `error` empty (the caller shows the generic text), and so does a success. This is the only place that
-    // allocates condition numbers (iOS has no New Condition, no paste, no copy to another bid and no renumber).
+    // bid (NULL numbers ignored, 0 for a bid without numbers, read as 64 bit inside the transaction after the ownership check).
+    // A copy whose UID would pass 2147483647, the largest Access Long, is refused the same way (plan 4.2, owner decision N-M1-04:
+    // Windows keeps no UID ceiling, identity_allocation.py:5-47; this is a deliberate safe deviation): `error` is then
+    // "Cannot add a condition: no identity is left below 2147483647." (integrity::next_uid_within_access_limit). Every other failure
+    // leaves `error` empty (the caller shows the generic text), and so does a success. Condition numbers are allocated by
+    // insert_condition and duplicate_condition.
     std::string duplicate_condition(const std::string &db_path,
                                     const std::string &bid_uid,
                                     const std::string &condition_uid,
@@ -263,3 +266,13 @@ namespace ost_store
                           const std::string &condition_uid);
 
 }
+
+// One header per M1 feature (plan 4.4 and 6.1), included here once so that parallel streams never edit the same lines. The first is the
+// bid lock guard for the UI; the others are empty stubs that the stream named in plan 6.1 fills.
+#include "ProjectStore_BidLock.hpp"
+#include "ProjectStore_ConditionCreate.hpp"
+#include "ProjectStore_ConditionFolders.hpp"
+#include "ProjectStore_Layers.hpp"
+#include "ProjectStore_PageRename.hpp"
+#include "ProjectStore_PageDelete.hpp"
+#include "ProjectStore_PageScale.hpp"

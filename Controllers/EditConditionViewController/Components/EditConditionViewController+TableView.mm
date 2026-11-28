@@ -2,6 +2,7 @@
 #import "EditConditionHelpers.h"
 #include "../../../Core/Domain/ConditionChoices.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
+#include "../../../Core/Domain/ConditionQuantityChoices.hpp"
 #include "../../../Core/Domain/DimensionFormat.hpp"
 #include <cmath>
 
@@ -131,7 +132,7 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
         _textFieldCell:tableView
                  label:@"Name"
                  value:[NSString
-                           stringWithUTF8String:_elevParts.baseName.c_str()]
+                           stringWithUTF8String:_elevParts.base_name.c_str()]
                    tag:kTagName];
     _nameField = (UITextField *)[cell viewWithTag:kTagName];
     return cell;
@@ -178,6 +179,7 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
     OSTDisableSmartPunctuation(field);
     field.translatesAutoresizingMaskIntoConstraints = NO;
     _elevValueField = field;
+    [self _noticeTypingInField:field];
     [cell.contentView addSubview:field];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -218,6 +220,16 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
     return cell;
   }
   case TopRow::RefNo: {
+    if (_createMode) {
+      // New Condition: the number the writer will give, read-only (N-M1-07, register NC-1); no field, so nothing to parse or focus
+      UITableViewCell *cell = [self _detailCell:tableView id:@"NextNumberCell"];
+      cell.textLabel.text = @"Cond. No.";
+      cell.detailTextLabel.text = _nextNumberText;
+      cell.detailTextLabel.textColor = [UIColor secondaryLabelColor];
+      cell.selectionStyle = UITableViewCellSelectionStyleNone;
+      _refNoField = nil;
+      return cell;
+    }
     UITableViewCell *cell = [self
         _textFieldCell:tableView
                  label:@"Cond. No."
@@ -358,15 +370,11 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
   if (calcType == 0) {
     cell.detailTextLabel.text = @"(none)";
   } else {
-    NSString *calcLabel = @"(none)";
-    auto qtyOpts =
-        ost_domain::get_quantity_options_for_type(_condition.condition_type);
-    for (const auto &opt : qtyOpts) {
-      if (opt.first == calcType) {
-        calcLabel = [NSString stringWithUTF8String:opt.second.c_str()];
-        break;
-      }
-    }
+    // the label of the option, or "Unknown (N)" for a stored quantity the style does not offer (Windows d1c430a)
+    NSString *calcLabel = [NSString
+        stringWithUTF8String:ost_domain::condition_quantity_label(
+                                 _condition.condition_type, calcType)
+                                 .c_str()];
     // the labels are UTF-8 (IN², m², ...): converted as text, never printed through %s (QTY-16)
     std::string uomLabel = ost_domain::get_uom_label(uom);
     if (!uomLabel.empty()) {
@@ -437,7 +445,7 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
     sw.on = ar.boolVal;
     sw.tag = row;
     // Trim disables Curved Segment (COND-TRIM-01)
-    if ([ar.label isEqualToString:@"Curved Segment"])
+    if ([ar.label isEqualToString:kAdvLabelCurvedSegment])
       sw.enabled = ost_domain::curved_segment_enabled(_condition);
     [sw addTarget:self
                   action:@selector(_advToggleChanged:)
@@ -468,14 +476,14 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
   NSString *label = _advRows[row].label;
   if ([label isEqualToString:@"Connect"])
     _condition.connect = sw.isOn;
-  else if ([label isEqualToString:@"Display Name"])
+  else if ([label isEqualToString:kAdvLabelDisplayName])
     _condition.display_name = sw.isOn;
-  else if ([label isEqualToString:@"Round Quantity"])
+  else if ([label isEqualToString:kAdvLabelRoundQuantity])
     _condition.round_quantity = sw.isOn;
   else if ([label isEqualToString:@"Drop/Run"])
     _condition.drop_run = sw.isOn;
   else if ([label isEqualToString:@"Trim"] ||
-           [label isEqualToString:@"Curved Segment"]) {
+           [label isEqualToString:kAdvLabelCurvedSegment]) {
     // Trim and Curved Segment exclude each other (COND-TRIM-01): the switches are rebuilt from the condition so the other one
     // shows off (and Curved Segment disabled while Trim is on)
     [self.view endEditing:YES];
@@ -490,9 +498,9 @@ static void OSTDisableSmartPunctuation(UITextField *field) {
     return;
   } else if ([label isEqualToString:@"Grid"])
     _condition.grid = sw.isOn;
-  else if ([label isEqualToString:@"Display Pattern"])
+  else if ([label isEqualToString:kAdvLabelDisplayPattern])
     _condition.display_grid_while_drawing = sw.isOn;
-  else if ([label isEqualToString:@"Display Dimension"])
+  else if ([label isEqualToString:kAdvLabelDisplayDimension])
     _condition.display_dimension = sw.isOn;
   else if ([label isEqualToString:@"Snap to Linear"])
     _condition.snap_to_linear = sw.isOn ? 0 : -1;

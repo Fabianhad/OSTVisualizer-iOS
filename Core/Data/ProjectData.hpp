@@ -114,6 +114,19 @@ namespace ost_data
             }
         }
 
+        // The in-memory side of Rename Page after ost_store::rename_page worked (Windows project_data_service.py:420-425 apply_page_name:
+        // the page gets the name; iOS keeps ONE copy of it, Windows three records). Only `name` of the page `page_uid` changes: every
+        // other field, the map entry, `page_order` and `folders` stay (a rename never re-sorts: RP-4). An unknown uid returns false and
+        // creates nothing (no operator[] insertion). The caller applies it only after a successful write.
+        bool apply_page_name(const std::string &page_uid, const std::string &name)
+        {
+            auto it = pages.find(page_uid);
+            if (it == pages.end())
+                return false;
+            it->second.name = name;
+            return true;
+        }
+
         // What the layer sheet shows for a row of the layer list: the live visibility of a layer of the bid (the toggles made
         // since the load), else the stored Show of the listed row (a shared template row cannot be changed from the sheet),
         // else visible for a uid the list does not have.

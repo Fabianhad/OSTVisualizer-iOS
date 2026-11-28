@@ -65,9 +65,21 @@ namespace ost_domain
     // one, the last " @ " (else " @") is a legacy bare marker (bottom). T/B are case-sensitive.
     ElevationParts parse_elevation(const std::string &name);
 
+    // elevation.py::reassemble_elevation (:62-67; plan 5.1 / 4.13, replaces the Objective-C copy reassembleElevation of EditConditionHelpers.mm,
+    // which trims only U+0020): trimmed = value.strip() (Python str.strip: every Unicode white space, ost_import::text_rules::py_strip); a blank
+    // value gives `base_name` unchanged; else base_name + " @T " + trimmed for elevation_type 0 and base_name + " @B " + trimmed for every other type
+    // (1, 5, -1 ...).
+    std::string reassemble_elevation(const std::string &base_name, int elevation_type, const std::string &value);
+
     // elevation_text.py::is_elevation_text: the elevation grammar prefix patterns (feet+inches, feet only,
-    // inches only, metres+centimetres, metres, centimetres), case-insensitive, matched at the start of the text.
+    // inches only, metres+centimetres, metres, centimetres), case-insensitive, matched at the start of the text. U+2033 and U+201D
+    // are read as the inch mark '"' first (normalize_inch_marks, Windows 0a24294), so "5'6<U+2033>" and "6<U+201D>" are elevation texts.
     bool is_elevation_text(const std::string &text);
+
+    // elevation_text.py::IMPERIAL_FEET_INCHES.match(normalize_inch_marks(text)): the text STARTS with a complete feet-and-inches value
+    // (5'6", 5' 6<U+2033>, 10'6 1/2"). The Edit Condition dialog skips its closing-inch-mark rule for such a text
+    // (elevation_text_needs_closing_inch_mark, edit_condition_dialog.py:1628-1630). No strip: the caller passes the stripped text.
+    bool elevation_text_starts_with_feet_and_inches(const std::string &text);
 
     // elevation_text.py::_parse_fractional_inches_text (:54-76; "6", "1/2", "3 1/2", "-3 1/2"). Returns false where
     // the Windows function raises ValueError (zero denominator "zero denominator in fraction 1/0", unreadable
@@ -86,8 +98,9 @@ namespace ost_domain
     double cm_to_inches(double cm);
 
     // What elevation_text.py::elevation_text_inches did with a text: a number (Value), None (NotAnElevation), or an exception
-    // (Raises: ValueError for a zero denominator or a feet run beyond Python's 4300-digit int() limit, OverflowError for a feet run
-    // beyond the float range).
+    // (Raises: ValueError for a zero denominator, a feet run beyond Python's 4300-digit int() limit, or, since Windows 0a24294, a
+    // result beyond the float range: the OverflowError of a feet run and any non-finite inches-only / metre / centimetre figure
+    // become ValueError("elevation out of range: <first 40 characters>")).
     enum class ElevationTextStatus
     {
         Value,
@@ -95,17 +108,18 @@ namespace ost_domain
         Raises
     };
 
-    // elevation_text.py::elevation_text_inches (b9902e6): THE function that reads an elevation text, in inches. text.strip(), then
-    // the six-pattern gate (is_elevation_text, anchored prefix) or None; a text with an imperial mark and no letter m is read by
-    // the imperial reader, one with a letter m and no mark by the metric reader (centimetres / 2.54), one with both is None.
-    // `inches` is written only for Value (and may then be inf: a metre figure beyond the float range, which Windows does not
-    // raise on either); for Raises `error` (when given) holds the Windows message. The loader (extract_z_value_from_name,
+    // elevation_text.py::elevation_text_inches (b9902e6, 0a24294): THE function that reads an elevation text, in inches.
+    // normalize_inch_marks(text).strip() (U+2033 and U+201D become '"'), then the six-pattern gate (is_elevation_text, anchored
+    // prefix) or None; a text with an imperial mark and no letter m is read by the imperial reader, one with a letter m and no mark
+    // by the metric reader (centimetres / 2.54), one with both is None. `inches` is written only for Value, and is always finite (a
+    // result beyond the float range is Raises); for Raises `error` (when given) holds the Windows message. The loader (extract_z_value_from_name,
     // position_parser.py:21-31) and the Edit Condition dialog (parse_elevation_z, edit_condition_dialog.py:1437-1461) both call it.
     ElevationTextStatus elevation_text_inches(const std::string &text, double &inches, std::string *error = nullptr);
 
     // position_parser.py::extract_z_value_from_name = parse_elevation + elevation_text_inches of the value (position_parser.py:21-31).
     // On success z_inches/is_top hold the Windows result ((0.0, false) when the name has no valid elevation). Returns false where
-    // Windows raises (a zero denominator, e.g. "Wall @B 1/0\""): the Windows MDB reader then logs a warning and stores (0.0, false).
+    // Windows raises (a zero denominator, e.g. "Wall @B 1/0\"", or a number beyond the float range since 0a24294): the Windows MDB reader
+    // then logs a warning and stores (0.0, false).
     bool extract_z_value_from_name(const std::string &name, double &z_inches, bool &is_top,
                                    std::string *error = nullptr);
 

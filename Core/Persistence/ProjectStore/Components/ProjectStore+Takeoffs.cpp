@@ -44,8 +44,15 @@ namespace ost_store
     {
         // Windows update_layer_show: the layer must exist and belong to ONE existing bid (require_single_bid_scope_for_uids): a
         // missing layer and a template layer of no bid are refused and nothing is written. The bid that is open is not compared
-        // with the layer's bid (Windows does not either), so bid_uid is not used.
-        (void)bid_uid;
+        // with the layer's bid (Windows does not either) for an ordinary layer. One row kind IS compared (iOS fail-closed guard behind the
+        // Windows d1c430a UI refusal, owner note b, ui_event_coordinator.update_layer_visibility_deferred + is_shared_template_layer): a
+        // shared template row, a locked template layer whose bid is not `bid_uid` (another bid's locked copy; one of no bid is refused above),
+        // is never written here, even by a caller that skipped the sheet's refusal (single_layer_visibility_refusal): false, nothing written.
+        // An unusable bid_uid (empty, not a number) matches no bid, so every locked template row is refused then. An unlocked template row
+        // and a plain layer of another bid are written as before (no stricter scoping than Windows).
+        long long open_bid = -1;
+        if (!integrity::parse_uid(bid_uid, open_bid))
+            open_bid = -1;
         long long layer = 0;
         if (!integrity::parse_uid(layer_uid, layer))
             return false;
@@ -61,6 +68,22 @@ namespace ost_store
         {
             db.rollback();
             return false;
+        }
+        if (owner != open_bid && db.column_exists("BidLayers", "IsTemplate") && db.column_exists("BidLayers", "IsLocked"))
+        {
+            ost_db::Statement locked = db.prepare(
+                "SELECT COUNT(*) FROM [BidLayers] WHERE [UID] = ? AND [IsTemplate] <> 0 AND [IsLocked] <> 0");
+            if (!locked.valid())
+            {
+                db.rollback();
+                return false;
+            }
+            locked.bind_int64(1, layer);
+            if (!locked.step() || locked.column_int(0) != 0)
+            {
+                db.rollback();
+                return false;
+            }
         }
 
         ost_db::Statement stmt = db.prepare(
@@ -331,7 +354,7 @@ namespace ost_store
             parent_page.bind_int64(1, parent);
             if (parent_page.step_result() != ost_db::StepResult::Row ||
                 parent_page.column_type(0) == ost_db::Statement::TypeNull || parent_page.column_int64(0) != page)
-                return fail(); // "A Takeoff and its parent must belong to the same Page."
+                return fail(); // "A takeoff and its parent must belong to the same page."
         }
 
         // The UID: the explicit one, else MAX(UID) + 1 raised above every column that references a takeoff (Windows

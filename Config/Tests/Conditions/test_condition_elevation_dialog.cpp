@@ -32,7 +32,7 @@ using ost_domain::parse_elevation_z;
 namespace
 {
     // The Windows wording, spelled out (not taken from the constants under test)
-    const char *const kWindowsMetricHint = "Use metres or centimetres, for example \"3.2 m\" or \"320 cm\".";
+    const char *const kWindowsMetricHint = "Use meters or centimeters, for example \"3.2 m\" or \"320 cm\".";
     const char *const kWindowsImperialHint = "Use feet and inches with unit marks, for example 10' 6\".";
 
     std::string hint_of(bool metric) { return metric ? kWindowsMetricHint : kWindowsImperialHint; }
@@ -156,9 +156,11 @@ TEST(CondElev01_Validation, AnInfiniteElevationIsRefused)
     }
 }
 
-// Not in the Windows tests, a deliberate deviation: a feet run beyond the float range raises OverflowError in the Windows dialog,
-// which catches only ValueError (an uncaught exception in a Qt slot). iOS refuses it with the normal message. A feet run beyond the
-// 4300-digit int() limit is a ValueError on Windows, caught: the same message.
+// A feet run beyond the float range raised OverflowError in the Windows dialog of 49a2d59, which catches only ValueError (an
+// uncaught exception in a Qt slot); since Windows 0a24294 elevation_text_inches turns it into ValueError("elevation out of range"),
+// so the dialog refuses it with the normal message (EditConditionElevationRuleTests.test_a_feet_run_beyond_the_float_range_is_refused_
+// with_the_normal_message), as iOS already did. A feet run beyond the 4300-digit int() limit is a ValueError on Windows, caught: the
+// same message.
 TEST(CondElev01_Validation, AFeetRunBeyondTheFloatRangeIsRefusedWithTheNormalMessage)
 {
     for (const bool metric : {true, false})

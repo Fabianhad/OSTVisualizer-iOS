@@ -1006,10 +1006,12 @@ TEST(CondStyle01_StyleChange, TheQuantitySlotsRestartFromTheStyleDefault)
     CHECK_EQ(change.condition.uom3, -1);
 }
 
-// _validate_and_build_dto: `uom = -1 if calc == 0 else uom_combo.currentData()`, compared with the stored unit. A stored slot of
-// calc 0 with another unit (computed by driving the Windows dialog headless: a rename of such a condition sends uom2 / uom3 = -1)
-// is written as -1 by any Save; a slot with a quantity keeps its unit.
-TEST(CondUpd02_ConditionToSave, ASlotWithoutAQuantityHasTheUnitMinusOne)
+// _validate_and_build_dto (edit_condition_dialog.py, Windows d26893c :1905-1925): `if self._qty_rows()[i] == self._saved_qty_rows[i]:
+// continue`, otherwise `uom = -1 if calc == 0 else uom_combo.currentData()`, compared with the stored unit. The unit combo of a slot
+// without a quantity is empty, so a slot whose quantity the user did not change is skipped: a stored slot of calc 0 with another
+// unit (an import) keeps that unit through any Save (no Windows test pins it: the skip in the code does; iOS wrote -1 before).
+// A slot the user changes is normalised: calc 0 has the unit -1, a slot with a quantity keeps the unit the form shows.
+TEST(CondUpd02_ConditionToSave, AnUntouchedSlotWithoutAQuantityKeepsItsStoredUnit)
 {
     Condition stored = notes_condition(ConditionType::Linear);
     stored.calc_type1 = 1;
@@ -1022,15 +1024,53 @@ TEST(CondUpd02_ConditionToSave, ASlotWithoutAQuantityHasTheUnitMinusOne)
     form.name = "Renamed";
     const Condition saved = condition_to_save(stored, form, false);
     CHECK_EQ(saved.uom1, 2);
-    CHECK_EQ(saved.uom2, -1);
-    CHECK_EQ(saved.uom3, -1);
+    CHECK_EQ(saved.uom2, 0);
+    CHECK_EQ(saved.uom3, 5);
     const ConditionChanges changes = collect_condition_changes(stored, saved);
     CHECK(changes.has(ConditionField::Name));
-    CHECK(changes.has(ConditionField::Uom2));
-    CHECK(changes.has(ConditionField::Uom3));
-    CHECK_FALSE(changes.has(ConditionField::Uom1));
-    CHECK_FALSE(changes.has(ConditionField::CalcType2));
-    CHECK_EQ(changes.fields.count(), 3u);
+    CHECK_EQ(changes.fields.count(), 1u);
+    // the same for a notes-only edit through the dialog's path, in every style
+    for (ConditionType type : {ConditionType::Linear, ConditionType::Area, ConditionType::Count, ConditionType::Attachment})
+    {
+        Condition odd = notes_condition(type);
+        odd.calc_type2 = 0;
+        odd.uom2 = 5;
+        Condition notes_form = condition_form_for_edit(odd);
+        notes_form.notes = "edited";
+        CHECK(fields_are(save_changes(odd, notes_form), {ConditionField::Notes}));
+    }
+}
+
+TEST(CondUpd02_ConditionToSave, ATouchedSlotIsNormalisedAsBefore)
+{
+    Condition stored = notes_condition(ConditionType::Linear);
+    stored.calc_type1 = 1;
+    stored.uom1 = 2;
+    stored.calc_type2 = 0;
+    stored.uom2 = 5; // calc 0 with another unit
+    stored.calc_type3 = 4;
+    stored.uom3 = 2;
+    Condition form = stored;
+    form.calc_type2 = 11; // the user picks a quantity in slot 2: both are written, with the unit the form shows
+    form.uom2 = 5;
+    form.calc_type3 = 0; // the user clears slot 3: calc 0 has the unit -1
+    form.uom3 = 2;
+    const Condition saved = condition_to_save(stored, form, false);
+    CHECK_EQ(saved.calc_type2, 11);
+    CHECK_EQ(saved.uom2, 5);
+    CHECK_EQ(saved.calc_type3, 0);
+    CHECK_EQ(saved.uom3, -1);
+    const ConditionChanges changes = collect_condition_changes(stored, saved);
+    CHECK(fields_are(changes, {ConditionField::CalcType2, ConditionField::CalcType3, ConditionField::Uom3}));
+    // a slot that keeps its quantity and changes only the unit writes the unit
+    Condition unit_form = stored;
+    unit_form.uom3 = 3;
+    CHECK(fields_are(collect_condition_changes(stored, condition_to_save(stored, unit_form, false)), {ConditionField::Uom3}));
+    // a slot of calc 0 that gets a quantity and then goes back to calc 0 is the untouched slot again
+    Condition back = stored;
+    back.calc_type2 = 0;
+    back.uom2 = -1; // the form of a slot without a quantity shows no unit
+    CHECK(collect_condition_changes(stored, condition_to_save(stored, back, false)).empty());
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1102,7 +1142,7 @@ TEST(CondM08_UnknownStyle, ANotesOnlyEditOfAConditionWithManyStoredValuesWritesO
     {
         SCOPED_CONTEXT("stored type " + std::to_string(n));
         Condition stored = rich_unknown_condition(n);
-        stored.rise = 3.0; // the Area-like form shows abs(rise) / abs(run) (DLG-RISE-01), so a positive value is what a reload saves
+        stored.rise = 3.0; // a negative stored value is covered by ANotesOnlyEditKeepsANegativeRiseAndRunOfAnAreaLikeCondition
         stored.run = 4.0;
         stored.color_fill = 0x336699;
         stored.depth = 6.0;
@@ -1189,6 +1229,147 @@ TEST(CondM08_UnknownStyle, EditingTheAreaControlsOfAnUnknownTypeSavesLikeAnArea)
         CHECK_FALSE(changes.values.drop_run);
         CHECK_FALSE(changes.values.connect);
     }
+}
+
+// test_a_notes_only_save_keeps_a_negative_rise_and_run (Windows d26893c, edit_condition_dialog.py :1860, :1882): the Area-like form
+// shows abs(rise) / abs(run) and the save compares abs(typed) with abs(stored), so a stored negative value is not rewritten by a
+// save that did not change it. The form below is what the dialog holds: the absolute values (EditConditionViewController parses
+// the Area-like fields with absolute:YES).
+TEST(CondM08_UnknownStyle, ANotesOnlyEditKeepsANegativeRiseAndRunOfAnAreaLikeCondition)
+{
+    for (int n : {static_cast<int>(ConditionType::Area), 7, -1})
+        for (bool metric : {false, true})
+        {
+            SCOPED_CONTEXT("stored type " + std::to_string(n) + (metric ? " metric" : " imperial"));
+            Condition stored = unknown_condition(n);
+            stored.rise = -3.0;
+            stored.run = -12.0;
+            Condition form = condition_form_for_edit(stored);
+            form.rise = 3.0;
+            form.run = 12.0;
+            form.notes = "edited";
+            const ConditionChanges changes = save_changes(stored, form, metric);
+            CHECK(fields_are(changes, {ConditionField::Notes}));
+            CHECK_EQ(changes.values.rise, -3.0);
+            CHECK_EQ(changes.values.run, -12.0);
+        }
+}
+
+TEST(CondM08_UnknownStyle, ARiseOrRunTheUserChangesOfAnAreaLikeConditionIsSavedAsAbsoluteValue)
+{
+    for (int n : {static_cast<int>(ConditionType::Area), 7})
+    {
+        SCOPED_CONTEXT("stored type " + std::to_string(n));
+        Condition stored = unknown_condition(n);
+        stored.rise = -3.0;
+        stored.run = -12.0;
+        Condition form = condition_form_for_edit(stored);
+        form.rise = 5.0; // typed 5 or -5: the field is parsed with abs()
+        form.run = 12.0; // unchanged: abs(12) == abs(-12)
+        ConditionChanges changes = save_changes(stored, form, false);
+        CHECK(fields_are(changes, {ConditionField::Rise}));
+        CHECK_EQ(changes.values.rise, 5.0);
+        CHECK_EQ(changes.values.run, -12.0);
+
+        form.rise = 3.0; // abs equals abs(stored): kept
+        form.run = 13.0;
+        changes = save_changes(stored, form, false);
+        CHECK(fields_are(changes, {ConditionField::Run}));
+        CHECK_EQ(changes.values.rise, -3.0);
+        CHECK_EQ(changes.values.run, 13.0);
+
+        form.rise = -3.0; // a signed form value is compared by its absolute value as well
+        form.run = -12.0;
+        CHECK(save_changes(stored, form, false).empty());
+
+        form.rise = 0.0; // cleared to zero is a change
+        form.run = 12.0;
+        changes = save_changes(stored, form, false);
+        CHECK(fields_are(changes, {ConditionField::Rise}));
+        CHECK_EQ(changes.values.rise, 0.0);
+    }
+}
+
+// the Linear branch compares the signed value (Windows :1808, :1830) and keeps the sign the user types
+TEST(CondM08_UnknownStyle, ALinearConditionKeepsTheSignedRiseAndRunCompare)
+{
+    Condition stored = notes_condition(ConditionType::Linear);
+    stored.rise = -3.0;
+    stored.run = -12.0;
+    Condition form = condition_form_for_edit(stored);
+    form.notes = "edited";
+    CHECK(fields_are(save_changes(stored, form), {ConditionField::Notes}));
+    form.rise = 3.0;
+    ConditionChanges changes = save_changes(stored, form);
+    CHECK(fields_are(changes, {ConditionField::Notes, ConditionField::Rise}));
+    CHECK_EQ(changes.values.rise, 3.0);
+    form.rise = -4.0;
+    changes = save_changes(stored, form);
+    CHECK_EQ(changes.values.rise, -4.0);
+    CHECK_EQ(changes.values.run, -12.0);
+}
+
+// EditConditionSaveFidelityTests (Windows d26893c): test_a_stored_quantity_the_type_does_not_offer_survives_a_notes_only_save
+// (unknown type 7 and a Count with calc 11 / uom 5 save only the notes), test_a_quantity_the_user_changes_is_still_written,
+// test_a_saved_quantity_is_not_written_again_by_a_later_notes_only_save. iOS keeps the stored quantity in the form until the user
+// picks another one and compares with the stored (updated) condition, which is what the Windows combo-state skip comes to.
+TEST(CondM08_UnknownStyle, AStoredQuantityTheTypeDoesNotOfferSurvivesANotesOnlySave)
+{
+    for (int n : {7, static_cast<int>(ConditionType::Count)})
+        for (bool metric : {false, true})
+        {
+            SCOPED_CONTEXT("stored type " + std::to_string(n) + (metric ? " metric" : " imperial"));
+            Condition stored = notes_condition(ConditionType::Count);
+            stored.condition_type = static_cast<ConditionType>(n);
+            stored.calc_type1 = 11;
+            stored.uom1 = 5;
+            Condition form = condition_form_for_edit(stored);
+            form.notes = "edited";
+            const ConditionChanges changes = save_changes(stored, form, metric);
+            CHECK(fields_are(changes, {ConditionField::Notes}));
+            CHECK_EQ(changes.values.calc_type1, 11);
+            CHECK_EQ(changes.values.uom1, 5);
+        }
+}
+
+TEST(CondM08_UnknownStyle, AQuantityTheUserChangesIsStillWrittenAndNotWrittenAgainAfterTheSave)
+{
+    Condition stored = notes_condition(ConditionType::Count);
+    stored.calc_type1 = 11;
+    stored.uom1 = 5;
+    Condition form = condition_form_for_edit(stored);
+    form.calc_type1 = 23; // another quantity of the Count list; its unit is the one the form shows
+    form.uom1 = 0;
+    const ConditionChanges first = save_changes(stored, form);
+    CHECK(fields_are(first, {ConditionField::CalcType1, ConditionField::Uom1}));
+    CHECK_EQ(first.values.calc_type1, 23);
+    CHECK_EQ(first.values.uom1, 0);
+    // the dialog now holds the saved condition (a successful save replaces the stored one): a notes-only save writes the notes only
+    const Condition saved = first.values;
+    Condition second = condition_form_for_edit(saved);
+    second.notes = "edited";
+    const ConditionChanges later = save_changes(saved, second);
+    CHECK(fields_are(later, {ConditionField::Notes}));
+    CHECK_EQ(later.values.calc_type1, 23);
+    // only the calc is written when the unit stays: calc 11 -> 23 with uom 5 kept
+    Condition same_unit = condition_form_for_edit(stored);
+    same_unit.calc_type1 = 23;
+    CHECK(fields_are(save_changes(stored, same_unit), {ConditionField::CalcType1}));
+}
+
+// the Windows combo skip leaves a quantity the type does not offer alone even when the user "clears" the slot (the combo state does
+// not change); iOS writes the clear (calc 0, uom -1): the user asked for it. Not a port of that Windows quirk.
+TEST(CondM08_UnknownStyle, AClearedStoredQuantityOfAnUnknownTypeIsWritten)
+{
+    Condition stored = unknown_condition(7);
+    stored.calc_type1 = 11;
+    stored.uom1 = 5;
+    Condition form = condition_form_for_edit(stored);
+    form.calc_type1 = 0;
+    form.uom1 = -1;
+    const ConditionChanges changes = save_changes(stored, form);
+    CHECK(fields_are(changes, {ConditionField::CalcType1, ConditionField::Uom1}));
+    CHECK_EQ(changes.values.uom1, -1);
 }
 
 // the Linear-only switches (drop_run, trim, curved, add length) do not exist for the Area-like layout: with the OLD loader (Linear

@@ -202,62 +202,18 @@ namespace ost_store
             }
         }
 
-        // The layer list of the layer sheet: Windows get_bid_layers_for_sidebar (the bid's layers plus the locked template layers,
-        // WHERE BidUID = ? OR (IsTemplate <> 0 AND IsLocked <> 0), the optional columns IsTemplate / Show / IsLocked / Sequence
-        // default to 0 / -1 / 0 / 0, the filter needs both flag columns) through merge_layers_for_bid without the Comments
-        // layer, as project_read_service.get_merged_bid_layers: a list that cannot be read logs "Failed to load bid layers" and is empty, it
-        // never fails the bid. Windows has no ORDER BY, the order of rows that tie is "database order"; the rows are read in UID
-        // order so it is the same on every run.
+        // The layer list of the layer sheet as load_project uses it: layer_reads::read_merged_layers (below, exported for the layer
+        // writers and reload_layers), and a list that cannot be read logs "Failed to load bid layers" and is empty, it never fails the
+        // bid (project_read_service.get_merged_bid_layers).
         std::vector<ost_domain::BidLayer> read_layer_list(ost_db::OstDatabase &db, const std::string &bid_uid)
         {
-            auto unreadable = [](const std::string &why)
+            std::vector<ost_domain::BidLayer> merged;
+            std::string why;
+            if (!layer_reads::read_merged_layers(db, bid_uid, merged, why))
             {
                 ost_log::warning("Failed to load bid layers", why);
                 return std::vector<ost_domain::BidLayer>();
-            };
-            const bool has_template = db.column_exists("BidLayers", "IsTemplate");
-            const bool has_locked = db.column_exists("BidLayers", "IsLocked");
-            const std::string sql = std::string("SELECT [UID], [BidUID], ") + (has_template ? "[IsTemplate]" : "0") + ", [Name], " +
-                                    (db.column_exists("BidLayers", "Show") ? "[Show]" : "-1") + ", " +
-                                    (has_locked ? "[IsLocked]" : "0") + ", " +
-                                    (db.column_exists("BidLayers", "Sequence") ? "[Sequence]" : "0") +
-                                    " FROM [BidLayers] WHERE [BidUID] = ?" +
-                                    (has_template && has_locked ? " OR ([IsTemplate] <> 0 AND [IsLocked] <> 0)" : "") +
-                                    " ORDER BY [UID]";
-            ost_db::Statement stmt = db.prepare(sql);
-            if (!stmt.valid())
-                return unreadable(stmt.error_message());
-            stmt.bind_text(1, bid_uid);
-            std::vector<std::string> uid_texts;
-            std::vector<ost_domain::BidLayer> rows;
-            while (stmt.step())
-            {
-                ost_domain::BidLayer layer;
-                layer.uid = stmt.column_text(0);
-                // str(BidUID) if BidUID else "": NULL and 0 belong to no bid
-                layer.bid_uid = stmt.column_text(1);
-                if (layer.bid_uid == "0")
-                    layer.bid_uid.clear();
-                layer.is_template = flag_is_set(stmt, 2);
-                layer.name = stmt.column_text(3);
-                layer.show = numeric_flag_is_minus_one_or_one(stmt, 4);
-                layer.is_locked = flag_is_set(stmt, 5);
-                layer.sequence = stmt.column_int(6);
-                uid_texts.push_back(layer.uid);
-                rows.push_back(std::move(layer));
             }
-            if (stmt.failed())
-                return unreadable(stmt.error_message());
-            const std::string problem = integrity::uid_list_problem(uid_texts, "BidLayers");
-            if (!problem.empty())
-                return unreadable(problem);
-            // get_merged_bid_layers: the Comments layer is dropped after the merge, it is neither listed nor touched by Show All /
-            // Hide All (LP-18)
-            std::vector<ost_domain::BidLayer> merged = ost_domain::merge_layers_for_bid(rows);
-            merged.erase(std::remove_if(merged.begin(), merged.end(),
-                                        [](const ost_domain::BidLayer &layer)
-                                        { return ost_domain::is_comments_layer_name(layer.name); }),
-                         merged.end());
             return merged;
         }
 
@@ -319,6 +275,116 @@ namespace ost_store
                     tree.emplace(rows[root].uid, std::move(folders[root]));
         }
     } // namespace
+
+    namespace layer_reads
+    {
+
+        // The bid's own layers: the `SELECT UID, Name, Show, Sequence FROM BidLayers WHERE BidUID = ?` of load_project, exported (plan 5.3) so
+        // that reload_layers fills ProjectData::layers exactly like a load does.
+        bool read_own_layers(ost_db::OstDatabase &db,
+                             const std::string &bid_uid,
+                             std::unordered_map<std::string, ost_domain::Layer> &out,
+                             std::vector<std::string> &uid_texts,
+                             std::string &why)
+        {
+            out.clear();
+            uid_texts.clear();
+            ost_db::Statement stmt = db.prepare(
+                "SELECT UID, Name, Show, Sequence "
+                "FROM BidLayers WHERE BidUID = ?");
+            if (!stmt.valid())
+            {
+                why = "Cannot read BidLayers: " + stmt.error_message();
+                return false;
+            }
+            stmt.bind_text(1, bid_uid);
+            while (stmt.step())
+            {
+                ost_domain::Layer layer;
+                layer.uid = stmt.column_text(0);
+                layer.name = stmt.column_text(1);
+                int show_val = stmt.column_int(2);
+                layer.visible = (show_val == 1 || show_val == -1);
+                layer.sequence = stmt.column_int(3);
+                uid_texts.push_back(layer.uid);
+                out[layer.uid] = std::move(layer);
+            }
+            if (stmt.failed())
+            {
+                why = "Cannot read BidLayers: " + stmt.error_message();
+                return false;
+            }
+            return true;
+        }
+
+        // The layer list of the layer sheet: Windows get_bid_layers_for_sidebar (the bid's layers plus the locked template layers,
+        // WHERE BidUID = ? OR (IsTemplate <> 0 AND IsLocked <> 0), the optional columns IsTemplate / Show / IsLocked / Sequence
+        // default to 0 / -1 / 0 / 0, the filter needs both flag columns) through merge_layers_for_bid without the Comments
+        // layer, as project_read_service.get_merged_bid_layers. Windows has no ORDER BY, the order of rows that tie is "database
+        // order"; the rows are read in UID order so it is the same on every run.
+        bool read_merged_layers(ost_db::OstDatabase &db,
+                                const std::string &bid_uid,
+                                std::vector<ost_domain::BidLayer> &out,
+                                std::string &why)
+        {
+            out.clear();
+            const bool has_template = db.column_exists("BidLayers", "IsTemplate");
+            const bool has_locked = db.column_exists("BidLayers", "IsLocked");
+            const std::string sql = std::string("SELECT [UID], [BidUID], ") + (has_template ? "[IsTemplate]" : "0") + ", [Name], " +
+                                    (db.column_exists("BidLayers", "Show") ? "[Show]" : "-1") + ", " +
+                                    (has_locked ? "[IsLocked]" : "0") + ", " +
+                                    (db.column_exists("BidLayers", "Sequence") ? "[Sequence]" : "0") +
+                                    " FROM [BidLayers] WHERE [BidUID] = ?" +
+                                    (has_template && has_locked ? " OR ([IsTemplate] <> 0 AND [IsLocked] <> 0)" : "") +
+                                    " ORDER BY [UID]";
+            ost_db::Statement stmt = db.prepare(sql);
+            if (!stmt.valid())
+            {
+                why = stmt.error_message();
+                return false;
+            }
+            stmt.bind_text(1, bid_uid);
+            std::vector<std::string> uid_texts;
+            std::vector<ost_domain::BidLayer> rows;
+            while (stmt.step())
+            {
+                ost_domain::BidLayer layer;
+                layer.uid = stmt.column_text(0);
+                // str(BidUID) if BidUID else "": NULL and 0 belong to no bid
+                layer.bid_uid = stmt.column_text(1);
+                if (layer.bid_uid == "0")
+                    layer.bid_uid.clear();
+                layer.is_template = flag_is_set(stmt, 2);
+                layer.name = stmt.column_text(3);
+                layer.show = numeric_flag_is_minus_one_or_one(stmt, 4);
+                layer.is_locked = flag_is_set(stmt, 5);
+                layer.sequence = stmt.column_int(6);
+                uid_texts.push_back(layer.uid);
+                rows.push_back(std::move(layer));
+            }
+            if (stmt.failed())
+            {
+                why = stmt.error_message();
+                return false;
+            }
+            const std::string problem = integrity::uid_list_problem(uid_texts, "BidLayers");
+            if (!problem.empty())
+            {
+                why = problem;
+                return false;
+            }
+            // get_merged_bid_layers: the Comments layer is dropped after the merge, it is neither listed nor touched by Show All /
+            // Hide All (LP-18)
+            std::vector<ost_domain::BidLayer> merged = ost_domain::merge_layers_for_bid(rows);
+            merged.erase(std::remove_if(merged.begin(), merged.end(),
+                                        [](const ost_domain::BidLayer &layer)
+                                        { return ost_domain::is_comments_layer_name(layer.name); }),
+                         merged.end());
+            out = std::move(merged);
+            return true;
+        }
+
+    } // namespace layer_reads
 
     bool load_project(const std::string &db_path,
                       const std::string &bid_uid,
@@ -489,25 +555,10 @@ namespace ost_store
         std::vector<std::string> layer_uid_texts;
         if (db.table_exists("BidLayers"))
         {
-            ost_db::Statement stmt = db.prepare(
-                "SELECT UID, Name, Show, Sequence "
-                "FROM BidLayers WHERE BidUID = ?");
-            if (!stmt.valid())
-                return cannot_read("BidLayers", stmt);
-            stmt.bind_text(1, bid_uid);
-            while (stmt.step())
-            {
-                ost_domain::Layer layer;
-                layer.uid = stmt.column_text(0);
-                layer.name = stmt.column_text(1);
-                int show_val = stmt.column_int(2);
-                layer.visible = (show_val == 1 || show_val == -1);
-                layer.sequence = stmt.column_int(3);
-                layer_uid_texts.push_back(layer.uid);
-                project.layers[layer.uid] = std::move(layer);
-            }
-            if (stmt.failed())
-                return cannot_read("BidLayers", stmt);
+            // layer_reads::read_own_layers (exported for reload_layers, plan 5.3): "Cannot read BidLayers: <sqlite text>" on a failure
+            std::string why;
+            if (!layer_reads::read_own_layers(db, bid_uid, project.layers, layer_uid_texts, why))
+                return fail(why);
         }
 
         std::vector<std::string> cdn_type_uid_texts; // judged by master_data_uid_problem below
@@ -800,7 +851,7 @@ namespace ost_store
                     continue;
                 auto parent = page_by_uid.find(row.takeoff.parent_uid);
                 if (parent != page_by_uid.end() && page_by_uid[row.takeoff.uid] != parent->second)
-                    return fail("A Takeoff and its parent must belong to the same Page.");
+                    return fail("A takeoff and its parent must belong to the same page.");
             }
 
             // find_takeoff_parent_cycle_uids over the holes: the smallest uid of the cycles is named

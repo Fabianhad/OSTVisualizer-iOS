@@ -200,7 +200,7 @@ TEST(AreaTessellation, SquareWithAHoleMatchesTheWindowsFaceListFromThePlan)
 TEST(AreaTessellation, WindingSenseAndTopologyAreNotChangedByTheFrameFix)
 {
     // GEO-14 must change the triangle set only: the mesh stays a closed, consistently oriented shell with the
-    // outward (positive) signed volume iOS has today (GEO-15, the winding sense, is a separate decision).
+    // outward (positive) signed volume iOS has today (GEO-15, the winding sense, is parity since Windows d1c430a made every shape outward).
     for (const auto &c : ost_oracle::face_cases())
     {
         SCOPED_CONTEXT(c.name);

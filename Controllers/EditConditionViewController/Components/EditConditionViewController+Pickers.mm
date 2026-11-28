@@ -2,10 +2,29 @@
 #import "EditConditionHelpers.h"
 #include "../../../Core/Domain/ConditionChoices.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
+#include "../../../Core/Domain/ConditionQuantityChoices.hpp"
 
 @interface EditConditionViewController (Pickers) <
     UIColorPickerViewControllerDelegate>
 @end
+
+// iPad: an action sheet is a popover there and raises an exception without an anchor (plan 4.3). Every picker below passes its sheet's
+// popover controller and the table row that opened it; the sheet then points at that row. On iPhone the sheet is
+// presented from the bottom as before and ignores the anchor. The cell is the anchor; a row that is not on screen (it always is: the
+// user just tapped it) falls back to the table itself.
+static void anchorSheetOnRow(UIPopoverPresentationController *popover,
+                             UITableView *tableView, NSIndexPath *rowPath) {
+  if (!popover)
+    return;
+  UITableViewCell *cell = [tableView cellForRowAtIndexPath:rowPath];
+  if (cell) {
+    popover.sourceView = cell;
+    popover.sourceRect = cell.bounds;
+  } else {
+    popover.sourceView = tableView;
+    popover.sourceRect = tableView.bounds;
+  }
+}
 
 @implementation EditConditionViewController (Pickers)
 
@@ -20,13 +39,13 @@
     switch (row) {
     case TopRow::Style:
       if (!_styleDisabled)
-        [self _showPickerForStyle];
+        [self _showPickerForStyleFromRow:indexPath];
       break;
     case TopRow::CdnType:
-      [self _showPickerForCdnType];
+      [self _showPickerForCdnTypeFromRow:indexPath];
       break;
     case TopRow::Layer:
-      [self _showPickerForLayer];
+      [self _showPickerForLayerFromRow:indexPath];
       break;
     default:
       break;
@@ -35,14 +54,14 @@
     if (indexPath.row == 0)
       [self _showColorPicker];
     else if (indexPath.row == 1)
-      [self _showPickerForPattern];
+      [self _showPickerForPatternFromRow:indexPath];
     else {
       NSInteger shapeRow = isLinePattern(_condition.pattern) ? 3 : 2;
       if (indexPath.row == shapeRow)
-        [self _showPickerForShape];
+        [self _showPickerForShapeFromRow:indexPath];
     }
   } else if (indexPath.section == kSectionResults) {
-    [self _showPickerForQuantity:indexPath.row];
+    [self _showPickerForQuantity:indexPath.row fromRow:indexPath];
   }
 }
 
@@ -51,7 +70,7 @@
 // The style choice (Windows _STYLE_ITEMS and _sync_unknown_style_item, edit_condition_dialog.py :64-69, :970-978): Linear, Area,
 // Count, Attachment, then for a stored type outside the four a greyed "Unknown (N)" entry that cannot be chosen (COND-M08). The
 // list and the labels come from Core; the current style is shown by the Style row.
-- (void)_showPickerForStyle {
+- (void)_showPickerForStyleFromRow:(NSIndexPath *)rowPath {
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:@"Style"
                        message:nil
@@ -71,10 +90,11 @@
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
+  anchorSheetOnRow(alert.popoverPresentationController, _tableView, rowPath);
   [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)_showPickerForCdnType {
+- (void)_showPickerForCdnTypeFromRow:(NSIndexPath *)rowPath {
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:@"Type"
                        message:nil
@@ -106,10 +126,11 @@
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
+  anchorSheetOnRow(alert.popoverPresentationController, _tableView, rowPath);
   [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)_showPickerForLayer {
+- (void)_showPickerForLayerFromRow:(NSIndexPath *)rowPath {
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:@"Layer"
                        message:nil
@@ -139,12 +160,13 @@
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
+  anchorSheetOnRow(alert.popoverPresentationController, _tableView, rowPath);
   [self presentViewController:alert animated:YES completion:nil];
 }
 
 #pragma mark - Appearance Pickers
 
-- (void)_showPickerForPattern {
+- (void)_showPickerForPatternFromRow:(NSIndexPath *)rowPath {
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:@"Pattern"
                        message:nil
@@ -165,10 +187,11 @@
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
+  anchorSheetOnRow(alert.popoverPresentationController, _tableView, rowPath);
   [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)_showPickerForShape {
+- (void)_showPickerForShapeFromRow:(NSIndexPath *)rowPath {
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:@"Shape"
                        message:nil
@@ -189,6 +212,7 @@
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
+  anchorSheetOnRow(alert.popoverPresentationController, _tableView, rowPath);
   [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -220,7 +244,8 @@
 
 #pragma mark - Quantity / UOM Pickers
 
-- (void)_showPickerForQuantity:(NSInteger)qtyIndex {
+- (void)_showPickerForQuantity:(NSInteger)qtyIndex
+                       fromRow:(NSIndexPath *)rowPath {
   UIAlertController *alert = [UIAlertController
       alertControllerWithTitle:[NSString stringWithFormat:@"Quantity %ld",
                                                           (long)(qtyIndex + 1)]
@@ -244,17 +269,40 @@
                                               style:UIAlertActionStyleDefault
                                             handler:^(UIAlertAction *a) {
                                               [self _showPickerForUom:qtyIndex
-                                                             calcType:calcType];
+                                                             calcType:calcType
+                                                              fromRow:rowPath];
                                             }]];
+  }
+
+  // A stored quantity the style does not offer: one more entry after the options, "Unknown (N)", greyed so it can never be chosen
+  // (Windows d1c430a _show_stored_quantity). Cancelling keeps the stored value, "(none)" clears it.
+  const int storedCalc = qtyIndex == 0   ? _condition.calc_type1
+                         : qtyIndex == 1 ? _condition.calc_type2
+                                         : _condition.calc_type3;
+  if (auto unknown = ost_domain::unknown_quantity_calc_type(
+          _condition.condition_type, storedCalc)) {
+    UIAlertAction *unknownAction = [UIAlertAction
+        actionWithTitle:[NSString
+                            stringWithUTF8String:ost_domain::
+                                                     unknown_quantity_label(
+                                                         *unknown)
+                                                         .c_str()]
+                  style:UIAlertActionStyleDefault
+                handler:nil];
+    unknownAction.enabled = NO;
+    [alert addAction:unknownAction];
   }
 
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
+  anchorSheetOnRow(alert.popoverPresentationController, _tableView, rowPath);
   [self presentViewController:alert animated:YES completion:nil];
 }
 
-- (void)_showPickerForUom:(NSInteger)qtyIndex calcType:(int)calcType {
+- (void)_showPickerForUom:(NSInteger)qtyIndex
+                 calcType:(int)calcType
+                  fromRow:(NSIndexPath *)rowPath {
   // a metric bid offers m / mm, m2 / mm2, m3 / mm3 (COND-METRIC-01, QTY-05)
   auto uomOptions = ost_domain::get_valid_uoms_for_calc_type(calcType, _metric);
 
@@ -283,6 +331,7 @@
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
                                             style:UIAlertActionStyleCancel
                                           handler:nil]];
+  anchorSheetOnRow(alert.popoverPresentationController, _tableView, rowPath);
   [self presentViewController:alert animated:YES completion:nil];
 }
 

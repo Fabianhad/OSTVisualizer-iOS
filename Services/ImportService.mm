@@ -1,29 +1,15 @@
 #import "ImportService.h"
+#import "ImportService_Internal.h"
+#include "../Core/Domain/FailureText.hpp"
 #include "../Core/Import/OspFileSystem.hpp"
 #include "../Core/Import/OspPackage.hpp"
 #include "../Core/Import/OstXmlParser.hpp"
 #include "../Core/Import/RawBidIntegrity.hpp"
 #include "../Core/Persistence/ProjectStore/ProjectStore.hpp"
+#include <exception>
 #include <string>
 
-// An NSString for UTF-8 text from Core. Everything the import accepts is valid UTF-8 (IMP-M01), but a database filled by an older build may
-// hold raw windows-1252 bytes: those are read as windows-1252 (or Latin-1) instead of becoming nil, which would raise in an NSDictionary
-// literal and make the whole project list unreadable.
-static NSString *OSTString(const std::string &text) {
-  NSString *string = [NSString stringWithUTF8String:text.c_str()];
-  if (!string) {
-    string = [[NSString alloc] initWithBytes:text.data()
-                                      length:text.size()
-                                    encoding:NSWindowsCP1252StringEncoding];
-  }
-  if (!string) {
-    string = [[NSString alloc] initWithBytes:text.data()
-                                      length:text.size()
-                                    encoding:NSISOLatin1StringEncoding];
-  }
-  return string ?: @"";
-}
-
+NSErrorDomain const OSTImportErrorDomain = @"OSTImport";
 NSNotificationName const OSTProjectImportedNotification = @"OSTProjectImported";
 NSNotificationName const OSTProjectDeletedNotification = @"OSTProjectDeleted";
 NSNotificationName const OSTRenderConfigChangedNotification =
@@ -43,10 +29,29 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   return std::string([[[self databaseURL] path] UTF8String]);
 }
 
-+ (NSError *)_importErrorWithCode:(NSInteger)code message:(NSString *)message {
-  return [NSError errorWithDomain:@"OSTImport"
-                             code:code
-                         userInfo:@{NSLocalizedDescriptionKey : message}];
+// The error of a failed import (EXP-21): the code is the ost_domain::ImportFailureKind and the description is the ONE user sentence of the
+// Windows local import ("The OST file is damaged or ..."), which the picker shows as it is. The technical reason (parser text, validation
+// issues, store text, Cocoa error) is only logged by the caller. The open-in alert builds its own line from the code (SceneDelegate).
++ (NSError *)_importFailureOfKind:(ost_domain::ImportFailureKind)kind
+                           format:(ost_domain::ImportFormat)format {
+  const ost_domain::DialogText text = ost_domain::import_failure_text(
+      kind, format, ost_domain::ImportContext::Picker, std::string());
+  return [NSError errorWithDomain:OSTImportErrorDomain
+                             code:static_cast<NSInteger>(kind)
+                         userInfo:@{
+                           NSLocalizedDescriptionKey : OSTString(text.message)
+                         }];
+}
+
+// The kind of a file that could not be read: one that is not there (the open-in alert says "File does not exist."), or any other read
+// failure, which Windows reports like a damaged file.
++ (ost_domain::ImportFailureKind)_kindOfReadError:(NSError *)readError {
+  if ([readError.domain isEqualToString:NSCocoaErrorDomain] &&
+      (readError.code == NSFileReadNoSuchFileError ||
+       readError.code == NSFileNoSuchFileError)) {
+    return ost_domain::ImportFailureKind::FileNotFound;
+  }
+  return ost_domain::ImportFailureKind::Damaged;
 }
 
 // Everything after the parse that both formats share: Windows validates (and repairs) the raw rows before the first write (IMP-09), then
@@ -54,6 +59,7 @@ NSNotificationName const OSTRenderConfigChangedNotification =
 // independent copy (IMP-19): there is no "already imported" check.
 + (BOOL)_storeRawData:(ost_import::OstRawData &)raw
                 label:(NSString *)label
+               format:(ost_domain::ImportFormat)format
                 error:(NSError **)error {
   std::string validationError;
   std::string validationDetails;
@@ -61,12 +67,10 @@ NSNotificationName const OSTRenderConfigChangedNotification =
     NSLog(@"ImportService: %@ rejected: %s %s", label, validationError.c_str(),
           validationDetails.c_str());
     if (error) {
-      NSString *message = OSTString(validationError);
-      if (!validationDetails.empty()) {
-        message = [NSString stringWithFormat:@"%@\n%@", message,
-                                             OSTString(validationDetails)];
-      }
-      *error = [self _importErrorWithCode:2 message:message];
+      *error = [self
+          _importFailureOfKind:ost_domain::classify_import_failure(
+                                   validationError)
+                        format:format];
     }
     return NO;
   }
@@ -75,8 +79,8 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   if (!ost_store::create_schema(db_path)) {
     NSLog(@"ImportService: %@: the database schema could not be created", label);
     if (error) {
-      *error = [self _importErrorWithCode:4
-                                  message:@"Failed to store project data"];
+      *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Damaged
+                                   format:format];
     }
     return NO;
   }
@@ -86,8 +90,8 @@ NSNotificationName const OSTRenderConfigChangedNotification =
     NSLog(@"ImportService: %@: storing the project failed: %s", label,
           result.error.c_str());
     if (error) {
-      *error = [self _importErrorWithCode:4
-                                  message:@"Failed to store project data"];
+      *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Damaged
+                                   format:format];
     }
     return NO;
   }
@@ -103,20 +107,65 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   return YES;
 }
 
+// A C++ exception that nothing classified is the Windows "unexpected" case (an exception outside import_ost): the reason is only logged.
++ (BOOL)_failedUnexpectedly:(const char *)what
+                     format:(ost_domain::ImportFormat)format
+                      error:(NSError **)error {
+  NSLog(@"ImportService: the import stopped with an unexpected exception: %s",
+        what);
+  if (error) {
+    *error = [self _importFailureOfKind:ost_domain::ImportFailureKind::Unexpected
+                                 format:format];
+  }
+  return NO;
+}
+
 + (BOOL)importOSTFile:(NSURL *)fileURL error:(NSError **)error {
+  try {
+    return [self _importOSTFile:fileURL error:error];
+  } catch (const std::exception &e) {
+    return [self _failedUnexpectedly:e.what()
+                              format:ost_domain::ImportFormat::Ost
+                               error:error];
+  } catch (...) {
+    return [self _failedUnexpectedly:"unknown exception"
+                              format:ost_domain::ImportFormat::Ost
+                               error:error];
+  }
+}
+
++ (BOOL)importOSPFile:(NSURL *)fileURL error:(NSError **)error {
+  try {
+    return [self _importOSPFile:fileURL error:error];
+  } catch (const std::exception &e) {
+    return [self _failedUnexpectedly:e.what()
+                              format:ost_domain::ImportFormat::Osp
+                               error:error];
+  } catch (...) {
+    return [self _failedUnexpectedly:"unknown exception"
+                              format:ost_domain::ImportFormat::Osp
+                               error:error];
+  }
+}
+
++ (BOOL)_importOSTFile:(NSURL *)fileURL error:(NSError **)error {
   BOOL accessing = [fileURL startAccessingSecurityScopedResource];
 
   // `bytes` points into the data: it must live until the parse is done (ARC may otherwise release it after its last message).
+  NSError *readError = nil;
   NSData *data __attribute__((objc_precise_lifetime)) =
       [NSData dataWithContentsOfURL:fileURL
                             options:NSDataReadingMappedIfSafe
-                              error:error];
+                              error:&readError];
   if (accessing)
     [fileURL stopAccessingSecurityScopedResource];
 
   if (!data) {
-    if (error && !*error) {
-      *error = [self _importErrorWithCode:1 message:@"Could not read file"];
+    NSLog(@"ImportService: OST file '%@' cannot be read: %@",
+          fileURL.lastPathComponent, readError);
+    if (error) {
+      *error = [self _importFailureOfKind:[self _kindOfReadError:readError]
+                                   format:ost_domain::ImportFormat::Ost];
     }
     return NO;
   }
@@ -127,13 +176,12 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   // The parse is as strict as the Windows one (IMP-M01): malformed XML is rejected with the reason, a windows-1252 file is transcoded.
   ost_import::OstRawData raw = ost_import::parse_ost_xml(bytes, length);
   if (raw.empty()) {
+    NSLog(@"ImportService: OST file '%@' rejected: %s",
+          fileURL.lastPathComponent, raw.error.c_str());
     if (error) {
-      NSString *message = @"Invalid OST file format";
-      if (!raw.error.empty()) {
-        message = [NSString stringWithFormat:@"%@: %@", message,
-                                             OSTString(raw.error)];
-      }
-      *error = [self _importErrorWithCode:2 message:message];
+      *error = [self _importFailureOfKind:ost_domain::classify_import_failure(
+                                              raw.error)
+                                   format:ost_domain::ImportFormat::Ost];
     }
     return NO;
   }
@@ -141,23 +189,28 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   return [self _storeRawData:raw
                        label:[NSString stringWithFormat:@"OST file '%@'",
                                                         fileURL.lastPathComponent]
+                      format:ost_domain::ImportFormat::Ost
                        error:error];
 }
 
-+ (BOOL)importOSPFile:(NSURL *)fileURL error:(NSError **)error {
++ (BOOL)_importOSPFile:(NSURL *)fileURL error:(NSError **)error {
   BOOL accessing = [fileURL startAccessingSecurityScopedResource];
 
   // `bytes` points into the (memory mapped) data: it must live until the package is staged.
+  NSError *readError = nil;
   NSData *data __attribute__((objc_precise_lifetime)) =
       [NSData dataWithContentsOfURL:fileURL
                             options:NSDataReadingMappedIfSafe
-                              error:error];
+                              error:&readError];
   if (accessing)
     [fileURL stopAccessingSecurityScopedResource];
 
   if (!data) {
-    if (error && !*error) {
-      *error = [self _importErrorWithCode:1 message:@"Could not read file"];
+    NSLog(@"ImportService: OSP file '%@' cannot be read: %@",
+          fileURL.lastPathComponent, readError);
+    if (error) {
+      *error = [self _importFailureOfKind:[self _kindOfReadError:readError]
+                                   format:ost_domain::ImportFormat::Osp];
     }
     return NO;
   }
@@ -181,7 +234,9 @@ NSNotificationName const OSTRenderConfigChangedNotification =
     NSLog(@"ImportService: OSP file '%@' rejected: %s",
           fileURL.lastPathComponent, staged.error.c_str());
     if (error) {
-      *error = [self _importErrorWithCode:2 message:OSTString(staged.error)];
+      *error = [self _importFailureOfKind:ost_domain::classify_import_failure(
+                                              staged.error)
+                                   format:ost_domain::ImportFormat::Osp];
     }
     return NO;
   }
@@ -190,6 +245,7 @@ NSNotificationName const OSTRenderConfigChangedNotification =
                        label:[NSString stringWithFormat:@"OSP file '%@' (%zu images staged)",
                                                         fileURL.lastPathComponent,
                                                         staged.staged_image_count]
+                      format:ost_domain::ImportFormat::Osp
                        error:error];
 }
 
@@ -250,6 +306,9 @@ NSNotificationName const OSTRenderConfigChangedNotification =
   ost_data::ProjectData loaded;
   std::string loadError;
   if (!ost_store::load_project([self _dbPath], uid, loaded, &loadError)) {
+    // The reason is for the log (EXP-21): the alerts show the Core load_failure_reason sentence, never this diagnostic.
+    NSLog(@"ImportService: bid %@ cannot be loaded: %s", bidUID,
+          loadError.c_str());
     project = ost_data::ProjectData();
     if (errorText)
       *errorText = OSTString(loadError);
@@ -262,9 +321,7 @@ NSNotificationName const OSTRenderConfigChangedNotification =
 + (ost_data::ProjectData)loadProjectWithUID:(NSString *)bidUID {
   ost_data::ProjectData project;
   NSString *errorText = nil;
-  if (![self loadProjectWithUID:bidUID project:project error:&errorText]) {
-    NSLog(@"ImportService: bid %@ cannot be loaded: %@", bidUID, errorText);
-  }
+  [self loadProjectWithUID:bidUID project:project error:&errorText];
   return project;
 }
 

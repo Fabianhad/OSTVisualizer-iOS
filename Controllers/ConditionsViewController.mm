@@ -1,5 +1,8 @@
 #import "ConditionsViewController.h"
 #include "../Core/Domain/Condition.hpp"
+#include "../Core/Domain/ConditionCreate.hpp"
+#include "../Core/Domain/ConditionDeleteText.hpp"
+#include "../Core/Domain/ConditionFolderUi.hpp"
 #include "../Core/Domain/ConditionTree.hpp"
 #include "../Core/Domain/QuantityDisplay.hpp"
 #include <algorithm>
@@ -23,7 +26,16 @@ struct ConditionRow {
 struct ConditionSection {
   std::string title;
   std::vector<ConditionRow> rows;
+  // The folder the section sits in: the uid and the name of the nearest folder at or above its node of the Conditions tree
+  // (ost_domain::folder_context_uid, Windows _resolve_folder_context_uid); "" for a section at the top level. "New Condition" from a section
+  // creates in this folder.
+  std::string folder_uid;
+  std::string folder_name;
 };
+
+static NSString *OSTText(const std::string &text) {
+  return [NSString stringWithUTF8String:text.c_str()] ?: @"";
+}
 
 @interface ConditionsViewController () <UITableViewDataSource,
                                         UITableViewDelegate>
@@ -47,7 +59,18 @@ struct ConditionSection {
       initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                            target:self
                            action:@selector(_dismiss)];
-  self.navigationItem.rightBarButtonItem = done;
+  // "+" = New Condition (in the folder of the selected condition), "Folders" = the folder manager (plan 4.9: no new toolbar button, these two
+  // live in the bar of the sheet). On iPad the form is a centred sheet and the manager is pushed inside this sheet: no popover is opened here.
+  UIBarButtonItem *add = [[UIBarButtonItem alloc]
+      initWithBarButtonSystemItem:UIBarButtonSystemItemAdd
+                           target:self
+                           action:@selector(_addTapped:)];
+  self.navigationItem.rightBarButtonItems = @[ done, add ];
+  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc]
+      initWithTitle:OSTText(ost_domain::kFoldersButtonTitle)
+              style:UIBarButtonItemStylePlain
+             target:self
+             action:@selector(_foldersTapped:)];
 
   _tableView = [[UITableView alloc] initWithFrame:CGRectZero
                                             style:UITableViewStyleInsetGrouped];
@@ -90,6 +113,36 @@ struct ConditionSection {
   [self dismissViewControllerAnimated:YES completion:nil];
 }
 
+#pragma mark - New Condition and Folders
+
+// Windows _on_new_clicked (conditions_sidebar.py:1392-1395): the new condition goes into the folder of the current item, the top level when
+// there is none. Only conditions are selectable here, so that is the folder of the section of the selected condition.
+- (void)_addTapped:(UIBarButtonItem *)sender {
+  [self _requestNewConditionInFolderUID:[self _folderUIDOfSelectedCondition]];
+}
+
+- (void)_foldersTapped:(UIBarButtonItem *)sender {
+  if (_delegate && [_delegate respondsToSelector:@selector(conditionsViewControllerDidRequestFolders:)])
+    [_delegate conditionsViewControllerDidRequestFolders:self];
+}
+
+- (void)_requestNewConditionInFolderUID:(NSString *)folderUID {
+  if (_delegate && [_delegate respondsToSelector:@selector(conditionsViewController:didRequestNewConditionInFolderUID:)])
+    [_delegate conditionsViewController:self didRequestNewConditionInFolderUID:folderUID ?: @""];
+}
+
+// The folder of the section that holds the selected condition ("" = the top level, and when nothing (or a condition that is gone) is selected).
+- (NSString *)_folderUIDOfSelectedCondition {
+  if (!_selectedUID)
+    return @"";
+  const std::string target = std::string(_selectedUID.UTF8String ?: "");
+  for (const ConditionSection &section : _sections)
+    for (const ConditionRow &row : section.rows)
+      if (row.uid == target)
+        return OSTText(section.folder_uid);
+  return @"";
+}
+
 #pragma mark - Data Loading
 
 - (void)loadConditionsFromProject:(const ost_data::ProjectData &)project {
@@ -126,6 +179,8 @@ struct ConditionSection {
       if (is_empty) {
         ConditionSection section;
         section.title = path_title();
+        section.folder_uid = ost_domain::folder_context_uid(nodes, i);
+        section.folder_name = node.name;
         _sections.push_back(std::move(section));
       }
       break;
@@ -136,6 +191,13 @@ struct ConditionSection {
       section.title = folder_path.empty()
                           ? node.name
                           : path_title() + " — " + node.name;
+      // the folder the group sits in: the one rule of Core, over the tree nodes (the folder list of this load is the project's)
+      section.folder_uid = ost_domain::folder_context_uid(nodes, i);
+      if (!section.folder_uid.empty()) {
+        auto folder = project.condition_folders.find(section.folder_uid);
+        if (folder != project.condition_folders.end())
+          section.folder_name = folder->second.name;
+      }
       _sections.push_back(std::move(section));
       break;
     }
@@ -345,14 +407,49 @@ struct ConditionSection {
   }
 }
 
+// A long press on a section HEADER (plan 5.1, N-M1-14): the only item is "New Condition in <folder>" for the folder the section sits in (an empty
+// folder is a section with no rows, so its header is the only thing to press). The sheet is anchored on the header (iPad popover, plan 4.3).
+- (void)_presentHeaderSheetAtPoint:(CGPoint)point {
+  for (size_t s = 0; s < _sections.size(); s++) {
+    const CGRect rect = [_tableView rectForHeaderInSection:(NSInteger)s];
+    if (CGRectIsEmpty(rect) || !CGRectContainsPoint(rect, point))
+      continue;
+    const ConditionSection &section = _sections[s];
+    NSString *folderUID = OSTText(section.folder_uid);
+    UIAlertController *sheet = [UIAlertController
+        alertControllerWithTitle:OSTText(section.title)
+                         message:nil
+                  preferredStyle:UIAlertControllerStyleActionSheet];
+    __weak ConditionsViewController *weakSelf = self;
+    [sheet addAction:[UIAlertAction
+                         actionWithTitle:OSTText(ost_domain::new_condition_action_title(section.folder_uid, section.folder_name))
+                                   style:UIAlertActionStyleDefault
+                                 handler:^(UIAlertAction *action) {
+                                   [weakSelf _requestNewConditionInFolderUID:folderUID];
+                                 }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel"
+                                              style:UIAlertActionStyleCancel
+                                            handler:nil]];
+    if (sheet.popoverPresentationController) {
+      sheet.popoverPresentationController.sourceView = _tableView;
+      sheet.popoverPresentationController.sourceRect = rect;
+    }
+    [self presentViewController:sheet animated:YES completion:nil];
+    return;
+  }
+}
+
 - (void)_handleLongPress:(UILongPressGestureRecognizer *)gesture {
   if (gesture.state != UIGestureRecognizerStateBegan)
     return;
 
   CGPoint point = [gesture locationInView:_tableView];
   NSIndexPath *indexPath = [_tableView indexPathForRowAtPoint:point];
-  if (!indexPath)
+  if (!indexPath) {
+    // not on a row: a section header (an empty folder is a header with no rows) offers New Condition in its folder
+    [self _presentHeaderSheetAtPoint:point];
     return;
+  }
   if ((size_t)indexPath.section >= _sections.size())
     return;
   const auto &sec = _sections[indexPath.section];
@@ -362,6 +459,7 @@ struct ConditionSection {
   const auto &row = sec.rows[indexPath.row];
   NSString *uid = [NSString stringWithUTF8String:row.uid.c_str()];
   NSString *name = [NSString stringWithUTF8String:row.name.c_str()];
+  const std::string nameText = row.name;  // the delete title is built from the std::string: an invalid UTF-8 name makes `name` nil
 
   UIAlertController *sheet = [UIAlertController
       alertControllerWithTitle:name
@@ -384,6 +482,28 @@ struct ConditionSection {
                            }
                          }]];
 
+  // "New Condition in <folder>" (the folder of the pressed row) and "Move to Folder..." (plan 5.1, 5.2; the delegate checks the bid lock first).
+  // Both sit before Delete so the destructive item stays last.
+  NSString *rowFolderUID = OSTText(sec.folder_uid);
+  __weak ConditionsViewController *weakSelf = self;
+  [sheet addAction:[UIAlertAction
+                       actionWithTitle:OSTText(ost_domain::new_condition_action_title(sec.folder_uid, sec.folder_name))
+                                 style:UIAlertActionStyleDefault
+                               handler:^(UIAlertAction *action) {
+                                 [weakSelf _requestNewConditionInFolderUID:rowFolderUID];
+                               }]];
+  [sheet addAction:[UIAlertAction
+                       actionWithTitle:OSTText(ost_domain::kMoveToFolderAction)
+                                 style:UIAlertActionStyleDefault
+                               handler:^(UIAlertAction *action) {
+                                 ConditionsViewController *strongSelf = weakSelf;
+                                 if (strongSelf && strongSelf->_delegate &&
+                                     [strongSelf->_delegate respondsToSelector:@selector(conditionsViewController:
+                                                                                         didRequestMoveConditionUID:)])
+                                   [strongSelf->_delegate conditionsViewController:strongSelf
+                                                        didRequestMoveConditionUID:uid];
+                               }]];
+
   [sheet
       addAction:
           [UIAlertAction
@@ -392,14 +512,12 @@ struct ConditionSection {
                       handler:^(UIAlertAction *action) {
                         UIAlertController *confirm = [UIAlertController
                             alertControllerWithTitle:
-                                [NSString
-                                    stringWithFormat:@"Delete \"%@\"?", name]
+                                OSTText(ost_domain::condition_delete_title(
+                                    nameText))
                                              message:
-                                                 @"Deleting a Condition will "
-                                                 @"delete all its Takeoffs "
-                                                 @"on all Pages within this "
-                                                 @"Bid.\n\nThis cannot be "
-                                                 @"undone."
+                                                 OSTText(ost_domain::
+                                                             condition_delete_message(
+                                                                 1))
                                       preferredStyle:
                                           UIAlertControllerStyleAlert];
                         [confirm

@@ -5,6 +5,7 @@
 #include "../Core/Export/threejs_writer.hpp"
 #include "../Core/Geometry/feature_edges.hpp"
 #include "../Core/Meshing/ExportMeshSet.hpp"
+#include <cerrno>
 #include <exception>
 
 // All geometry, boolean, colour and naming rules are in Core
@@ -27,6 +28,9 @@ static BOOL checkStatus(ost_meshing::ExportStatus status,
     setOutcome(outcome, ExportOutcomeNoTakeoffs);
     return NO;
   case ost_meshing::ExportStatus::NothingToExport:
+    // The alert shows the Windows "No file was written" sentence only (EXP-21): the reason is for the log.
+    NSLog(@"Export: there are takeoffs but no mesh survives (negative-only or "
+          @"every positive consumed); no file is written");
     setOutcome(outcome, ExportOutcomeNothingToExport);
     return NO;
   }
@@ -67,8 +71,10 @@ static NSString *exportFileName(const ost_data::ProjectData &project,
   std::string fileName = ost_geometry::export_text::export_filename(
       extension, project.bid_name, names);
   NSString *name = [NSString stringWithUTF8String:fileName.c_str()];
-  if (!name)
+  if (!name) {
+    NSLog(@"Export: the file name is not valid UTF-8; nothing is written");
     setOutcome(outcome, ExportOutcomeFailed);
+  }
   return name;
 }
 
@@ -108,6 +114,7 @@ static NSString *exportFileName(const ost_data::ProjectData &project,
   NSString *mtlPath = [tmpDir stringByAppendingPathComponent:mtlName];
 
   if (!writer.save([objPath UTF8String])) {
+    NSLog(@"Export: OBJ could not be written to %@ (errno %d)", objPath, errno);
     setOutcome(outcome, ExportOutcomeWriteFailed);
     return nil;
   }
@@ -157,6 +164,7 @@ static NSString *exportFileName(const ost_data::ProjectData &project,
       [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
 
   if (!writer.save([dxfPath UTF8String])) {
+    NSLog(@"Export: DXF could not be written to %@ (errno %d)", dxfPath, errno);
     setOutcome(outcome, ExportOutcomeWriteFailed);
     return nil;
   }
@@ -199,6 +207,8 @@ static NSString *exportFileName(const ost_data::ProjectData &project,
       [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
 
   if (!writer.save([htmlPath UTF8String])) {
+    NSLog(@"Export: HTML could not be written to %@ (errno %d)", htmlPath,
+          errno);
     setOutcome(outcome, ExportOutcomeWriteFailed);
     return nil;
   }

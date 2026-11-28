@@ -2,6 +2,7 @@
 #define EDITCONDITIONVIEWCONTROLLER_INTERNAL_H
 
 #import "EditConditionViewController.h"
+#include "../../Core/Domain/PositionParser.hpp"
 #include "../../Core/Domain/UomService.hpp"
 #include <optional>
 #include <vector>
@@ -49,6 +50,14 @@ static const NSInteger kTagTileY = 404;
 static const NSInteger kTagGap = 405;
 static const NSInteger kTagSpacing = 406;
 
+// Labels of the Advanced switches (Windows texts.py EDIT_CONDITION_DIALOG_OPTION_*, sentence case). They are also the dispatch keys
+// of _advToggleChanged:; the row builders use the same constants, so a label is changed in one place.
+static NSString *const kAdvLabelDisplayName = @"Display name";
+static NSString *const kAdvLabelRoundQuantity = @"Round quantity";
+static NSString *const kAdvLabelDisplayDimension = @"Display dimension";
+static NSString *const kAdvLabelCurvedSegment = @"Set as curved segment";
+static NSString *const kAdvLabelDisplayPattern = @"Display pattern while drawing";
+
 // --- Dimension row model ---
 enum class DimFormat
 {
@@ -79,14 +88,6 @@ struct AdvRow
     NSInteger tag;
     bool boolVal;
     double dimVal;
-};
-
-// --- Elevation parsing result ---
-struct ElevationParts
-{
-    std::string baseName;
-    int type;
-    std::string value;
 };
 
 // --- Class extension — ivars visible to all category .mm files ---
@@ -123,9 +124,25 @@ struct ElevationParts
     UITextField *_elevValueField;
     NSMutableDictionary<NSNumber *, NSString *> *_fieldTextCache;
     NSString *_notesTextCache;
-    ElevationParts _elevParts;
+    // The elevation of the name in the form: ost_domain::parse_elevation of the loaded name (base_name, type 0 top / 1 bottom, value)
+    ost_domain::ElevationParts _elevParts;
     UIBarButtonItem *_prevButton;
     UIBarButtonItem *_nextButton;
+    UIBarButtonItem *_saveButton;
+
+    // --- Create mode (New Condition, plan 5.1): nothing of this is used by the Edit mode ---
+    BOOL _createMode;
+    // A Save is being written / was written: a second tap (a double tap) creates nothing
+    BOOL _createInFlight;
+    BOOL _createDone;
+    // The Name field took the focus once, when the form first appeared
+    BOOL _createFocused;
+    // The synthetic condition (ost_domain::new_condition_form): the "stored" condition a Save is compared with, the folder the condition is
+    // created in ("" = the top level), the bid's own default layer ("" = none) and the text of the read-only Cond. No. row
+    ost_domain::Condition _createForm;
+    std::string _createFolderUID;
+    std::string _createDefaultLayerUID;
+    NSString *_nextNumberText;
 }
 @end
 
@@ -139,6 +156,8 @@ struct ElevationParts
 // Recomputes the dirty flag after a change of a text, a switch or a picker.
 - (void)_updateDirty;
 - (BOOL)_validateAndCollectTextFields;
+// Create mode: the form notices a text while it is typed (a UIControlEventEditingChanged action on the field); no-op in the Edit mode.
+- (void)_noticeTypingInField:(UITextField *)field;
 - (NSString *)_cachedTextForTag:(NSInteger)tag;
 - (UITableViewCell *)_detailCell:(UITableView *)table id:(NSString *)cellId;
 - (UITableViewCell *)_textFieldCell:(UITableView *)table

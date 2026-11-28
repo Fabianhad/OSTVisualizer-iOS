@@ -77,6 +77,8 @@ namespace ost_db
         };
         ColumnType column_type(int idx) const;
         std::string column_text(int idx) const;
+        // Every byte of a TEXT or BLOB value (sqlite3_column_bytes): column_text() stops at the first NUL byte.
+        std::string column_text_exact(int idx) const;
 
     private:
         friend class OstDatabase;

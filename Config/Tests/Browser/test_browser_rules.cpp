@@ -111,18 +111,18 @@ TEST(Brw21_NameFallback, AnyOtherNameIsShownAsItIs)
 // ---------------------------------------------------------------------------------------------------------------
 
 // Port of test_trashing_one_bid_confirms_and_moves_it_with_its_original_project and the n bids variant
-// ("Move 4 bids to 'Deleted Bids'?\nYou can permanently delete them from there.").
+// ("Move 4 bids to Deleted Bids?\nYou can permanently delete them from there.").
 TEST(Brw01_Confirmation, TrashTextsAreTheWindowsStrings)
 {
     ost_domain::DialogText one = ost_domain::trash_bids_confirmation(1);
     CHECK_STR_EQ(one.title, "Move to Deleted Bids");
-    CHECK_STR_EQ(one.message, "Move this bid to 'Deleted Bids'?\nYou can permanently delete it from there.");
+    CHECK_STR_EQ(one.message, "Move this bid to Deleted Bids?\nYou can permanently delete it from there.");
 
     ost_domain::DialogText four = ost_domain::trash_bids_confirmation(4);
     CHECK_STR_EQ(four.title, "Move to Deleted Bids");
-    CHECK_STR_EQ(four.message, "Move 4 bids to 'Deleted Bids'?\nYou can permanently delete them from there.");
+    CHECK_STR_EQ(four.message, "Move 4 bids to Deleted Bids?\nYou can permanently delete them from there.");
 
-    CHECK_STR_EQ(ost_domain::trash_bids_confirmation(2).message, "Move 2 bids to 'Deleted Bids'?\nYou can permanently delete them from there.");
+    CHECK_STR_EQ(ost_domain::trash_bids_confirmation(2).message, "Move 2 bids to Deleted Bids?\nYou can permanently delete them from there.");
 }
 
 // Port of test_permanent_delete_confirms_with_the_bid_count_and_writes_per_database (3 bids) and

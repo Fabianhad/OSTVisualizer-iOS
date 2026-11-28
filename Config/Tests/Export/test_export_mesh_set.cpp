@@ -562,8 +562,8 @@ namespace
     // The meshes that leave the three entry points of Core/Meshing/ExportMeshSet.cpp (the 3D view, the HTML scene and every
     // group of the OBJ / DXF export) of a project with Count A (a1 at x 0, a2 at x 500), Attachment B (b1 at x 200) and
     // three scenes: no negative; a negative of another condition type far away; a negative of A at x 10 that cuts a1 (the
-    // box 20 x 20 x 10 at x -10..10 loses x 0..10, volume 4000 -> 2000). Decided: iOS keeps every mesh outward-facing, cut or
-    // untouched (EXP-13 / EXP-M02), so every mesh that leaves any of the three has a positive signed volume. This is the test
+    // box 20 x 20 x 10 at x -10..10 loses x 0..10, volume 4000 -> 2000). Windows d1c430a made every shape outward and iOS already kept every mesh outward-facing, cut or
+    // untouched (parity; EXP-13 / EXP-M02), so every mesh that leaves any of the three has a positive signed volume. This is the test
     // that sees a face reversal added AFTER the pass (BooleanRule.Winding_ThePassNeverReversesTheFacesOfAPositive only sees
     // the pass itself, ObjWinding.* only the generators and the difference).
     void check_winding_of_entry_point(const char *entry_point,

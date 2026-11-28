@@ -6,7 +6,9 @@
 #include "OspTestSupport.hpp"
 
 #include "Import/CabMemberName.hpp"
+#include "Domain/FailureText.hpp"
 #include "Import/Digest.hpp"
+#include "Import/ImportDiagnostics.hpp"
 
 #include <string>
 #include <vector>
@@ -871,6 +873,29 @@ TEST(OspFlow, StagesImagesRewritesPathsAndRemovesTheExtraction)
     CHECK_STR_EQ(result.raw.bid_row["UID"], "1");
     // the extraction folder (below tmp) was removed, nothing else was left there
     CHECK(flow.tree.entries_in("tmp").empty());
+}
+
+// A temporary folder that cannot be created is a device failure: stage_osp_package reports it with the shared constant, writes nothing, and
+// the classifier shows it like every other local failure of the file (Windows swallows it inside import_osp: the "damaged" sentence).
+namespace
+{
+    class NoTempFolderFs : public ost_import::StdOspFileSystem
+    {
+    public:
+        bool make_temp_directory(const std::string &, const std::string &, std::string &) override { return false; }
+    };
+}
+
+TEST(OspFlow, ATemporaryFolderThatCannotBeCreatedFailsTheImportWithTheSharedDiagnostic)
+{
+    Flow flow("flow_no_temp");
+    NoTempFolderFs fs;
+    const std::string package = ost_osptest::make_osp({{"Project.ost", ost_osptest::page_xml({})}});
+    ost_import::OspStageResult result;
+    CHECK_FALSE(flow.run(package, result, &fs));
+    CHECK_STR_EQ(result.error, ost_import::kOspTempFolderError);
+    CHECK_FALSE(flow.tree.exists("images"));
+    CHECK(ost_domain::classify_import_failure(result.error) == ost_domain::ImportFailureKind::Damaged);
 }
 
 // Item test plan of IMP-12 end to end: an existing different drawing stays, the new one gets the digest name, the path points at it.

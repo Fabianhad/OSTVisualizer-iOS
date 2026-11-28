@@ -46,61 +46,8 @@ int shapeDisplayIndex(ost_domain::ShapeId s) {
   return 0;
 }
 
-// --- Elevation parsing ---
-
-ElevationParts parseElevation(const std::string &name) {
-  ElevationParts parts;
-  parts.type = 0;
-  auto posT = name.rfind(" @T");
-  auto posB = name.rfind(" @B");
-  auto pos = std::string::npos;
-  int markerLen = 3;
-  if (posT != std::string::npos && posB != std::string::npos) {
-    pos = std::max(posT, posB);
-    parts.type = (pos == posB) ? 1 : 0;
-  } else if (posT != std::string::npos) {
-    pos = posT;
-    parts.type = 0;
-  } else if (posB != std::string::npos) {
-    pos = posB;
-    parts.type = 1;
-  }
-
-  if (pos == std::string::npos) {
-    auto posAt = name.rfind(" @ ");
-    if (posAt == std::string::npos)
-      posAt = name.rfind(" @");
-    if (posAt != std::string::npos) {
-      pos = posAt;
-      parts.type = 1;
-      markerLen = 2;
-    }
-  }
-  if (pos == std::string::npos) {
-    parts.baseName = name;
-    parts.value = "";
-    return parts;
-  }
-  parts.baseName = name.substr(0, pos);
-  size_t valStart = pos + markerLen;
-  if (valStart < name.size() && name[valStart] == ' ')
-    valStart++;
-  parts.value = (valStart < name.size()) ? name.substr(valStart) : "";
-  return parts;
-}
-
-std::string reassembleElevation(const std::string &baseName, int type,
-                                const std::string &value) {
-  std::string trimmedValue = value;
-  while (!trimmedValue.empty() && trimmedValue.front() == ' ')
-    trimmedValue.erase(trimmedValue.begin());
-  while (!trimmedValue.empty() && trimmedValue.back() == ' ')
-    trimmedValue.pop_back();
-  if (trimmedValue.empty())
-    return baseName;
-  const char *tag = (type == 0) ? " @T " : " @B ";
-  return baseName + tag + trimmedValue;
-}
+// The elevation of a condition name is read and written by Core (ost_domain::parse_elevation / reassemble_elevation, PositionParser.hpp), the
+// same functions the loader uses; the Objective-C copies that lived here (the second one trimmed only U+0020) are gone.
 
 // --- Dimension display ---
 

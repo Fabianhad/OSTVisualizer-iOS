@@ -5,6 +5,7 @@
 //   by newlines; empty for most), then the BidTakeoffs rows of bid 1
 //   (UID, BidUID, BidConditionUID, BidPageUID, ParentUID, Position, Rotation) and the Windows outcome:
 //   "OK:<uid>=<coordinate count>,..." in load order, or "<exception class>|<message>".
+// The two IncoherentBidOwnedScopeError messages were edited by hand to the Windows d26893c text (shared/texts.py:913-920, lowercase "takeoff" and "page").
 #pragma once
 
 namespace ost_ptest
@@ -58,7 +59,7 @@ namespace ost_ptest
          "CyclicBidOwnedReferenceError|BidTakeoffs.UID=9 participates in a ParentUID cycle."},
         {"",
          "(7, 1, 30, 10, 0, '0;0;1;1', 0), (8, 1, 30, 11, 7, '0;0;1;1', 0)",
-         "IncoherentBidOwnedScopeError|A Takeoff and its parent must belong to the same Page."},
+         "IncoherentBidOwnedScopeError|A takeoff and its parent must belong to the same page."},
         {"",
          "(7, 1, 30, 10, 0, '0;0;1;1', 0), (8, 1, 30, 10, 7, '0;0;1;1', 0), (9, 1, 30, 10, 8, '0;0;1;1', 0)",
          "OK:7=4,8=4,9=4"},
@@ -121,7 +122,7 @@ namespace ost_ptest
          "DanglingBidOwnedReferenceError|BidTakeoffs.UID=1 references missing BidTakeoffs.UID=99 through ParentUID."},
         {"",
          "(1, 1, 30, 10, 0, '1;2', 0), (2, 1, 30, 11, 1, '1;2', 0), (7, 1, 30, 10, 8, '1;2', 0), (8, 1, 30, 10, 7, '1;2', 0)",
-         "IncoherentBidOwnedScopeError|A Takeoff and its parent must belong to the same Page."},
+         "IncoherentBidOwnedScopeError|A takeoff and its parent must belong to the same page."},
         {"",
          "(5, 1, 30, 10, 0, '1;2', 0), (3, 1, 98, 10, 0, '1;2', 0), (4, 1, 99, 10, 0, '1;2', 0)",
          "DanglingBidOwnedReferenceError|BidTakeoffs.UID=3 references missing BidConditions.UID=98 through BidConditionUID."},

@@ -162,7 +162,7 @@ TEST(Dbp17_InsertTakeoffValidation, OwnersOfTheSameBidAreAccepted)
                  "901:10:30:100:60:40");
 }
 
-// Windows require_takeoff_parent_pages: "A Takeoff and its parent must belong to the same Page." The parent is a takeoff of the
+// Windows require_takeoff_parent_pages: "A takeoff and its parent must belong to the same page." The parent is a takeoff of the
 // bid, but on page 101.
 TEST(Dbp17_InsertTakeoffValidation, ParentOnAnotherPageIsRejected)
 {

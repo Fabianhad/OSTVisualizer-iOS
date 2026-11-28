@@ -1,4 +1,5 @@
 #include "../../../Core/Domain/Layer.hpp"
+#include "../../../Core/Domain/LayerSheet.hpp"
 #import "../ViewController_Internal.h"
 
 @interface ViewController (Layers) <UITableViewDataSource, UITableViewDelegate>
@@ -9,14 +10,17 @@
 - (void)_handleLayerToggle {
   // The layer list is the Windows one: the bid's layers merged with the locked
   // template layers, in Sequence order with stable ties, without the Comments
-  // layer (Core: merge_layers_for_bid, LP-24, LP-18).
-  if (self.projectService.project.empty() ||
-      self.projectService.project.merged_layers.empty())
+  // layer (Core: merge_layers_for_bid, LP-24, LP-18). The sheet also opens for
+  // a bid whose list is empty: Windows allows New Layer there (after_sequence 0,
+  // test_layers_sidebar.py:221-246), and "+" creates the first one (M1, 5.3).
+  // Nothing opens while the main controller already presents something (a second tap on Layers, or an
+  // alert): UIKit would refuse the second presentation, and the table stored below would then be an
+  // orphan that _layersTableView hands to the editing flows instead of the one on screen.
+  if (self.presentedViewController)
     return;
-  self.projectService.sortedLayerUIDs.clear();
-  for (const auto &layer : self.projectService.project.merged_layers) {
-    self.projectService.sortedLayerUIDs.push_back(layer.uid);
-  }
+  if (self.projectService.project.empty())
+    return;
+  [self _rebuildSortedLayerUIDs];
   UITableView *table =
       [[UITableView alloc] initWithFrame:CGRectZero
                                    style:UITableViewStyleInsetGrouped];
@@ -52,7 +56,13 @@
       initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                            target:self
                            action:@selector(_layersDone:)];
-  sheetVC.navigationItem.rightBarButtonItem = done;
+  // "+" = New Layer at the end of the list (Windows New with no row selected,
+  // layers_dialog.py:315-322). The first item is the rightmost.
+  UIBarButtonItem *add = [[UIBarButtonItem alloc]
+      initWithBarButtonSystemItem:UIBarButtonSystemItemAdd
+                           target:self
+                           action:@selector(_layersAddTapped:)];
+  sheetVC.navigationItem.rightBarButtonItems = @[ done, add ];
 
   UINavigationController *nav =
       [[UINavigationController alloc] initWithRootViewController:sheetVC];
@@ -88,17 +98,25 @@
 // locked template layer of no bid or of another bid) is never changed, in the
 // write, in memory or in the list (LP-24 (a); the plan is
 // ost_domain::plan_bulk_layer_visibility). When the bid has no layer of its own
-// the plan is NoOwnLayers: Windows returns False there and the sidebar path
-// ignores it, so nothing is written, nothing changes and no alert is shown. The
-// project follows only after the write worked, a refused write is reported and
-// changes nothing (DBP-11, DBP-17, Windows restore_authoritative).
+// the plan is NoOwnLayers: nothing is written and nothing changes, and since
+// Windows d26893c (ui_event_coordinator.py:6812-6835, layers_dialog.py:700-716)
+// the user is told: "Layer Visibility" / "This bid has no layers of its own to
+// show or hide." (Core: bulk_layer_visibility_notice, which is silent for
+// AlreadyThere). The project follows only after the write worked, a refused
+// write is reported and changes nothing (DBP-11, DBP-17, Windows
+// restore_authoritative).
 - (void)_setAllLayersVisible:(BOOL)show {
   const auto &project = self.projectService.project;
   const ost_domain::BulkLayerPlan plan = ost_domain::plan_bulk_layer_visibility(
       project.merged_layers, std::string(self.bidUID.UTF8String ?: ""),
       project.layers, show);
-  if (plan.outcome != ost_domain::BulkLayerOutcome::Write)
+  if (plan.outcome != ost_domain::BulkLayerOutcome::Write) {
+    const ost_domain::DialogText notice = ost_domain::bulk_layer_visibility_notice(plan);
+    if (!notice.title.empty())
+      [self _presentLayerVisibilityNoticeTitle:[NSString stringWithUTF8String:notice.title.c_str()]
+                                       message:[NSString stringWithUTF8String:notice.message.c_str()]];
     return;
+  }
   if (self.bidUID.length > 0 &&
       ![ImportService setLayersVisibility:show
                                 forLayers:plan.uids
@@ -226,6 +244,22 @@
   [presenter presentViewController:alert animated:YES completion:nil];
 }
 
+// Windows _on_layers_show_all / layers_dialog._set_all_show: the message of a Show All / Hide All that did nothing because the bid has no layer of
+// its own, shown on the topmost controller (the Layers sheet is presented over this one); the check marks did not change, so nothing is reloaded.
+- (void)_presentLayerVisibilityNoticeTitle:(NSString *)title message:(NSString *)message {
+  UIViewController *presenter = self;
+  while (presenter.presentedViewController)
+    presenter = presenter.presentedViewController;
+  UIAlertController *alert = [UIAlertController
+      alertControllerWithTitle:title
+                       message:message
+                preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+                                            style:UIAlertActionStyleDefault
+                                          handler:nil]];
+  [presenter presentViewController:alert animated:YES completion:nil];
+}
+
 // What the list shows for a layer (ost_data::ProjectData::is_listed_layer_visible):
 // the live visibility of a layer of the bid (the toggles and Show All / Hide All
 // made since the load), the stored Show of a shared template row (a locked
@@ -245,6 +279,13 @@
 
 - (void)_layersDone:(id)sender {
   [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+// The table of the Layers sheet that was opened last (nil when it was never opened; after Done it stays, and reloading it is harmless):
+// ViewController+LayerEditing.mm reloads it after a write. The associated object is set in _handleLayerToggle, in this file only, so the key
+// is the same literal. _handleLayerToggle does not run while something is presented, so this is always the sheet on screen when one is up.
+- (UITableView *)_layersTableView {
+  return objc_getAssociatedObject(self, "layerTable");
 }
 
 #pragma mark - UITableView DataSource/Delegate (Layers)
@@ -279,6 +320,19 @@
     const std::string layerUID =
         self.projectService.sortedLayerUIDs[indexPath.row];
     const BOOL show = ![self _visibilityOfListedLayer:layerUID];
+    // Windows d1c430a (update_layer_visibility_deferred, ui_event_coordinator.py:6564-6573; the alert of _on_layer_visibility_toggled): the
+    // single show / hide of a shared template row (a locked template layer of no bid or of another bid, the Image layer included) is refused
+    // with "Layer Visibility" / "This layer is a locked template layer that other bids share, so it cannot be shown or hidden from this
+    // bid." before anything is written; the check mark is put back to the stored value (reload of the sheet). Core decides (owner note b).
+    const ost_domain::DialogText refusal = ost_domain::single_layer_visibility_refusal(
+        self.projectService.project.merged_layers,
+        std::string(self.bidUID.UTF8String ?: ""), layerUID);
+    if (!refusal.title.empty()) {
+      [tableView reloadData];
+      [self _presentLayerVisibilityNoticeTitle:[NSString stringWithUTF8String:refusal.title.c_str()]
+                                       message:[NSString stringWithUTF8String:refusal.message.c_str()]];
+      return;
+    }
     // Stored first (Windows layers_dialog._on_show_changed): a refused write
     // (a layer that is no layer of a bid, a failed statement) changes nothing
     // and is reported (DBP-11, DBP-17).
@@ -317,6 +371,34 @@
       [self _restorePlacementAfterLayerShow:layerUIDString
                                layerIsImage:layerIsImage];
   }
+}
+
+// M1 layer editing (plan 5.3): a tap still toggles the visibility (above); the
+// per-row actions are the trailing swipe (Delete, Rename) and the long-press
+// menu (Rename, New Layer Below, Move Up, Move Down, Delete), both built by
+// ViewController+LayerEditing.mm from Core's row rules. A row that offers
+// nothing returns nil.
+- (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView
+    trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
+  if (indexPath.row < 0 ||
+      (size_t)indexPath.row >= self.projectService.sortedLayerUIDs.size())
+    return nil;
+  NSString *layerUID = [NSString
+      stringWithUTF8String:self.projectService.sortedLayerUIDs[indexPath.row]
+                               .c_str()];
+  return [self _layerSwipeActionsForUID:layerUID];
+}
+
+- (UIContextMenuConfiguration *)tableView:(UITableView *)tableView
+    contextMenuConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath
+                                        point:(CGPoint)point {
+  if (indexPath.row < 0 ||
+      (size_t)indexPath.row >= self.projectService.sortedLayerUIDs.size())
+    return nil;
+  NSString *layerUID = [NSString
+      stringWithUTF8String:self.projectService.sortedLayerUIDs[indexPath.row]
+                               .c_str()];
+  return [self _layerContextMenuForUID:layerUID];
 }
 
 @end

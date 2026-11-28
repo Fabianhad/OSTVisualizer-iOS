@@ -1,5 +1,6 @@
 #include "../../Core/Data/PageNavigation.hpp"
 #include "../../Core/Domain/BrowserRules.hpp"
+#include "../../Core/Domain/FailureText.hpp"
 #include "../../Core/Domain/NegativeChange.hpp"
 #include "../../Core/Domain/QuantityPages.hpp"
 #include "../../Core/Domain/TakeoffSelection.hpp"
@@ -522,6 +523,14 @@ static const int kToolbar2DOnlyTag = 40000;
     return;
   if (_is2DMode)
     return;
+  // A long press that starts on a page button of either bar opens the page menu only: this whole-view recogniser has no delegate and
+  // both bars stay visible in 3D mode, so without this guard the press would also pick the takeoff under the finger or select all
+  // takeoffs of the selected condition (plan 4.8, 5.5; device check M1-14).
+  for (UIScrollView *bar in @[ _pageBar3D, _pageBar2D ]) {
+    if (!bar.hidden &&
+        CGRectContainsPoint(bar.bounds, [lp locationInView:bar]))
+      return;
+  }
 
   CGPoint pt = [lp locationInView:self.view];
   CGFloat scale = [UIScreen mainScreen].scale;
@@ -549,8 +558,18 @@ static const int kToolbar2DOnlyTag = 40000;
   if (!tk)
     return;
 
-  bool currentNeg = tk->is_negative;
-  NSString *title = currentNeg ? @"\u2713 Count as Negative Quantity"
+  // The item and its check mark come from ost_domain::negative_toggle_for_press
+  // (host-tested). iOS has no multi-selection and no paste before M2, so the
+  // group is EMPTY and the single takeoff path applies: the item is offered, it
+  // is checked when that takeoff is negative. M2 passes the pasted takeoff uids
+  // here and in _toggleNegativeForPressedTakeoff: (N-M2-04, owner decision 3).
+  const ost_domain::NegativeToggle toggle =
+      ost_domain::negative_toggle_for_press(_projectService.project.takeoffs,
+                                            std::vector<std::string>(),
+                                            takeoffUID);
+  if (!toggle.offered)
+    return;
+  NSString *title = toggle.checked ? @"\u2713 Count as Negative Quantity"
                                : @"Count as Negative Quantity";
 
   UIAlertController *sheet = [UIAlertController
@@ -564,8 +583,7 @@ static const int kToolbar2DOnlyTag = 40000;
                     actionWithTitle:title
                               style:UIAlertActionStyleDefault
                             handler:^(UIAlertAction *a) {
-                              [self _setNegative:!currentNeg
-                                  forPressedTakeoff:uid];
+                              [self _toggleNegativeForPressedTakeoff:uid];
                             }]];
 
   [sheet addAction:[UIAlertAction actionWithTitle:@"Cancel"
@@ -585,14 +603,17 @@ static const int kToolbar2DOnlyTag = 40000;
 // pressed takeoff: the negative flag of that takeoff alone, in ONE history
 // entry, so one undo restores it and one redo applies it again (UND-09). A
 // condition that is merely selected in the sidebar widens nothing; the decision
-// is ost_domain::negative_changes_for_press (host-tested).
-- (void)_setNegative:(BOOL)negative
-    forPressedTakeoff:(const std::string &)pressedUID {
-  const std::vector<NegativeChange> changes =
-      ost_domain::negative_changes_for_press(_projectService.project.takeoffs,
-                                             pressedUID, negative == YES);
-  if (changes.empty())
+// is ost_domain::negative_toggle_for_press (host-tested). The group is empty
+// until M2: the paste wiring passes the pasted takeoff uids, and then one press
+// sets the whole group in this same ONE entry (owner decision 3).
+- (void)_toggleNegativeForPressedTakeoff:(const std::string &)pressedUID {
+  const ost_domain::NegativeToggle toggle =
+      ost_domain::negative_toggle_for_press(_projectService.project.takeoffs,
+                                            std::vector<std::string>(),
+                                            pressedUID);
+  if (!toggle.offered || toggle.changes.empty())
     return;
+  const std::vector<NegativeChange> &changes = toggle.changes;
   const std::vector<std::pair<std::string, bool>> updates =
       ost_domain::negative_values(changes, false);
 
@@ -717,6 +738,7 @@ static const int kToolbar2DOnlyTag = 40000;
 }
 
 - (void)planView:(PlanView *)planView areaPlacementInProgress:(BOOL)inProgress {
+  self.areaPlacementInProgress = inProgress; // read by the page menu when it is shown (ViewController+PageMenu.mm)
   _fab.userInteractionEnabled = !inProgress;
   _fab.alpha = inProgress ? 0.3 : 1.0;
   _snapToggle.userInteractionEnabled = !inProgress;
@@ -1014,6 +1036,28 @@ static const int kToolbar2DOnlyTag = 40000;
 - (void)undoRedoClearSelection {
   [self _applySelectionState:ost_domain::clear_selection([self _selectionState])];
   [self _syncSelection];
+}
+
+// Windows HistoryTargetUnavailableError: the page or a takeoff the replay needs is gone from the project (the rule is Core
+// ost_domain::history_targets_unavailable). The undo / redo is then refused before it writes and the entry stays.
+- (BOOL)undoRedoReplayTargetsUnavailable:(const ost_domain::HistoryReplayTargets &)targets {
+  return ost_domain::history_targets_unavailable(_projectService.project, targets);
+}
+
+// A user-triggered undo / redo that did not run (Windows show_error("Undo" / "Redo", ...)): same alert shape as -_presentSaveFailure.
+- (void)undoRedoPresentRefusalWithTitle:(NSString *)title message:(NSString *)message {
+  // A locked bid is told so ("This bid is locked."), not that the change "could not be undone" (practically unreachable today: takeoff writes are not
+  // lock-guarded yet, N-M1-01; kept so that a later lock retrofit says "This bid is locked." instead of "could not be undone").
+  if ([self _refuseIfBidLocked])
+    return;
+  UIViewController *presenter = self;
+  while (presenter.presentedViewController)
+    presenter = presenter.presentedViewController;
+  UIAlertController *alert = [UIAlertController alertControllerWithTitle:title
+                                                                 message:message
+                                                          preferredStyle:UIAlertControllerStyleAlert];
+  [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+  [presenter presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)undoRedoDidModify {
@@ -1347,12 +1391,15 @@ static const int kToolbar2DOnlyTag = 40000;
 
 - (void)_loadProjectFromDatabase:(NSString *)bidUID {
   // A bid that cannot be read completely or whose data is inconsistent is not
-  // entered: the reason is shown instead of an empty project (DBP-M02,
-  // DBP-31, BRW-16, POS-M01).
+  // entered: an alert is shown instead of an empty project (DBP-M02,
+  // DBP-31, BRW-16, POS-M01); the cause is only logged.
   ost_data::ProjectData proj;
-  NSString *error = nil;
-  if (![ImportService loadProjectWithUID:bidUID project:proj error:&error]) {
-    _loadErrorToPresent = error.length > 0 ? error : @"The bid could not be read.";
+  // ImportService logs the diagnostic; the alert shows the one user sentence (EXP-21).
+  if (![ImportService loadProjectWithUID:bidUID project:proj error:nil]) {
+    _loadErrorToPresent = [NSString
+        stringWithUTF8String:ost_domain::load_failure_reason(
+                                 ost_domain::LoadTarget::Bid)
+                                 .c_str()];
     return;
   }
   if (!proj.empty()) {
