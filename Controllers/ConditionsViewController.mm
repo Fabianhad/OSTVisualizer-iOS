@@ -1,6 +1,7 @@
 #import "ConditionsViewController.h"
 #include "../Core/Domain/Condition.hpp"
 #include "../Core/Domain/ConditionCreate.hpp"
+#include "../Core/Domain/ConditionDeleteText.hpp"
 #include "../Core/Domain/ConditionFolderUi.hpp"
 #include "../Core/Domain/ConditionTree.hpp"
 #include "../Core/Domain/QuantityDisplay.hpp"
@@ -510,14 +511,12 @@ static NSString *OSTText(const std::string &text) {
                       handler:^(UIAlertAction *action) {
                         UIAlertController *confirm = [UIAlertController
                             alertControllerWithTitle:
-                                [NSString
-                                    stringWithFormat:@"Delete \"%@\"?", name]
+                                OSTText(ost_domain::condition_delete_title(
+                                    std::string([name UTF8String])))
                                              message:
-                                                 @"Deleting a condition will "
-                                                 @"delete all its takeoffs "
-                                                 @"on all pages within this "
-                                                 @"bid.\n\nThis cannot be "
-                                                 @"undone."
+                                                 OSTText(ost_domain::
+                                                             condition_delete_message(
+                                                                 1))
                                       preferredStyle:
                                           UIAlertControllerStyleAlert];
                         [confirm

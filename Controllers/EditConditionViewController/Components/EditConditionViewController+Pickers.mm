@@ -2,6 +2,7 @@
 #import "EditConditionHelpers.h"
 #include "../../../Core/Domain/ConditionChoices.hpp"
 #include "../../../Core/Domain/ConditionFormRules.hpp"
+#include "../../../Core/Domain/ConditionQuantityChoices.hpp"
 
 @interface EditConditionViewController (Pickers) <
     UIColorPickerViewControllerDelegate>
@@ -271,6 +272,25 @@ static void anchorSheetOnRow(UIPopoverPresentationController *popover,
                                                              calcType:calcType
                                                               fromRow:rowPath];
                                             }]];
+  }
+
+  // A stored quantity the style does not offer: one more entry after the options, "Unknown (N)", greyed so it can never be chosen
+  // (Windows d1c430a _show_stored_quantity). Cancelling keeps the stored value, "(none)" clears it.
+  const int storedCalc = qtyIndex == 0   ? _condition.calc_type1
+                         : qtyIndex == 1 ? _condition.calc_type2
+                                         : _condition.calc_type3;
+  if (auto unknown = ost_domain::unknown_quantity_calc_type(
+          _condition.condition_type, storedCalc)) {
+    UIAlertAction *unknownAction = [UIAlertAction
+        actionWithTitle:[NSString
+                            stringWithUTF8String:ost_domain::
+                                                     unknown_quantity_label(
+                                                         *unknown)
+                                                         .c_str()]
+                  style:UIAlertActionStyleDefault
+                handler:nil];
+    unknownAction.enabled = NO;
+    [alert addAction:unknownAction];
   }
 
   [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
