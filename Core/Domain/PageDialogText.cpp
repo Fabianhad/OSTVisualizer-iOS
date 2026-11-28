@@ -10,12 +10,9 @@ namespace ost_domain
         return {"Rename Page", "Old name: " + stored_name};
     }
 
-    DialogText page_delete_reload_failed_text(const std::string &reason)
+    DialogText page_delete_reload_failed_text(const std::string & /* reason: for the log only */)
     {
-        std::string message = "The page was deleted, but the bid could not be read again";
-        message += reason.empty() ? std::string(".") : ": " + reason;
-        message += "\n\nThe bid will close. Open it again to continue.";
-        return {"Delete Page", message};
+        return {"Delete Page", "The page was deleted, but the bid could not be read again.\n\nThe bid will close. Open it again to continue."};
     }
 
     DialogText page_delete_store_failure_text(const std::string &reason)

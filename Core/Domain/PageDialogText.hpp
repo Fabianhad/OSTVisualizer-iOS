@@ -20,10 +20,9 @@ namespace ost_domain
     DialogText page_rename_prompt_text(const std::string &stored_name);
 
     // The delete was committed but the bid could not be read again (iOS wording, plan 5.6 DP-2; Windows would say "Failed to delete page"
-    // although the page is gone). Title "Delete Page"; the message says the page was deleted, gives `reason` when it is not empty, and
-    // says the bid will close.
-    //   with a reason:    "The page was deleted, but the bid could not be read again: <reason>\n\nThe bid will close. Open it again to continue."
-    //   without a reason: "The page was deleted, but the bid could not be read again.\n\nThe bid will close. Open it again to continue."
+    // although the page is gone). Title "Delete Page"; the message says the page was deleted and the bid will close. `reason` (the load
+    // diagnostic) is NOT shown: the alert shows one user sentence and the reason goes to the log (EXP-21, messagebox.py:130-170).
+    //   "The page was deleted, but the bid could not be read again.\n\nThe bid will close. Open it again to continue."
     DialogText page_delete_reload_failed_text(const std::string &reason);
 
     // The alert for a delete that the STORE refused (`reason` is the `reason` of ost_store::delete_pages, the errorText of

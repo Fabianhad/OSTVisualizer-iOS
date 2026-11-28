@@ -230,13 +230,14 @@ TEST(PageDialogText, RenamePrompt_TheStoredNameIsShownAsItIs)
     CHECK_STR_EQ(ost_domain::page_rename_prompt_text("Plan 'B' \"C\"\n2").message, "Old name: Plan 'B' \"C\"\n2");
 }
 
-TEST(PageDialogText, DeleteReloadFailed_SaysTheDeleteHappened_AndGivesTheReason)
+TEST(PageDialogText, DeleteReloadFailed_SaysTheDeleteHappened_AndNeverShowsTheReason)
 {
-    // DP-2: Windows reports "Failed to delete page" when only the reload failed; iOS says the page is gone.
+    // DP-2: Windows reports "Failed to delete page" when only the reload failed; iOS says the page is gone. EXP-21 (owner decision 1): the
+    // alert shows one user sentence, the store reason goes to the log only (messagebox.py:130-170), so the reason never reaches the text.
     const ost_domain::DialogText text = ost_domain::page_delete_reload_failed_text("database is locked");
     CHECK_STR_EQ(text.title, "Delete Page");
-    CHECK_STR_EQ(text.message,
-                 "The page was deleted, but the bid could not be read again: database is locked\n\nThe bid will close. Open it again to continue.");
+    CHECK_STR_EQ(text.message, "The page was deleted, but the bid could not be read again.\n\nThe bid will close. Open it again to continue.");
+    CHECK(text.message.find("database is locked") == std::string::npos);
 }
 
 TEST(PageDialogText, DeleteReloadFailed_WithoutAReason_HasNoDanglingColon)
