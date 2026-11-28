@@ -3,6 +3,8 @@
 
 #include "../Data/ProjectData.hpp"
 
+#include <unordered_map>
+
 namespace ost_domain
 {
     namespace
@@ -13,17 +15,15 @@ namespace ost_domain
             return !page_uid.empty() && project.pages.find(page_uid) != project.pages.end();
         }
 
-        // _replay_takeoff_scale: the takeoff must be in the project and so must its page
-        bool takeoff_and_page_exist(const ost_data::ProjectData &project, const std::string &takeoff_uid)
+        // _replay_takeoff_scale: the takeoff must be in the project and so must its page. `page_of_takeoff` maps each takeoff uid to its page uid
+        // (the first takeoff with a uid wins, like the linear search it replaces), built once per call so a group of k takeoffs costs O(k + N).
+        bool takeoff_and_page_exist(const ost_data::ProjectData &project, const std::unordered_map<std::string, const std::string *> &page_of_takeoff,
+                                    const std::string &takeoff_uid)
         {
             if (takeoff_uid.empty())
                 return false;
-            for (const Takeoff &takeoff : project.takeoffs)
-            {
-                if (takeoff.uid == takeoff_uid)
-                    return page_exists(project, takeoff.page_uid);
-            }
-            return false;
+            const auto found = page_of_takeoff.find(takeoff_uid);
+            return found != page_of_takeoff.end() && page_exists(project, *found->second);
         }
     }
 
@@ -52,10 +52,17 @@ namespace ost_domain
 
     bool history_targets_unavailable(const ost_data::ProjectData &project, const HistoryReplayTargets &targets)
     {
-        for (const std::string &uid : targets.takeoff_uids)
+        if (!targets.takeoff_uids.empty())
         {
-            if (!takeoff_and_page_exist(project, uid))
-                return true;
+            std::unordered_map<std::string, const std::string *> page_of_takeoff;
+            page_of_takeoff.reserve(project.takeoffs.size());
+            for (const Takeoff &takeoff : project.takeoffs)
+                page_of_takeoff.emplace(takeoff.uid, &takeoff.page_uid); // emplace keeps the first takeoff of a uid
+            for (const std::string &uid : targets.takeoff_uids)
+            {
+                if (!takeoff_and_page_exist(project, page_of_takeoff, uid))
+                    return true;
+            }
         }
         for (const std::string &uid : targets.page_uids)
         {

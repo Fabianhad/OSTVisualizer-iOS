@@ -459,6 +459,7 @@ static NSString *OSTText(const std::string &text) {
   const auto &row = sec.rows[indexPath.row];
   NSString *uid = [NSString stringWithUTF8String:row.uid.c_str()];
   NSString *name = [NSString stringWithUTF8String:row.name.c_str()];
+  const std::string nameText = row.name;  // the delete title is built from the std::string: an invalid UTF-8 name makes `name` nil
 
   UIAlertController *sheet = [UIAlertController
       alertControllerWithTitle:name
@@ -512,7 +513,7 @@ static NSString *OSTText(const std::string &text) {
                         UIAlertController *confirm = [UIAlertController
                             alertControllerWithTitle:
                                 OSTText(ost_domain::condition_delete_title(
-                                    std::string([name UTF8String])))
+                                    nameText))
                                              message:
                                                  OSTText(ost_domain::
                                                              condition_delete_message(
