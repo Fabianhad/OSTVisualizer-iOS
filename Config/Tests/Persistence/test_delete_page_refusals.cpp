@@ -348,6 +348,40 @@ TEST(DelPageRefusals, PagesOfOtherBidsDoNotCountAsRemainingPages)
     expect_refused(db, "10", {"100"}, "Cannot delete the last page in the bid.");
 }
 
+// Windows d1c430a (project_write_service.py delete_pages_result, test_project_write_service.py::
+// test_the_last_real_page_is_refused_although_items_without_page_remain; domain/entities/page.py NO_PAGE_ID): items without a page (takeoffs
+// whose BidPageUID is NULL) are not a page, so the only real page of the bid is still the last one: refused with the same text, nothing written.
+// iOS has no pseudo page and counts the BidPages rows of the bid inside the transaction, so the page-less takeoffs never make a page.
+TEST(DelPageRefusals, TheOnlyPageIsRefusedAlthoughTakeoffsWithoutAPageRemain)
+{
+    TempDb db("delpage_ref_only_page_with_pageless");
+    world(db);
+    // bid 20: the one real page 200 (takeoff 900 on it) plus two takeoffs of condition 40 that belong to no page
+    db.must("INSERT INTO BidTakeoffs (UID, BidUID, BidConditionUID, BidPageUID, Position) VALUES (901, 20, 40, NULL, '5;6;7;8')");
+    db.must("INSERT INTO BidTakeoffs (UID, BidUID, BidConditionUID, BidPageUID, Position) VALUES (902, 20, 40, NULL, '9;10')");
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidTakeoffs WHERE BidUID = 20 AND BidPageUID IS NULL"), 2);
+    expect_refused(db, "20", {"200"}, "Cannot delete the last page in the bid.");
+    expect_refused(db, "20", {"200", "200"}, "Cannot delete the last page in the bid.");
+    CHECK_STR_EQ(pages(db, "BidUID = 20"), "200");
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidTakeoffs WHERE BidUID = 20"), 3);
+}
+
+// The control of the case above: with a second real page the same delete goes through; the page and its takeoff go, the page-less takeoffs stay.
+TEST(DelPageRefusals, ABidWithTwoPagesAndTakeoffsWithoutAPageDeletesOnePageAndKeepsThePagelessTakeoffs)
+{
+    TempDb db("delpage_ref_two_pages_with_pageless");
+    world(db);
+    db.must("INSERT INTO BidPages (UID, BidUID, Name) VALUES (201, 20, 'P201')");
+    db.must("INSERT INTO BidTakeoffs (UID, BidUID, BidConditionUID, BidPageUID, Position) VALUES (901, 20, 40, NULL, '5;6;7;8')");
+    db.must("INSERT INTO BidTakeoffs (UID, BidUID, BidConditionUID, BidPageUID, Position) VALUES (902, 20, 40, NULL, '9;10')");
+    CHECK(run(db, "20", {"200"}));
+    CHECK_STR_EQ(pages(db, "BidUID = 20"), "201");
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidTakeoffs WHERE UID = 900"), 0);
+    CHECK_EQ(db.count("SELECT COUNT(*) FROM BidTakeoffs WHERE BidUID = 20 AND BidPageUID IS NULL"), 2);
+    // and now 201 is the last real page: refused again
+    expect_refused(db, "20", {"201"}, "Cannot delete the last page in the bid.");
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------------
 // The bid lock (plan 4.1): inside the transaction, after the ownership checks
 // ---------------------------------------------------------------------------------------------------------------------------------
