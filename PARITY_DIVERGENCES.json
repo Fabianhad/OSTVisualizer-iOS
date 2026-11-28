@@ -2,7 +2,7 @@
  "header": {
   "title": "iOS vs Windows parity divergences (machine-readable twin of PARITY_MAP.md)",
   "schemaVersion": 3,
-  "updated": "2026-11-27",
+  "updated": "2026-11-28",
   "format": "Top level was a bare list of 216 records until the Phase 1 map (2026-11-15); since 2026-11-16 it is {header, items}. Record fields are unchanged; optional fields added over time: decision, queueNote, closedReason, crossReference, rebaseline (2026-11-16). Final pass 2026-11-18 (schemaVersion 3): status now holds the FINAL outcome (fixed, fixed-ui-unverified, blocked-needs-decision, wont-fix, cannot-reproduce, no-longer-divergent); statusBefore keeps the earlier value (open, decided or closed); statusWhere (files) and statusNote (what was done, or why not) come from the final result and statusCluster is the internal label of the work package that did the item (kept for traceability); dispositionPhase1 is set only where disposition changed (the 8 blocked-needs-decision items, planned as fix); openQuestions lists the needs-my-decision entries that name the item (kind formal or candidate). The windows.* and ios.* fields of an item describe the two sides AS MAPPED (the iOS side before the fix); the outcome is statusNote/statusWhere. Update 2026-11-19 (schemaVersion stays 3: only optional fields were added, nothing was removed or renamed): on the 23 items decided that day decisionUpdate ({date, outcome, text, codeChange}; outcome keep-ios, port or deviate-from-windows), statusBeforeDecision, decisionTests, decisionTestGap and, on the 4 code changes, codeChangeDetail; the 8 former blocked-needs-decision items also got dispositionBeforeDecision and closedReason (their disposition and status are wont-fix now); possibleWindowsDefect ({where: [file:line], what, scenario, severity, confidence} plus subItem, evidence, suggestedWindowsFix, whereNotes, group) and furtherPossibleWindowsDefects on the items where the research found a Windows problem (12 of the 23 decided items and EXP-17, EXP-M02, LP-22, COND-PLACE-01); openQuestions entries carry state (decided, partly-decided or open), decidedOn, outcome and resolution, and COND-PLACE-01 got its two open notes. The DBP-33 decision text was corrected (decision.userNote, decision.userNoteOriginal, queueNote). Header: decisions2026_11_19 (index of the decisions), counts, needsMyDecision (now the still-open index) and finalOutcome were rewritten. Update 2026-11-20 (job 5; schemaVersion stays 3: optional fields were added and nothing was renamed; the only key that went away is closedReason on EXP-12 and LP-24, see closedReasonBeforeJob5 below): re-baseline from Windows 6d4786f to b9902e6 (header.rebaselineJob5). New optional item fields: windowsFixed (the Windows outcome of each possible Windows defect: {commit, date, outcome (fixed, changed-differently, unchanged, log-only, no-longer-a-defect or mixed), where (file:line at b9902e6), text, records (one per sub-record on IMP-20 and COND-STYLE-02)}), windowsAnswer (DLG-FINITE-01), decisionUpdate2 ({date, job, outcome, text, codeChange, supersedes, tests}), rebaselineJob5 ({date, whyAffected, citationOnly, dispositionNow, iosNow, previous}), codeChangeDetailJob5, statusBeforeJob5 and dispositionBeforeJob5 (the values before job 5 on the 6 items whose status changed), closedReasonBeforeJob5 (the wont-fix text before job 5, on DBP-04, EXP-12, EXP-16, IMP-20, LP-22 and LP-24; on EXP-12 and LP-24, which are fixed now and no longer closed by a decision, the key closedReason itself is gone, on the other four it was rewritten), decisionTestGapBeforeJob5, newPossibleWindowsDefects (COND-ELEV-01), possibleWindowsDefect.stillPossibleWindowsDefect (EXP-17: what stays possible after b9902e6), codeChangeDetail.status (COND-STYLE-02 and COND-ELEV-01: the 2026-11-19 detail is history), in needsMyDecision.open[] the optional keys relatedItem, windowsWhere or windowsWhereNote, closedOn, closedBy and textStatus (the new entries and the closed ones) and in openQuestions[] openHalfClosedOn (DLG-FINITE-01). Inside possibleWindowsDefect the primary text (what, severity, where, windowsStatus) now says what Windows b9902e6 did and the assessment of 2026-11-19 is kept as originalAssessment; decisionUpdate.status and openQuestions[].textStatus / resolutionJob5 mark the 2026-11-19 texts that job 5 superseded. The windows.* block of an item is brought to b9902e6 where Windows changed it (the earlier text is in rebaselineJob5.previous); the ios.* block stays as mapped except on the no-longer-divergent items DBP-04, EXP-16 and LP-22, where it holds the current iOS state (the earlier text is in rebaselineJob5.previous); statusNote, statusWhere and files give the current iOS state. Header: windowsBaseline.headNow, counts (beforeJob5 and possibleWindowsDefectsByOutcome added), decisions2026_11_19.job5Outcome, rebaselineJob5, needsMyDecision and finalOutcome (verification.job5) were rewritten or extended. Windows file:line values of items that are not listed in rebaselineJob5.affectedIds are the 6d4786f (or an earlier) numbering (rebaselineJob5.citationsOfEarlierNumbering), except the windows.where of the six alsoUpdated items EXP-05, LP-15, COND-METRIC-01, LP-18, COND-REF-01 and COND-M08, which was renumbered to b9902e6 (rebaselineJob5.alsoUpdated.why). Update 2026-11-21 (job 6; schemaVersion stays 3: only optional fields were added, nothing was removed or renamed): on the records touched by the re-baseline to Windows 49a2d59 (COND-M08, COND-ELEV-01, DLG-FINITE-01, COND-STYLE-02, IMP-20) decisionUpdate3 ({date, job, outcome, text, codeChange, supersedes, tests}), rebaselineJob6 ({date, whyAffected, citationOnly, dispositionNow, iosNow, previous, citationsNote}) and, on COND-M08, COND-ELEV-01 and DLG-FINITE-01, codeChangeDetailJob6 ({filesChanged, testsAdded, testsRemoved or testsChanged, failingFirst, review, residualRisk, status}) and possibleWindowsDefectsJob6 ([{subItem, where, what, severity, confidence, windowsStatus, ported}]); COND-ELEV-01 also windowsFixedJob6 (what Windows 49a2d59 fixed) and windowsFixed.updatedJob6; COND-M08 also statusBeforeJob6 and dispositionBeforeJob6 (the values before job 6), statusNoteBeforeJob6 (the superseded text), questionStatus, decision.status, decisionTests, decisionTestGap and iosNotesJob6; COND-STYLE-02 codeChangeDetailJob5.testsRemovedJob6 (and decisions2026_11_19.codeChanges[0].testsRemovedJob6); on the small records COND-REF-01, COND-METRIC-01 and COND-FOLDER-01 only rebaselineJob6; decisionUpdate2.status marks the job 5 records that job 6 partly superseded (COND-ELEV-01, COND-STYLE-02, IMP-20). A removed test name that is still cited carries the suffix '(removed 2026-11-21 (job 6): superseded by CondM08_UnknownStyle.*, see COND-M08)'. Header: windowsBaseline (headNow 49a2d59, committedAsJob6, previousHeadNowJob6), iosBaseline (headBeforeJob6), counts (beforeJob6 and possibleWindowsDefectsJob6 added, the status tables recomputed), decisions2026_11_19.job6Outcome, rebaselineJob6, finalOutcome.verification.job6 and testsAddedByJob6, needsMyDecision (noteJob5 holds the counting rule of job 5; the new owner notes k to o are FYI-20 to FYI-24) and finalOutcome (previousFinalOutcome2026_11_20) were rewritten or extended. The windows.* block of COND-M08, COND-ELEV-01, DLG-FINITE-01, COND-STYLE-02, IMP-20, COND-REF-01 and COND-METRIC-01 is brought to 49a2d59 where Windows changed it (the earlier text is in rebaselineJob6.previous); the Windows file:line values of every other item are the b9902e6 or an earlier numbering (rebaselineJob6.citationsOfEarlierNumbering). Job 7 (2026-11-21, documents only) added: header.decisionsJob7 ({date, instruction, documentsOnly, decisions, deviceChecks, merge, statusCounts, ownerNotes, ci}), decisionUpdate4 ({date, job, outcome, text, codeChange, supersedes}) on COND-M08, COND-ELEV-01 and DLG-FINITE-01, a marker in possibleWindowsDefectsJob6 of those records, the status closed (closedOn, closedBy, textStatus) on needsMyDecision.open FYI-20, noteJob6 (the counting rule of job 6; note holds the rule of job 7) and finalOutcome.readingJob6 (finalOutcome.reading holds the job 7 figures); no status, count of items or test count changed. Update 2026-11-21 (job 8; schemaVersion stays 3: only optional fields were added, nothing was removed or renamed): on the four items that the owner's device checks verified (COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01, COND-M08) status is fixed now, statusBeforeDeviceCheck keeps fixed-ui-unverified and deviceVerified ({date, checks, result, device, build}) records the checks; LP-24, LP-22, EXP-12 and EXP-16 also carry deviceVerified (their status is unchanged); COND-PLACE-01 carries deviceVerifiedPartial (DEV-07, the Image-layer half only; its status stays fixed-ui-unverified); the header blocks deviceChecksJob8, counts.beforeJob8 and finalOutcome.previousFinalOutcome2026_11_21 (the job 7 figures; finalOutcome.reading and statusCounts hold the job 8 figures), decisionsJob7.deviceChecks.updatedJob8, decisionsJob7.merge.updatedJob8 and notes[19] were added, and job-8 brackets were appended to notes[2], [3], [8], [10], [14], [17] and [18], iosBaseline.note, needsMyDecision (FYI-18 and FYI-21, each also in open), finalOutcome.reading, finalOutcome.verification.ci.notChecked and finalOutcome.notVerified, and to the statusNote of the nine records that carry deviceVerified or deviceVerifiedPartial (also decisionUpdate4.text on COND-ELEV-01, DLG-FINITE-01 and COND-M08). Reworded in place (not brackets): decisions2026_11_19.codeChanges[2].status (DLG-FINITE-01: DEV-05 and DEV-11 passed), needsMyDecision FYI-22 (also in open) and, on COND-M08, decisionTestGap and iosNotesJob6[0] (DEV-09 passed on the owner's iPhone; the iPad behaviour was not checked). Status counts: 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 4 no-longer-divergent, 1 cannot-reproduce = 220. Updated 2026-11-24 (job 8, M1): the file has a third top-level key, m1Items (eight M1 records, ranks 221-228, outside items and header.counts), described in header.m1Job8; every other part of the structure is unchanged. [Updated 2026-11-27 (job 9, Windows d26893c): top-level key parity2 added ({header, items, conflicts, windowsDefectsStillOpen, ownerQuestions}: the inventory of the Windows range 49a2d59..d26893c with 116 unique items, see PARITY_MAP.md \"Parity pass 2\"); no item, no status and no count of header.counts changed; the owner decision of job 7 on COND-ELEV-01 (stray quote ported as is) is withdrawn (items.COND-ELEV-01.decisionUpdate5); m1Items deviations CF-5, CF-7, CF-8, NC-1, NC-10, SS-2, SS-5, LY-UI-4 and RP-UI-2 got update2026_11_27]",
   "windowsBaseline": {
    "repoRole": "source of truth, strictly read-only",
@@ -46,7 +46,8 @@
    "CI RESULT OF JOB 6 (2026-11-21 UTC): GitHub Actions run 44953904172 (workflow Build IPA, event push of branch ios-parity-sync, head commit e151655, which carries the five commits of job 6: 8773287, 8ef1251, bb58e0f, fc3a18e and e151655, pushed together as eae0894..e151655; 6 min 45 s) succeeded on the first run: the host tests passed 12 of 12 areas (the CI build uses the Manifold stub), xcodebuild Release iphoneos BUILD SUCCEEDED against the real iPhoneOS 18.5 SDK with the same first-party warnings as run 44856186199 (nothing added, nothing removed; the three warnings of EditConditionViewController+TableView.mm moved to :158, :44 and :76 because job 6 edited that file), and the IPA artifact was packaged and parsed locally (its executable contains the new code of job 6). So the code of job 6, the Obj-C(++) wiring included (EditConditionViewController*.mm for COND-M08, ImportService.mm and ViewController+Conditions.mm for the Duplicate alert), compiles against the real SDK and links with the host-test-covered Core; it has never run on a device or a simulator, the run does not show that the new Obj-C code is correct at runtime, the Manifold-only host tests were run locally only (MSVC and clang, all pass), and the 27 fixed-ui-unverified statuses and the device checks DEV-01 to DEV-11 stay open. The docs-only commit that records this run carries [skip ci] and has no run of its own: the last CI-verified code state is e151655. Details: finalOutcome.verification.ci and finalOutcome.verification.job6.github. [Updated 2026-11-21 (job 8): the device checks DEV-01 to DEV-11 are all PASS (the owner's iPhone, IPA of run 44953904172) and the fixed-ui-unverified statuses are 23 (27 until job 8); see header.deviceChecksJob8.]",
    "JOB 7 (2026-11-21, user: \"Record my decisions and the device-check results, then merge ios-parity-sync into main if everything passed. Windows repo read-only. No force-push. Never change app behavior in this job.\"): documents only. The five decisions of the owner are in header.decisionsJob7 and, for the three records they touch, in items.COND-M08.decisionUpdate4, items.COND-ELEV-01.decisionUpdate4 and items.DLG-FINITE-01.decisionUpdate4: the overflow alert of Duplicate keeps the title 'Duplicate Error'; the Windows quantity reset is not ported and is a possible Windows defect (silent data loss, it also hits unknown types), which closes owner note k (FYI-20); two duplicates at 2147483646 are pinned in Core and by sequential store calls and are not reachable through the UI; the stray ASCII double quote that switches the foot-mark rule off is a possible Windows defect, ported as is; the stale Windows line citations in four iOS comment files are left. The owner's device-check table (DEV-01 to DEV-11) came back with all eleven results blank: nothing is recorded as passed or failed, all eleven stay open, no status changed (172 / 27 / 16 / 0 / 1 / 4 = 220) and the merge into main was not done (main stays at 4a1302d, ios-parity-sync is not merged, no pull request exists). Owner notes after job 7: 32 entries, 4 resolved (a, e, g, k), 2 informational (j, o), 26 open; 28 entries of needsMyDecision.open are still current. No CI run exists for the documents-only commit ([skip ci]); the last CI-verified code state is e151655 (run 44953904172). [Superseded / updated 2026-11-21 (job 8): the device-check table was returned blank in job 7 (true when written); in job 8 the owner reported DEV-01 to DEV-11 all PASS, so 'all eleven stay open' and 'no item is verified on device' no longer hold; see notes[19] and header.deviceChecksJob8.] [Updated 2026-11-27 (job 9, Windows d26893c): the owner decision on the stray quote in this note is withdrawn: Windows 0a24294 fixed the rule and iOS follows (items.COND-ELEV-01.decisionUpdate5)]",
    "JOB 8, STEP 0 (2026-11-21, owner message of job 8): documents only, no code, test or behaviour changed. The owner tested on their iPhone with the IPA of GitHub run 44953904172 (head commit e151655): DEV-01 to DEV-11 are ALL PASS (no per-check notes were given). The earlier statement 'the table came back with all eleven results blank' (job 7, 2026-11-21, commit 80fb867) was true when written and stays as history (header.decisionsJob7.deviceChecks). The owner's rule: mark the items covered only by these checks as 'verified on device' (COND-ELEV-01 needs DEV-04 and DEV-10, DLG-FINITE-01 needs DEV-05 and DEV-11; the other fixed-ui-unverified items stay as they are and are carried into the next device pack). Result: COND-ELEV-01, COND-STYLE-02 (DEV-03), DLG-FINITE-01 and COND-M08 (DEV-09) are fixed now (deviceVerified, statusBeforeDeviceCheck); LP-24 and LP-22 (DEV-06) and EXP-12 and EXP-16 (DEV-08) keep their status and carry deviceVerified; the two device bugs of 2026-11-20 (DEV-01 transparent meshes, fix aef35d8; DEV-02 Delete selection, fix 34e14c9; no item id) are verified on device; COND-PLACE-01 stays fixed-ui-unverified (DEV-07 covers only the Image-layer half; the other half is carried into the next device pack). Counts 176 fixed, 23 fixed-ui-unverified, 16 wont-fix, 4 no-longer-divergent, 1 cannot-reproduce, 0 blocked-needs-decision (= 220); tests 1760 (1769 with Manifold) unchanged; owner notes unchanged (32 entries, 4 resolved, 2 informational, 26 open; DEV-10 observed on device PASS for note l, which stays open). The merge into main was requested by the owner (job 8) and is recorded after it happens [Updated 2026-11-24 (job 8, M1): it happened: merge commit 06d8d69 on main (pull request #1, 2026-11-22); GitHub run 45039125909 on main (head 06d8d69) succeeded; see the entry of 2026-11-24 in PORTING_LOG.md]. The last CI-verified code state stays e151655 (run 44953904172).",
-   "PARITY PASS 3 (2026-11-27): Windows d26893c..d1c430a (one commit, 49 files). iOS branch ios-parity-sync-2 (start c7163c6, code tip b36f2f6; 9469fa1 is the review-fix commit and the last change of production code, b36f2f6 a test-only fix of two -Wvexing-parse warnings; GitHub run 46092053772 on 9469fa1 was the first run (success; its host-test compile showed two -Wvexing-parse warnings in test_layer_sheet_rules.cpp, fixed in b36f2f6); the final run is 46093496040 on b36f2f6). Three statuses changed, wont-fix -> no-longer-divergent: EXP-13 (alias MSH-M02), EXP-M02 and GEO-15 (Windows holds outward meshes everywhere); counts are now fixed 176, fixed-ui-unverified 23, blocked-needs-decision 0, wont-fix 13, cannot-reproduce 1, no-longer-divergent 7 (220); the values before are in counts.beforePass3. EXP-17 stays wont-fix for byte and triangulation order only. Windows fixes ported or confirmed: shared layer toggle (owner note b), Delete Condition text, Unknown (N) quantity entry, undo/redo refusal, metric width; pins for winding and the last page. The records of the pass are in the top-level key parity3 and in PARITY_MAP.md \"Parity pass 3: Windows d26893c..d1c430a (2026-11-27)\"."
+   "PARITY PASS 3 (2026-11-27): Windows d26893c..d1c430a (one commit, 49 files). iOS branch ios-parity-sync-2 (start c7163c6, code tip b36f2f6; 9469fa1 is the review-fix commit and the last change of production code, b36f2f6 a test-only fix of two -Wvexing-parse warnings; GitHub run 46092053772 on 9469fa1 was the first run (success; its host-test compile showed two -Wvexing-parse warnings in test_layer_sheet_rules.cpp, fixed in b36f2f6); the final run is 46093496040 on b36f2f6). Three statuses changed, wont-fix -> no-longer-divergent: EXP-13 (alias MSH-M02), EXP-M02 and GEO-15 (Windows holds outward meshes everywhere); counts are now fixed 176, fixed-ui-unverified 23, blocked-needs-decision 0, wont-fix 13, cannot-reproduce 1, no-longer-divergent 7 (220); the values before are in counts.beforePass3. EXP-17 stays wont-fix for byte and triangulation order only. Windows fixes ported or confirmed: shared layer toggle (owner note b), Delete Condition text, Unknown (N) quantity entry, undo/redo refusal, metric width; pins for winding and the last page. The records of the pass are in the top-level key parity3 and in PARITY_MAP.md \"Parity pass 3: Windows d26893c..d1c430a (2026-11-27)\".",
+   "JOB 11 (2026-11-28): three owner decisions recorded and ported on branch ios-parity-sync-2 (Windows d1c430a unchanged): (1) EXP-21 adopt the current Windows wording for import, load, export, folder-delete and page-delete alerts (the keep decision of 2026-11-19 is superseded); (2) the Windows layer dialog titles for the rename and move refresh-failed alerts, the generic layer failures lose the database-locked hint; (3) Count as Negative on a pasted group follows the Windows rule (single takeoff unchanged). Owner questions 1, 4, 5 and 7 are resolved (8 of 13 resolved, 5 open; question 7, the merge order, by the owner's instruction of 2026-11-28 to merge by a pull request merge commit with the stated waiver). Records: top-level key job11 and the updatedInJob11 / decisionUpdateJob11 / updateJob11 fields. no status of the 220 items changed: still 176 fixed / 23 fixed-ui-unverified / 0 blocked-needs-decision / 13 wont-fix / 1 cannot-reproduce / 7 no-longer-divergent (before job 11: the same; 199 items ported). EXP-21 was never wont-fix: its status is fixed-ui-unverified (disposition fix) and the \"keep iOS\" decision of 2026-11-19 was a decision record inside it; the owner overturned that record, the new wording is ported and still unverified on a device (P4-01 to P4-08), so the status stays fixed-ui-unverified. UND-09 stays fixed-ui-unverified as well."
   ],
   "counts": {
    "total": 220,
@@ -390,7 +391,8 @@
      "no-longer-divergent": 1
     },
     "note": "The totals before parity pass 3 (the values of this block at the end of pass 2, 2026-11-27). Pass 3 moved THREE statuses, wont-fix -> no-longer-divergent: EXP-13 (alias MSH-M02), EXP-M02 and GEO-15 (Windows d1c430a holds outward meshes everywhere); fixed 176, fixed-ui-unverified 23 and the other statuses are unchanged; fixed + fixed-ui-unverified is still 199 items ported."
-   }
+   },
+   "job11Note": "Updated 2026-11-28 (job 11): no status of the 220 items changed; byStatus and byDisposition above are unchanged (176 / 23 / 0 / 13 / 1 / 7). EXP-21 was never wont-fix (status fixed-ui-unverified, disposition fix): the owner overturned its keep decision, the status stays. See job11.header.counts."
   },
   "decisions2026_11_19": {
    "date": "2026-11-19",
@@ -633,7 +635,8 @@
      "id": "EXP-21",
      "subItem": "export error text 'Export function returned False'",
      "group": "decided-2026-11-19",
-     "why": "Not a defect: deliberate and test-pinned wording."
+     "why": "Not a defect: deliberate and test-pinned wording.",
+     "supersededJob11": "Superseded by the owner decision of 2026-11-28: the Windows wording is adopted (decisionUpdateJob11 of EXP-21)."
     },
     {
      "id": "EXP-09",
@@ -777,7 +780,8 @@
      "id": "UND-09",
      "subItem": "'Count as Negative Quantity' acts on the plan-view selected takeoffs only",
      "group": "decided-2026-11-19",
-     "why": "Not a defect: Windows changes only the takeoffs passed in (the plan-view selection) and pushes one local history entry; this is the behaviour the iOS code change copies."
+     "why": "Not a defect: Windows changes only the takeoffs passed in (the plan-view selection) and pushes one local history entry; this is the behaviour the iOS code change copies.",
+     "scopeNoteJob11": "For a pasted group the whole group changes (Windows multi-selection rule, owner decision 3 of 2026-11-28); the single takeoff is unchanged."
     }
    ],
    "job5Outcome": {
@@ -877,7 +881,8 @@
        "id": "DBP-33"
       },
       {
-       "id": "EXP-21"
+       "id": "EXP-21",
+       "supersededJob11": "Overturned by the owner decision of 2026-11-28 (adopt the Windows wording)."
       },
       {
        "id": "EXP-09"
@@ -1846,7 +1851,7 @@
    ],
    "fyi": [
     "IMP-14: an unreadable / non-cabinet package says \"Invalid OSP file format\" where Windows says \"found 0\" (kept iOS wording of wiring entry IMP-M03).",
-    "DBP-11: iOS failure dialogs keep the Windows hint \"The database may be locked by another application.\"; \"New Project / Failed to create project.\", \"Save Failed / Failed to save the display settings.\", \"Duplicate Error\", \"Delete Error\" and the \"Not Saved\" / \"Layer Visibility\" alerts for failed forward writes are iOS wording where Windows only logs. Updated 2026-11-21 (job 7): the owner decided that the overflow alert of Duplicate keeps the title \"Duplicate Error\" (Windows: \"Duplicate Conditions\"; the message text is identical); this note stays information only.",
+    "DBP-11: iOS failure dialogs keep the Windows hint \"The database may be locked by another application.\"; \"New Project / Failed to create project.\", \"Save Failed / Failed to save the display settings.\", \"Duplicate Error\", \"Delete Error\" and the \"Not Saved\" / \"Layer Visibility\" alerts for failed forward writes are iOS wording where Windows only logs. Updated 2026-11-21 (job 7): the owner decided that the overflow alert of Duplicate keeps the title \"Duplicate Error\" (Windows: \"Duplicate Conditions\"; the message text is identical); this note stays information only. [Updated 2026-11-28 (job 11): not the four generic layer failures any more (owner decision 2, 2026-11-28); the browser and folder failures keep the hint.]",
     "GEO-M02: Qt clipper tolerance band cannot be reproduced; iOS uses one tolerance (1e-12 of the candidate size + 8 ulp); identical to Windows for exactly touching geometry and beyond ~1e-7 relative.",
     "Import: iOS is deliberately STRICTER than the Windows cabinet library on inconsistent cabinet headers.",
     "Quantities: Windows math.ceil raising on a non-finite quotient is not reproduced (no throwing from the quantity path); parsers: feet digit runs of 309+ digits (Windows OverflowError) return (0.0,false) on iOS; formatting: Windows quirks ported as is (format_quantity_number prints -0 / -0.00, display_to_mm strips any run of trailing m).",
@@ -1970,7 +1975,7 @@
      "kind": "fyi",
      "status": "open",
      "title": "DBP-11",
-     "text": "DBP-11: iOS failure dialogs keep the Windows hint \"The database may be locked by another application.\"; \"New Project / Failed to create project.\", \"Save Failed / Failed to save the display settings.\", \"Duplicate Error\", \"Delete Error\" and the \"Not Saved\" / \"Layer Visibility\" alerts for failed forward writes are iOS wording where Windows only logs. Updated 2026-11-21 (job 7): the owner decided that the overflow alert of Duplicate keeps the title \"Duplicate Error\" (Windows: \"Duplicate Conditions\"; the message text is identical); this note stays information only.",
+     "text": "DBP-11: iOS failure dialogs keep the Windows hint \"The database may be locked by another application.\"; \"New Project / Failed to create project.\", \"Save Failed / Failed to save the display settings.\", \"Duplicate Error\", \"Delete Error\" and the \"Not Saved\" / \"Layer Visibility\" alerts for failed forward writes are iOS wording where Windows only logs. Updated 2026-11-21 (job 7): the owner decided that the overflow alert of Duplicate keeps the title \"Duplicate Error\" (Windows: \"Duplicate Conditions\"; the message text is identical); this note stays information only. [Updated 2026-11-28 (job 11): not the four generic layer failures any more (owner decision 2, 2026-11-28); the browser and folder failures keep the hint.]",
      "iosMeanwhile": "iOS behaves as the note says (informational; no code is pending).",
      "windowsWhereNote": "No Windows file:line is recorded in the source note; the PARITY_MAP.md item of the same id has the Windows citations."
     },
@@ -2334,10 +2339,11 @@
     "fixed": 176,
     "fixed-ui-unverified": 23,
     "blocked-needs-decision": 0,
-    "wont-fix": 16,
+    "wont-fix": 13,
     "cannot-reproduce": 1,
-    "no-longer-divergent": 4
+    "no-longer-divergent": 7
    },
+   "statusCountsNote": "Updated 2026-11-28 (job 11): statusCounts above is the CURRENT split (176 / 23 / 0 / 13 / 1 / 7, see header.counts and job11.header.counts); until parity pass 3 it read wont-fix 16 and no-longer-divergent 4 (the job-5 value) and the reading below keeps that history.",
    "reading": "fixed + fixed-ui-unverified = 199 items ported (176 + 23); blocked-needs-decision = 0 (the 8 items kept for the user's decision were decided on 2026-11-19; four of them are fixed or no-longer-divergent since job 5); wont-fix = 16 (12 by the decisions of 2026-11-16 and 4 by those of 2026-11-19) and cannot-reproduce = 1 are left divergent on purpose; no-longer-divergent = 4 (MSH-19 and, since 2026-11-20, DBP-04, EXP-16 and LP-22: Windows converged on the iOS behaviour). 28 entries of needsMyDecision.open are still current: 26 notes and questions are open (1 question, 18 FYI notes, 7 cross-cluster issues) and 2 (notes j and o, FYI-19 and FYI-24) are informational; owner notes a, e, g and k are resolved (closed); the counting rule is in needsMyDecision.note. [Updated 2026-11-21 (job 6): COND-M08 moved from fixed to fixed-ui-unverified (172 + 27 = 199, unchanged); previousFinalOutcome2026_11_20 holds the figures of job 5.] [Updated 2026-11-21 (job 7): documents only, no status changed (172 + 27 = 199 ported, unchanged); owner note k (FYI-20) was closed by the owner's decision; the device-check table of the owner came back blank (header.decisionsJob7); readingJob6 holds the reading of job 6.] [Updated 2026-11-21 (job 8): the owner's device checks DEV-01 to DEV-11 all PASS; COND-ELEV-01, COND-STYLE-02, DLG-FINITE-01 and COND-M08 are verified on device and moved from fixed-ui-unverified to fixed: fixed + fixed-ui-unverified = 199 items ported (176 + 23, unchanged); previousFinalOutcome2026_11_21 holds the reading of job 7 (172 + 27).] [Updated 2026-11-24 (job 8, M1): no status of the 220 items changed; the eight M1 records (M1-FND, M1-NEWCOND, M1-FOLDERS, M1-LAYERS, M1-RENAME-PAGE, M1-DELETE-PAGE, M1-SET-SCALE, M1-PAGE-MENU) are in m1Items, all fixed-ui-unverified.]",
    "readingJob6": "fixed + fixed-ui-unverified = 199 items ported (172 + 27); blocked-needs-decision = 0 (the 8 items kept for the user's decision were decided on 2026-11-19; four of them are fixed or no-longer-divergent since job 5); wont-fix = 16 (12 by the decisions of 2026-11-16 and 4 by those of 2026-11-19) and cannot-reproduce = 1 are left divergent on purpose; no-longer-divergent = 4 (MSH-19 and, since 2026-11-20, DBP-04, EXP-16 and LP-22: Windows converged on the iOS behaviour). 29 entries of needsMyDecision.open are still current: 27 notes and questions are open (1 question, 19 FYI notes, 7 cross-cluster issues) and 2 (notes j and o, FYI-19 and FYI-24) are informational; owner notes a, e and g are resolved (closed); the counting rule is in needsMyDecision.note. [Updated 2026-11-21 (job 6): COND-M08 moved from fixed to fixed-ui-unverified (172 + 27 = 199, unchanged); previousFinalOutcome2026_11_20 holds the figures of job 5.]",
    "verification": {
@@ -6164,7 +6170,7 @@
    "statusBefore": "open",
    "statusCluster": "core: import | objc: objc-U5-import-browser",
    "statusWhere": "Services/ImportService.mm",
-   "statusNote": "ImportService declares ost_store::ImportResult, passes it to import_project and posts OSTProjectImportedNotification and logs with result.bid_uid (the NEW Bids.UID); result.error goes to NSLog, the NSError stays code 4 'Failed to store project data'. The is_bid_imported guards are gone.",
+   "statusNote": "ImportService declares ost_store::ImportResult, passes it to import_project and posts OSTProjectImportedNotification and logs with result.bid_uid (the NEW Bids.UID); result.error goes to NSLog, the NSError stays code 4 'Failed to store project data'. The is_bid_imported guards are gone. [Updated 2026-11-28 (job 11): the NSError is now in the domain OSTImportErrorDomain (code = the failure kind); its text is the picker sentence of the kind: the damaged-file sentence for every local failure, store, schema and temporary-folder failures included (as Windows, where import_ost swallows every exception, ost_importer.py:94-107), and the Windows sentence 'An unexpected error stopped the import of the OST|OSP file. Please check that the file is valid and try again; if the problem continues, contact support.' only for a C++ exception caught in ImportService.mm (importOSTFile: and importOSPFile: wrap their bodies in try/catch) or a nil NSError after a failed import; 'Failed to store project data' is no longer shown and the reason goes to NSLog (EXP-21 owner decision 1; review fix 53d2a54).]",
    "sourceArea": "import-ost-osp",
    "files": [
     "Core/Persistence/ProjectStore/Components/ProjectStore+Import.cpp",
@@ -6212,7 +6218,7 @@
    "statusBefore": "open",
    "statusCluster": "core: dbp11 | objc: objc-U5-import-browser, objc-U3-viewcontroller, objc-U4-conditions-ui",
    "statusWhere": "Core/Persistence/OstDatabase.hpp, Core/Persistence/OstDatabase.cpp, Core/Persistence/ProjectStore/ProjectStore.cpp, Core/Persistence/ProjectStore/ProjectStore_Internal.hpp, Core/Persistence/ProjectStore/Components/ProjectStore+Conditions.cpp, Core/Persistence/ProjectStore/Components/ProjectStore+Folders.cpp, Core/Persistence/ProjectStore/Components/ProjectStore+Import.cpp, Core/Persistence/ProjectStore/Components/ProjectStore+Takeoffs.cpp, Services/ImportService.mm, Controllers/DatabaseViewController.mm (+2 more)",
-   "statusNote": "A failed update (dialog alert), a failed duplicate ('Duplicate Error') and a failed delete ('Delete Error') are shown instead of ignored. iOS-only texts: failure dialogs keep the Windows hint \"The database may be locked by another application.\"; \"New Project / Failed to create project.\" and \"Save Failed / Failed to save the display settings.\" are iOS wording; alert flows need a device check.",
+   "statusNote": "A failed update (dialog alert), a failed duplicate ('Duplicate Error') and a failed delete ('Delete Error') are shown instead of ignored. iOS-only texts: failure dialogs keep the Windows hint \"The database may be locked by another application.\"; \"New Project / Failed to create project.\" and \"Save Failed / Failed to save the display settings.\" are iOS wording; alert flows need a device check. [Updated 2026-11-28 (job 11): the four generic layer failures no longer carry the database-locked hint (owner decision 2 of 2026-11-28: the Windows layers dialog has none); the browser and folder failures keep it.]",
    "sourceArea": "database-persistence",
    "files": [
     "Core/Persistence/OstDatabase.cpp",
@@ -6253,7 +6259,7 @@
     "tests/infrastructure/mdb/components/test_import_operations.py:754 (test_access_import_raw_row_insert_filters_columns_and_omits_blank_autonumber)",
     "tests/infrastructure/mdb/components/test_import_operations.py:1206 (test_write_failures_name_the_table_row_and_sorted_columns)"
    ],
-   "testPlan": "(a) XML with <BidCondition UID=10 .../>, <BidCondition UID=11 NotAColumn=\"1\"/>, <BidCondition UID=12/> must insert all three conditions (the unknown attribute dropped), and a Bid carrying Bogus=\"x\" must still insert its Bids row. (b) Force a mid-import failure (e.g. a table missing or duplicate PK in the remapped graph): Bids, BidAreas, CdnTypes and Settings.NextBidNo (7) must be exactly as before, import returns false, and the user gets the 'Failed to store project data' error. (c) Failure of any page table must roll back the earlier tables.",
+   "testPlan": "(a) XML with <BidCondition UID=10 .../>, <BidCondition UID=11 NotAColumn=\"1\"/>, <BidCondition UID=12/> must insert all three conditions (the unknown attribute dropped), and a Bid carrying Bogus=\"x\" must still insert its Bids row. (b) Force a mid-import failure (e.g. a table missing or duplicate PK in the remapped graph): Bids, BidAreas, CdnTypes and Settings.NextBidNo (7) must be exactly as before, import returns false, and the user gets the 'Failed to store project data' error. (c) Failure of any page table must roll back the earlier tables. [Updated 2026-11-28 (job 11): the error the user gets is now the damaged-file sentence 'The OST file is damaged or uses an unsupported format, so it cannot be imported.' (OSP: 'The OSP file ...') under 'Import Error', as on Windows where a store failure is swallowed to False (ost_importer.py:94-107), not 'Failed to store project data' (EXP-21 owner decision 1; review fix 53d2a54).]",
    "note": "A row-level column filter needs the destination table's column list (PRAGMA table_info), mirroring _get_table_columns.",
    "verdict": "CONFIRMED",
    "status": "fixed",
@@ -7623,7 +7629,7 @@
    "statusBefore": "open",
    "statusCluster": "core: persistence | objc: objc-U5-import-browser, objc-U4-conditions-ui",
    "statusWhere": "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp, Core/Persistence/ProjectStore/Components/ProjectStore+Folders.cpp, Core/Persistence/ProjectStore/ProjectStore.hpp, Services/ImportService.h, Services/ImportService.mm, Controllers/DatabaseViewController.mm",
-   "statusNote": "ViewController+Conditions.mm uses loadProjectWithUID:project:error:.",
+   "statusNote": "ViewController+Conditions.mm uses loadProjectWithUID:project:error:. [Updated 2026-11-28 (job 11): the alert now shows 'Failed to load <bid>:' and, on the next line, the Windows sentence 'An unexpected error stopped opening the bid. Please try again; if the problem continues, contact support.' (shared/texts.py:316-318); the cause is no longer shown and goes to the log only (EXP-21 owner decision 1; load_failure_reason(LoadTarget::Bid) at the three call sites).]",
    "sourceArea": "database-persistence",
    "files": [
     "Core/Persistence/OstDatabase.cpp",
@@ -7740,7 +7746,7 @@
    },
    "ios": {
     "where": "Services/ExportService.mm:94-98,117-120,159-161,188-190",
-    "behavior": "The file name is bid_name + extension, with no sanitising, no page names and no length limit. A bid name containing '/' becomes a sub-path that does not exist, so the write fails and the user sees 'No visible meshes to export' (see EXP-21). An empty bid name gives 'export'."
+    "behavior": "The file name is bid_name + extension, with no sanitising, no page names and no length limit. A bid name containing '/' becomes a sub-path that does not exist, so the write fails and the user sees 'No visible meshes to export' (see EXP-21). An empty bid name gives 'export'. [Updated 2026-11-28 (job 11): the user now sees 'Export Error' / 'The file could not be written. Please ensure you have write permissions to the destination folder and try again.' (EXP-21 owner decision 1; device row P4-06), not 'No visible meshes to export'.]"
    },
    "windowsTests": [
     "tests/infrastructure/test_visualization_provider.py::ExportFilenameTests::test_suggested_export_filename_replaces_windows_control_characters",
@@ -8716,7 +8722,7 @@
    "statusBefore": "decided",
    "statusCluster": "core: persistence2 | objc: objc-U5-import-browser, objc-U3-viewcontroller, objc-U4-conditions-ui",
    "statusWhere": "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp, Services/ImportService.mm, Controllers/DatabaseViewController.mm, Controllers/ViewController/ViewController.mm",
-   "statusNote": "Same call and alert as DBP-31.",
+   "statusNote": "Same call and alert as DBP-31. [Updated 2026-11-28 (job 11): the alert now shows 'Failed to load <bid>:' and, on the next line, the Windows sentence 'An unexpected error stopped opening the bid. Please try again; if the problem continues, contact support.' (shared/texts.py:316-318); the cause is no longer shown and goes to the log only (EXP-21 owner decision 1; load_failure_reason(LoadTarget::Bid) at the three call sites).]",
    "sourceArea": "parsers-units",
    "files": [
     "Core/Persistence/ProjectStore/ProjectStore.cpp",
@@ -8764,7 +8770,7 @@
    "statusBefore": "decided",
    "statusCluster": "core: import2 | objc: objc-U5-import-browser",
    "statusWhere": "Core/Import/OstXmlParser.cpp, Core/Import/OstXmlParser.hpp, Core/Import/XmlNormalizer.hpp, Core/Import/XmlNormalizer.cpp, Core/Import/XmlCharData.hpp, Services/ImportService.mm",
-   "statusNote": "No pugixml load_buffer / save in ImportService any more: the OST is parsed once from its ORIGINAL bytes with parse_ost_xml (strict, windows-1252 transcode); importOSTFile shows 'Invalid OST file format: <expat reason>'; the image rewrite is applied to the parsed BidPages rows (the strict normalize_xml + pugixml tree is used read-only to find the BidPage references like ET.it...",
+   "statusNote": "No pugixml load_buffer / save in ImportService any more: the OST is parsed once from its ORIGINAL bytes with parse_ost_xml (strict, windows-1252 transcode); importOSTFile shows 'Invalid OST file format: <expat reason>'; the image rewrite is applied to the parsed BidPages rows (the strict normalize_xml + pugixml tree is used read-only to find the BidPage references like ET.it... [Updated 2026-11-28 (job 11): a rejected file now shows 'Import Error' / 'The OST file is damaged or uses an unsupported format, so it cannot be imported.'; the expat reason is only logged (EXP-21 owner decision 1).]",
    "sourceArea": "import-ost-osp",
    "files": [
     "Core/Import/OstXmlParser.cpp",
@@ -8821,7 +8827,7 @@
    "statusBefore": "decided",
    "statusCluster": "core: persistence2 | objc: objc-U5-import-browser, objc-U3-viewcontroller, objc-U4-conditions-ui",
    "statusWhere": "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp, Core/Persistence/ProjectStore/ProjectStore_Integrity.hpp, Core/Persistence/ProjectStore/Components/ProjectStore+Integrity.cpp, Core/Persistence/ProjectStore/ProjectStore.hpp, Services/ImportService.h, Services/ImportService.mm, Controllers/DatabaseViewController.mm, Controllers/ViewController/ViewController.mm",
-   "statusNote": "The post-duplicate reload uses loadProjectWithUID:project:error:; a failure keeps the project and shows 'Error Loading File' / 'Failed to load <bid>: <cause>'.",
+   "statusNote": "The post-duplicate reload uses loadProjectWithUID:project:error:; a failure keeps the project and shows 'Error Loading File' / 'Failed to load <bid>: <cause>'. [Updated 2026-11-28 (job 11): the alert now shows 'Failed to load <bid>:' and, on the next line, the Windows sentence 'An unexpected error stopped opening the bid. Please try again; if the problem continues, contact support.' (shared/texts.py:316-318); the cause is no longer shown and goes to the log only (EXP-21 owner decision 1; load_failure_reason(LoadTarget::Bid) at the three call sites).]",
    "sourceArea": "database-persistence",
    "files": [
     "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp"
@@ -9201,7 +9207,7 @@
    ],
    "aliasTestPlans": {
     "MSH-18": "Project with 2 pages and visible takeoffs, selectedPages = {} -> exportOBJ/DXF/ThreeJS must return nil (no files), not a file with all pages; selectedPages = {page1} -> only page1 meshes.",
-    "LP-13": "Project with pages P1, P2 and takeoffs on both; selected3D = {} gives 'Nothing to Export' (iOS exports both pages). selected3D={P1} exports only P1."
+    "LP-13": "Project with pages P1, P2 and takeoffs on both; selected3D = {} gives 'Nothing to Export' (iOS exports both pages). selected3D={P1} exports only P1. [Updated 2026-11-28 (job 11): an empty selection shows the unchanged 'No Data' alert; 'Nothing to Export' no longer exists (nothing exportable is 'Export Error' / 'No file was written. ...', EXP-21 owner decision 1; device row P4-05).]"
    }
   },
   {
@@ -11207,7 +11213,7 @@
    "statusBefore": "open",
    "statusCluster": "objc: objc-U3-viewcontroller",
    "statusWhere": "Core/Persistence/ProjectStore/ProjectStore.hpp, Core/Persistence/ProjectStore/Components/ProjectStore+Takeoffs.cpp, Services/ImportService.h, Services/ImportService.mm, Controllers/ViewController/Components/UndoRedoController.h, Controllers/ViewController/Components/UndoRedoController.mm, Controllers/ViewController/ViewController.mm, Core/Domain/NegativeChange.hpp, Config/Tests/Settings/test_negative_press.cpp",
-   "statusNote": "The 'Count as Negative Quantity' toggle (ViewController _setNegative:forPressedTakeoff:) is ONE history entry (UndoAction::SetNegative holding {uid, old, new}, UndoRedoController pushNegativeChanges:) and is undoable/redoable. DECIDED 2026-11-19 (code change, port): it changes ONLY the pressed takeoff (ost_domain::negative_changes_for_press in Core/Domain/NegativeChange.hpp), like Windows on_set_negative for a single selected takeoff (plan_view_action_handler.py:2072-2116). A condition that is merely selected in the sidebar widens nothing any more (before: every takeoff of the condition on the open pages). Tests: Und09_NegativePress.* in test_negative_press.cpp. Unverified: the context menu / undo / redo path was only syntax-checked against stubs, not run on a device.",
+   "statusNote": "The 'Count as Negative Quantity' toggle (ViewController _setNegative:forPressedTakeoff:) is ONE history entry (UndoAction::SetNegative holding {uid, old, new}, UndoRedoController pushNegativeChanges:) and is undoable/redoable. DECIDED 2026-11-19 (code change, port): it changes ONLY the pressed takeoff (ost_domain::negative_changes_for_press in Core/Domain/NegativeChange.hpp), like Windows on_set_negative for a single selected takeoff (plan_view_action_handler.py:2072-2116). A condition that is merely selected in the sidebar widens nothing any more (before: every takeoff of the condition on the open pages). Tests: Und09_NegativePress.* in test_negative_press.cpp. Unverified: the context menu / undo / redo path was only syntax-checked against stubs, not run on a device. [Updated 2026-11-28 (job 11): 'it changes ONLY the pressed takeoff' is the rule for a single takeoff; a pasted group follows the Windows rule since the owner decision of 2026-11-28 (Core negative_toggle_for_press, suite Und09_NegativeGroup, 9 tests; the long-press handler passes an empty group until M2 wires the paste). Status stays fixed-ui-unverified. See decisionUpdateJob11.]",
    "sourceArea": "settings-undo-camera",
    "files": [
     "Controllers/ViewController/ViewController.mm"
@@ -11222,7 +11228,8 @@
      "decidedOn": "2026-11-19",
      "outcome": "port",
      "resolution": "'Count as Negative Quantity' changes ONLY the pressed takeoff, in ONE undoable entry (like Windows on_set_negative for a single selected takeoff). A condition that is merely selected in the sidebar no longer widens the change to every takeoff of the condition on the open pages.",
-     "textStatus": "historical: the text was written before the code change of 2026-11-19 and describes the behavior as it was then; what was decided and done is in resolution and in the item's decisionUpdate"
+     "textStatus": "historical: the text was written before the code change of 2026-11-19 and describes the behavior as it was then; what was decided and done is in resolution and in the item's decisionUpdate",
+     "scopeNoteJob11": "The resolution 'ONLY the pressed takeoff' of 2026-11-19 holds for a single takeoff; for a group (the Windows multi-selection) the owner decided on 2026-11-28 that the whole group changes."
     }
    ],
    "statusBeforeDecision": "fixed-ui-unverified",
@@ -11257,6 +11264,34 @@
     "reviewVerdict": "CONFIRMED-FIXED",
     "review": "CONFIRMED-FIXED by an independent reviewer, who ran three mutations of NegativeChange.hpp (the file was restored byte-identically, checked by sha256): widening the press to the whole condition (the old behavior) failed 5 of 6 tests; recording no old flag and returning a change for an unknown uid failed 5 of 6; swapping use_old in negative_values failed 2 of 6 (undo and redo swapped). The .mm call site cannot be mutated on the host, so the reviewer read it. The Core test has no selection input: it proves one change per press with the old flag recorded, not that the .mm passes the right uid and flag. The reviewer also diffed the three .mm/.h files against the version before the change (the selection logic moved into ost_domain::negative_changes_for_press, one history entry, undo and redo through negative_values), the six tests in test_negative_press.cpp and the final green runs. The tests exercise Core only; _setNegative:forPressedTakeoff:, the context menu and the undo buttons are only syntax-checked against stubs.",
     "residualRisk": "The context-menu / undo / redo path was not run on a device (fixed-ui-unverified)."
+   },
+   "decisionUpdateJob11": {
+    "date": "2026-11-28",
+    "outcome": "port (group)",
+    "replaces": "the pressed-takeoff-only default for a GROUP (the single takeoff is unchanged)",
+    "text": "\"Count as Negative Quantity\" on a pasted GROUP (owner question 5): the Windows rule replaces the pressed-takeoff-only default for a group; a single takeoff is unchanged. The Windows \"group\" is the CURRENT plan-view multi-selection (after Paste the pasted takeoffs, children included, plus annotations stay selected; annotation and unknown uids are dropped; no descendant expansion). Rule (`plan_view_action_handler.py:2134-2181` on_set_negative; `input_handler.py:3247-3251`; `view_context_menu.py:162-196`; `takeoff.py:136`): the item is offered only if the selection holds at least one root takeoff and NO child takeoff (hole or attachment); it is checked only when EVERY selected takeoff is negative; the new value is \"not all negative\" for EVERY selected takeoff (mixed or all positive -> all True, all negative -> all False), NOT taken from the pressed item; ONE undo entry records (uid, old) and (uid, new) for ALL members, also those already at the target; undo restores each takeoff's own old flag. Ported in Core: `Core/Domain/NegativeChange.hpp` `negative_toggle_for_press(takeoffs, group_uids, pressed_uid)` returning {offered, checked, changes}; the GROUP path (two or more uids that resolve to takeoffs and the pressed takeoff is a member) is the Windows rule, the SINGLE path (empty group, group of one, pressed takeoff not a member) is exactly the old behaviour (no hole gate: iOS still offers the item on a single pressed hole or attachment, Windows hides it: recorded divergence kept). iOS has no multi-selection and no paste before M2, so the Objective-C long-press handler passes an EMPTY group (identical behaviour through the new Core function); the M2 paste wiring passes the pasted uids as the group (`NEW_FEATURES_PLAN.md` N-M2-04, question resolved). UND-09 single-takeoff row stays (single takeoff only; the group is the Windows rule). Tests: suite `Und09_NegativeGroup` (9 tests) in `Config/Tests/Settings/test_negative_press.cpp`; the six `Und09_NegativePress` tests stay valid. Owner flags (defaults = exact Windows): a pasted group that contains a hole or attachment has no item; the check mark shows only when ALL are negative and a press sets all negative.",
+    "codeChange": true,
+    "statusAfter": "fixed-ui-unverified (unchanged)",
+    "decisionTests": [
+     "Und09_NegativeGroup.AnAllPositiveGroupBecomesAllNegative",
+     "Und09_NegativeGroup.AnAllPositiveGroupOfThreeIsOneEntryOfThree",
+     "Und09_NegativeGroup.AMixedGroupSetsEveryMemberNegativeAndTheNegativeOnesStayInTheEntry",
+     "Und09_NegativeGroup.AnAllNegativeGroupBecomesAllPositive",
+     "Und09_NegativeGroup.AHoleOrAnAttachmentInTheGroupHidesTheItem",
+     "Und09_NegativeGroup.APressedTakeoffOutsideTheGroupActsAlone",
+     "Und09_NegativeGroup.AnnotationAndUnknownUidsOfTheGroupAreSkipped",
+     "Und09_NegativeGroup.TheSinglePathIsTheOldBehaviour",
+     "Und09_NegativeGroup.OneUndoRestoresEachFlagOfTheGroupAndOneRedoAppliesThemAgain"
+    ],
+    "files": [
+     "Core/Domain/NegativeChange.hpp",
+     "Controllers/ViewController/ViewController.mm",
+     "Config/Tests/Settings/test_negative_press.cpp"
+    ],
+    "commits": [
+     "6d27c03"
+    ],
+    "deviceRows": "P4-07 (single takeoff smoke only; no group row is possible before M2)"
    }
   },
   {
@@ -12074,7 +12109,7 @@
    "statusBefore": "open",
    "statusCluster": "objc: objc-U1-services",
    "statusWhere": "Services/ExportService.mm, Services/ExportService.h, Controllers/ViewController/Components/ViewController+Export.mm",
-   "statusNote": "Three distinct results like Windows instead of one 'Nothing to Export' alert: ExportService.exportOBJ/DXF/ThreeJS now return nil with an ExportOutcome (NoTakeoffs / NothingToExport / WriteFailed / Failed for a Core exception, which no longer can leave the app). ViewController+Export.mm shows: no page selected or no visible takeoff -> warning 'No Data' / 'No takeoffs found fo... Wording: Windows shows the critical \"Export Error: Error creating <fmt> export: Export function returned False\" for nothing-survives and a failed write; iOS shows \"Nothing to Export\" (EXP-22 decision text) and \"Export Error ... The file could not be written.\" DECIDED 2026-11-19 (keep iOS wording, no code change): \"Nothing to Export\", \"Export Error ... The file could not be written.\" and \"No Data\" stay. Judged deliberate and test-pinned on the Windows side, not a defect.",
+   "statusNote": "Three distinct results like Windows instead of one 'Nothing to Export' alert: ExportService.exportOBJ/DXF/ThreeJS now return nil with an ExportOutcome (NoTakeoffs / NothingToExport / WriteFailed / Failed for a Core exception, which no longer can leave the app). ViewController+Export.mm shows: no page selected or no visible takeoff -> warning 'No Data' / 'No takeoffs found fo... Wording: Windows shows the critical \"Export Error: Error creating <fmt> export: Export function returned False\" for nothing-survives and a failed write; iOS shows \"Nothing to Export\" (EXP-22 decision text) and \"Export Error ... The file could not be written.\" DECIDED 2026-11-19 (keep iOS wording, no code change): \"Nothing to Export\", \"Export Error ... The file could not be written.\" and \"No Data\" stay. Judged deliberate and test-pinned on the Windows side, not a defect. [Updated 2026-11-28 (job 11): the sentence 'DECIDED 2026-11-19 (keep iOS wording, no code change)' is SUPERSEDED by the owner decision of 2026-11-28: the Windows wording is adopted (import, load, export, folder-delete and page-delete alerts); 'Nothing to Export' and 'Error creating <fmt> export:' are gone, the technical reason goes to the log only; the three outcomes stay distinct (No Data, Export Error / No file was written, Export Error / The file could not be written). Status stays fixed-ui-unverified (device rows P4-01 to P4-08). See decisionUpdateJob11 and PORTING_BLOCKERS.md section 'Closed by the owner decisions of job 11 (2026-11-28)'.]",
    "sourceArea": "export-formats",
    "files": [
     "Controllers/ViewController/Components/ViewController+Export.mm",
@@ -12095,7 +12130,8 @@
       "tests/application/services/test_export_service.py::test_export_failure_result_distinguishes_worker_rejection_and_exception",
       "tests/presentation/visualization/exporters/test_base_exporter.py::test_base_exporter_propagates_explicit_writer_failure"
      ]
-    }
+    },
+    "noteJob11": "History: the rebaseline of 2026-11-16 describes Windows before c46d751 / d26893c ('Export function returned False'); the owner adopted the CURRENT Windows wording on 2026-11-28 (decisionUpdateJob11)."
    },
    "openQuestions": [
     {
@@ -12105,7 +12141,10 @@
      "state": "decided",
      "decidedOn": "2026-11-19",
      "outcome": "keep-ios",
-     "resolution": "The iOS export error wording stays: 'Nothing to Export', 'Export Error ... The file could not be written.' and 'No Data' (Windows: 'Export Error: Error creating <fmt> export: Export function returned False'). No code change."
+     "resolution": "The iOS export error wording stays: 'Nothing to Export', 'Export Error ... The file could not be written.' and 'No Data' (Windows: 'Export Error: Error creating <fmt> export: Export function returned False'). No code change.",
+     "supersededOn": "2026-11-28",
+     "supersededBy": "decisionUpdateJob11",
+     "supersededNote": "The keep-ios resolution of 2026-11-19 is replaced by the owner decision of 2026-11-28 (adopt the Windows wording): text and resolution above are history."
     }
    ],
    "statusBeforeDecision": "fixed-ui-unverified",
@@ -12113,10 +12152,46 @@
     "date": "2026-11-19",
     "outcome": "keep-ios",
     "text": "The iOS export error wording stays: 'Nothing to Export', 'Export Error ... The file could not be written.' and 'No Data' (Windows: 'Export Error: Error creating <fmt> export: Export function returned False'). No code change.",
-    "codeChange": false
+    "codeChange": false,
+    "supersededOn": "2026-11-28",
+    "supersededBy": "decisionUpdateJob11"
    },
    "decisionTests": [],
-   "decisionTestGap": "UI wording in .mm files; not host-testable and only syntax-checked against stubs."
+   "decisionTestGap": "UI wording in .mm files; not host-testable and only syntax-checked against stubs.",
+   "iosNowJob11": "ViewController+Export.mm: no page selected or no visible takeoff -> 'No Data' / 'No takeoffs found for any of the selected pages.' (unchanged); nothing exportable -> 'Export Error' / 'No file was written. Check that the selected pages have takeoffs this format can export, then try again or choose a different destination.'; Failed -> 'Export Error' / 'An unexpected error stopped the export. Please try again or choose a different destination; if the problem continues, contact support.'; write failed -> 'Export Error' / 'The file could not be written. Please ensure you have write permissions to the destination folder and try again.'",
+   "decisionUpdateJob11": {
+    "date": "2026-11-28",
+    "outcome": "adopt-windows-wording",
+    "supersedes": "decisionUpdate (2026-11-19, keep-ios)",
+    "text": "EXP-21 (owner question 1), import, load, export, folder-delete and page-delete alert wording: ADOPT the current Windows wording (Windows `d1c430a`: `ost_visualizer/shared/texts.py`, `ost_visualizer/presentation/texts.py`, `import_handler.py`, `export_service.py`, `presentation/utils/messagebox.py`). The decision of 2026-11-19 (\"keep iOS\") is SUPERSEDED (kept as history). Rule (`presentation/utils/messagebox.py:130-170`): an alert shows ONE user sentence; the technical detail (parser reason, Core diagnostic, store text, exception) goes to the log only (`NSLog` on iOS; the export paths log the reason too since the review fix 9856e4c: `ExportService.mm` writes an NSLog line for nothing to export, for a file name that is not valid UTF-8 and for an OBJ, DXF or HTML write failure, with the path and errno). It is applied to every existing iOS alert of import (picker and open-in), project-list and bid load failures, folder delete failures, the page-delete reload failure and the three export formats (table of 16 texts (rows 1-15 plus the unexpected-case row 5a) in `PARITY_MAP.md`, section \"Owner decisions of job 11 (2026-11-28)\"). The wording of the M3 exports (OST / OSP / CSV / PDF) is not on iOS yet: the same rule is recorded for M3 in `NEW_FEATURES_PLAN.md` section 4.15. Judgement call (confirmed by the owner's decision text): the LOCAL import path is the Windows local path (`import_handler.py:218-246`): EVERY local OST / OSP failure shows \"Import Error\" / \"The OST file is damaged or uses an unsupported format, so it cannot be imported.\" (OSP: \"The OSP file ...\"); the per-case sentences (no bid, takeoffs invalid, invalid references) are Windows HEAD texts that reach a dialog only on the SQL import (`import_handler.py:271-278`) and are not used in the iOS alert; a store, schema or temporary-folder failure shows the same damaged-file sentence (Windows `import_ost` swallows every exception and returns False, `ost_importer.py:94-107`); the sentence \"An unexpected error stopped the import of the OST|OSP file. Please check that the file is valid and try again; if the problem continues, contact support.\" appears only for a genuinely unexpected condition: a C++ exception caught in `ImportService.mm` (`importOSTFile:` and `importOSPFile:` wrap their bodies in try/catch) or a nil `NSError` after a failed import. Known-cause sentences (not found, access denied, disk full, \"open in another program\", network location) cannot be wired today (the writers return bool, the store returns text only, no errno), so only the vocabulary exists, with host tests, for M3 (`Core/Domain/FailureText.{hpp,cpp}`: `FileFailureCause`, `file_failure_reason`, `cause_from_errno`, `write_failure_text`). \"Please ensure you have write permissions to the destination folder\" has no destination folder on iOS (temporary folder and share sheet); it is adopted as it is (the owner said adopt the Windows wording).",
+    "codeChange": true,
+    "statusAfter": "fixed-ui-unverified (unchanged; the item was never wont-fix)",
+    "decisionTests": [
+     "Exp21_ImportDiagnostics, Exp21_ImportClassify, Exp21_ImportText, Exp21_LoadReason, Exp21_FolderDelete, Exp21_FileFailure, Exp21_ExportText (24 tests in `Config/Tests/Browser/test_failure_text.cpp`)",
+     "PageDialogText.DeleteReloadFailed_SaysTheDeleteHappened_AndNeverShowsTheReason (Config/Tests/Persistence/test_page_menu_rules.cpp, changed pin)"
+    ],
+    "files": [
+     "Core/Domain/FailureText.hpp",
+     "Core/Domain/FailureText.cpp",
+     "Core/Import/ImportDiagnostics.hpp",
+     "Services/ImportService.mm",
+     "Controllers/DatabaseViewController.mm",
+     "SceneDelegate.mm",
+     "Controllers/ViewController/ViewController.mm",
+     "Controllers/ViewController/Components/ViewController+Conditions.mm",
+     "Controllers/ViewController/Components/ViewController+Export.mm",
+     "Core/Domain/PageDialogText.cpp"
+    ],
+    "commits": [
+     "037c2a2",
+     "4223178",
+     "cdcc380",
+     "fc4b725",
+     "5884ab7"
+    ],
+    "deviceRows": "P4-01 to P4-08 in DEVICE_CHECKS.md (pending, merged unverified)",
+    "m3Rule": "NEW_FEATURES_PLAN.md section 4.15"
+   }
   },
   {
    "id": "EXP-15",
@@ -12683,7 +12758,7 @@
    "statusBefore": "decided",
    "statusCluster": "core: persistence2 | objc: objc-U5-import-browser, objc-U3-viewcontroller, objc-U4-conditions-ui",
    "statusWhere": "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp, Services/ImportService.h, Services/ImportService.mm, Controllers/DatabaseViewController.mm, Controllers/ViewController/ViewController.mm",
-   "statusNote": "Same call and alert as DBP-31.",
+   "statusNote": "Same call and alert as DBP-31. [Updated 2026-11-28 (job 11): the alert now shows 'Failed to load <bid>:' and, on the next line, the Windows sentence 'An unexpected error stopped opening the bid. Please try again; if the problem continues, contact support.' (shared/texts.py:316-318); the cause is no longer shown and goes to the log only (EXP-21 owner decision 1; load_failure_reason(LoadTarget::Bid) at the three call sites).]",
    "sourceArea": "project-browser",
    "files": [
     "Core/Persistence/ProjectStore/Components/ProjectStore+Load.cpp"
@@ -13779,7 +13854,7 @@
    "statusBefore": "decided",
    "statusCluster": "core: export-rules | objc: objc-U1-services",
    "statusWhere": "Core/Meshing/ExportMeshSet.hpp, Core/Meshing/ExportMeshSet.cpp, Services/ExportService.mm, Controllers/ViewController/Components/ViewController+Export.mm",
-   "statusNote": "A negative-only export or one in which no mesh survives (NothingToExport) returns before any writer exists, so no file is created, in OBJ, DXF and HTML; the alert is the 'Nothing to Export' alert in every format (decision fixed-windows).",
+   "statusNote": "A negative-only export or one in which no mesh survives (NothingToExport) returns before any writer exists, so no file is created, in OBJ, DXF and HTML; the alert is the 'Nothing to Export' alert in every format (decision fixed-windows). [Updated 2026-11-28 (job 11): the alert for this outcome is now 'Export Error' / 'No file was written. Check that the selected pages have takeoffs this format can export, then try again or choose a different destination.' (EXP-21 owner decision 1); the behaviour (no file, no writer) is unchanged.]",
    "sourceArea": "export-formats",
    "files": [
     "Services/ExportService.mm"
@@ -15982,7 +16057,7 @@
    "statusBefore": "open",
    "statusCluster": "core: export-rules | objc: objc-U1-services",
    "statusWhere": "Core/Meshing/ExportMeshSet.hpp, Core/Meshing/ExportMeshSet.cpp, Services/ExportService.mm, Controllers/ViewController/Components/ViewController+Export.mm",
-   "statusNote": "An export in which no boolean result survives fails before anything is written (status NothingToExport, no writer is created); the controller shows the 'Nothing to Export' alert.",
+   "statusNote": "An export in which no boolean result survives fails before anything is written (status NothingToExport, no writer is created); the controller shows the 'Nothing to Export' alert. [Updated 2026-11-28 (job 11): the controller now shows 'Export Error' / 'No file was written. ...', not 'Nothing to Export' (EXP-21 owner decision 1).]",
    "sourceArea": "rebaseline",
    "files": [
     "Services/ExportService.mm",
@@ -16810,9 +16885,10 @@
      "id": "LY-11",
      "windowsRef": "ost_visualizer/presentation/coordinators/ui_event_coordinator.py:6578-6580, :6877-6882, :6917-6918",
      "windows": "The sidebar swallows failed create / move / rename (reload only).",
-     "ios": "An alert always (N-M1-17), then a quiet reload like Windows; the four generic failure texts carry the database-locked hint (Windows' dialogs have none, its sidebar delete adds it).",
+     "ios": "An alert always (N-M1-17), then a quiet reload like Windows; the four generic failure texts carry the database-locked hint (Windows' dialogs have none, its sidebar delete adds it). [Updated 2026-11-28 (job 11): the database-locked hint of the four generic failure texts is REMOVED (owner decision 2 of 2026-11-28, N-M1-17 hint part): the alert itself stays, the texts are exactly 'Failed to create|rename|move|delete layer.'.]",
      "status": "safe-deviation-ui-unverified",
-     "why": "No silent failure."
+     "why": "No silent failure.",
+     "updateJob11": "The four generic layer failure texts no longer carry the database-locked hint (owner decision 2 of 2026-11-28; the Windows dialog never has it, only the sidebar adds it). The alert (no silent failure) stays."
     },
     {
      "id": "LY-12",
@@ -16870,7 +16946,8 @@
      "ios": "'Refresh Error' / 'The change was saved, but the layer list could not be refreshed. Reopen the database to see it.' (iOS text); a failed delete refresh reads 'Layers were deleted, but the refresh failed.' [Updated 2026-11-27 (job 9, Windows d26893c): Windows 0a24294 reports a committed rename/move whose list reload failed with \"The layer was renamed|moved, but the layer list could not be refreshed. Reopen the database to see the change.\"; iOS shows exactly these (371c484; title stays \"Refresh Error\", Windows uses \"Rename Layer\"/\"Move Layer\" in the Layers dialog, review R9-05); the delete text is unchanged (\"Layers were deleted, but the refresh failed.\"). The iOS-only sentence \"The change was saved, but the layer list could not be refreshed. Reopen the database to see it.\" above is history.]",
      "status": "safe-deviation-ui-unverified",
      "why": "Do not call a committed change failed.",
-     "update2026_11_27": "Windows 0a24294 reports a committed rename/move whose list reload failed with \"The layer was renamed|moved, but the layer list could not be refreshed. Reopen the database to see the change.\"; iOS shows exactly these (371c484; title stays \"Refresh Error\", Windows uses \"Rename Layer\"/\"Move Layer\" in the Layers dialog, review R9-05); the delete text is unchanged (\"Layers were deleted, but the refresh failed.\"). The iOS-only sentence \"The change was saved, but the layer list could not be refreshed. Reopen the database to see it.\" above is history."
+     "update2026_11_27": "Windows 0a24294 reports a committed rename/move whose list reload failed with \"The layer was renamed|moved, but the layer list could not be refreshed. Reopen the database to see the change.\"; iOS shows exactly these (371c484; title stays \"Refresh Error\", Windows uses \"Rename Layer\"/\"Move Layer\" in the Layers dialog, review R9-05); the delete text is unchanged (\"Layers were deleted, but the refresh failed.\"). The iOS-only sentence \"The change was saved, but the layer list could not be refreshed. Reopen the database to see it.\" above is history.",
+     "updateJob11": "The rename and move refresh-failed alerts are titled 'Rename Layer' / 'Move Layer' (the Windows dialog titles, owner decision 2 of 2026-11-28); 'Refresh Error' stays for the create refresh alert only; the delete text is unchanged."
     },
     {
      "id": "LY-UI-5",
@@ -19119,7 +19196,12 @@
      "KEEP-iOS",
      "WORDING"
     ],
-    "note": "Conflict: A1-35 classed KEEP-iOS and facts.md lists A3-05 under \"optional wording not ported\", but A5-06 (same change), facts item 4 and commit 371c484 port it; verified in Core/Domain/LayerSheet.hpp:30-32. Title: review R9-05, owner question 4."
+    "note": "Conflict: A1-35 classed KEEP-iOS and facts.md lists A3-05 under \"optional wording not ported\", but A5-06 (same change), facts item 4 and commit 371c484 port it; verified in Core/Domain/LayerSheet.hpp:30-32. Title: review R9-05, owner question 4.",
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "result": "resolved",
+     "text": "The title question is RESOLVED (owner question 4, 2026-11-28): the rename and move refresh-failed alerts are now titled 'Rename Layer' / 'Move Layer' (the Windows dialog titles); the texts are unchanged."
+    }
    },
    {
     "id": "P2-040",
@@ -20954,11 +21036,16 @@
      "KEEP-iOS",
      "WORDING"
     ],
-    "note": "Owner decision of 2026-11-19 (keep iOS prefix/texts, EXP-21) stands; its basis changed (Windows c46d751/d26893c). Not changed: owner question 1 (also: does \"write permissions\" fit iOS?). iOS \"Nothing to Export\" kept.",
+    "note": "(history, superseded 2026-11-28: see updatedInJob11) Owner decision of 2026-11-19 (keep iOS prefix/texts, EXP-21) stands; its basis changed (Windows c46d751/d26893c). Not changed: owner question 1 (also: does \"write permissions\" fit iOS?). iOS \"Nothing to Export\" kept.",
     "iosRefNotes": [
      "ObjC, outside Core",
      "title Export Error, the case ExportOutcomeFailed and the default case (the first version of this entry was cut off)"
-    ]
+    ],
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "result": "ported",
+     "text": "PORTED 2026-11-28 (job 11, owner decision 1): the keep decision is overturned; the export alerts show the Windows sentences under 'Export Error' ('Nothing to Export' and the prefix are gone); 'write permissions to the destination folder' is adopted as it is."
+    }
    },
    {
     "id": "P2-087",
@@ -20997,7 +21084,12 @@
      "KEEP-iOS",
      "WORDING"
     ],
-    "note": "Same owner question 1 (EXP-21 and import alert reasons)."
+    "note": "(history, superseded 2026-11-28: see updatedInJob11) Same owner question 1 (EXP-21 and import alert reasons).",
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "result": "ported",
+     "text": "PORTED 2026-11-28 (job 11, owner decision 1): every local OST / OSP import failure shows the damaged-file sentence under 'Import Error', a store, schema or temporary-folder failure the same damaged-file sentence (as Windows); the unexpected-import sentence only for a C++ exception caught in ImportService.mm or a nil NSError; the per-case sentences (no bid, takeoffs invalid, invalid references) reach a Windows dialog only on the SQL import and are not used on iOS; the technical reason goes to NSLog."
+    }
    },
    {
     "id": "P2-088",
@@ -21595,7 +21687,12 @@
     "analystClasses": [
      "PORT"
     ],
-    "note": "Open: does \"Count as Negative\" apply to the group as on Windows, or the pressed takeoff only (iOS UND-09 default kept): owner question 5."
+    "note": "(history, superseded 2026-11-28: see updatedInJob11) Open: does \"Count as Negative\" apply to the group as on Windows, or the pressed takeoff only (iOS UND-09 default kept): owner question 5.",
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "result": "resolved",
+     "text": "RESOLVED (owner question 5, 2026-11-28): Count as Negative on a group follows the Windows rule (Core negative_toggle_for_press); the wiring is M2."
+    }
    },
    {
     "id": "P2-106",
@@ -22486,7 +22583,12 @@
     "n": 1,
     "question": "Export alert prefix (\"Error creating <fmt> export:\") and the import alert reasons (EXP-21): Windows removed \"Export function returned False.\" and the \"Failed to create ... export:\" prefix and now shows user sentences (c46d751, d26893c). The owner decision of 2026-11-19 (keep iOS) stands and was NOT overturned here. Keep iOS, or follow Windows (also: does the Windows advice about write permissions fit iOS)?",
     "area": "export-import",
-    "defaultIfUndecided": "keep iOS (nothing changed)"
+    "defaultIfUndecided": "keep iOS (nothing changed) (history: superseded by the owner decision of 2026-11-28, see updatedInJob11)",
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "state": "RESOLVED",
+     "text": "EXP-21: the owner decided to ADOPT the current Windows wording for import, load, export, folder-delete and page-delete alerts; the 'keep iOS' default is replaced (job11.decisions[0])."
+    }
    },
    {
     "n": 2,
@@ -22514,13 +22616,23 @@
     "n": 4,
     "question": "Layer rename/move refresh-failed alert title (review R9-05): the iOS Layers sheet keeps the sidebar title \"Refresh Error\"; the Windows Layers dialog uses \"Rename Layer\" / \"Move Layer\" for the same event. Keep \"Refresh Error\", or use the dialog titles?",
     "area": "layers",
-    "defaultIfUndecided": "keep \"Refresh Error\""
+    "defaultIfUndecided": "keep \"Refresh Error\" (history: superseded by the owner decision of 2026-11-28, see updatedInJob11)",
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "state": "RESOLVED",
+     "text": "Layer titles: the Windows dialog titles 'Rename Layer' / 'Move Layer' are used for the rename and move refresh-failed alerts and the generic layer failures lose the database-locked hint; the folder-failure titles were not part of the decision and are unchanged (job11.decisions[1])."
+    }
    },
    {
     "n": 5,
     "question": "M2: does \"Count as Negative\" apply to the whole selected group as on Windows (context-menu rule of df78f67), or to the pressed takeoff only (iOS UND-09 default)?",
     "area": "m2-clipboard-snap",
-    "defaultIfUndecided": "pressed takeoff only (iOS default kept)"
+    "defaultIfUndecided": "pressed takeoff only (iOS default kept) (history: superseded by the owner decision of 2026-11-28, see updatedInJob11)",
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "state": "RESOLVED",
+     "text": "Count as Negative on a group follows the Windows rule (the whole group, one undo entry; single takeoff unchanged); ported in Core, the wiring is M2 (job11.decisions[2])."
+    }
    },
    {
     "n": 6,
@@ -22532,7 +22644,12 @@
     "n": 7,
     "question": "Merge order: device results of M1 (DEVICE_CHECKS.md M1-01..M1-20 and the 23 carried checks) are still pending and ios-feature-m1 and ios-parity-sync-2 are both unmerged into main (ios-parity-sync-2 contains ios-feature-m1 entirely plus 20+ commits). Proposed: after the device results, merge ios-parity-sync-2 into main with one pull request and a merge commit, then start M2 from the updated main. Agree?",
     "area": "next steps",
-    "defaultIfUndecided": "proposal as stated"
+    "defaultIfUndecided": "proposal as stated",
+    "updatedInJob11": {
+     "date": "2026-11-28",
+     "state": "RESOLVED",
+     "text": "Merge order: resolved by the owner's instruction of 2026-11-28 to merge ios-parity-sync-2 into main by a pull request merge commit with the stated waiver of the device results (67 rows pending, merged unverified; the owner sends the results later and fixes go on a NEW branch from main)."
+    }
    },
    {
     "n": 8,
@@ -23829,7 +23946,11 @@
    {
     "n": 1,
     "state": "open (unchanged)",
-    "change": "EXP-21 (export and import alert wording): stays open, default kept."
+    "change": "EXP-21 (export and import alert wording): stays open, default kept.",
+    "job11": {
+     "state": "RESOLVED (job 11, 2026-11-28)",
+     "change": "EXP-21: the Windows wording is adopted."
+    }
    },
    {
     "n": 2,
@@ -23844,12 +23965,20 @@
    {
     "n": 4,
     "state": "open (unchanged)",
-    "change": "Folder-failure and layer-refresh titles: stay open, default kept."
+    "change": "Folder-failure and layer-refresh titles: stay open, default kept.",
+    "job11": {
+     "state": "RESOLVED (job 11, 2026-11-28)",
+     "change": "Layer refresh titles: the Windows dialog titles; the generic layer failures lose the hint."
+    }
    },
    {
     "n": 5,
     "state": "open (unchanged)",
-    "change": "M2 \"Count as Negative Quantity\" on a group: stays open, default kept (pressed takeoff only)."
+    "change": "M2 \"Count as Negative Quantity\" on a group: stays open, default kept (pressed takeoff only).",
+    "job11": {
+     "state": "RESOLVED (job 11, 2026-11-28)",
+     "change": "Count as Negative on a group: the Windows rule."
+    }
    },
    {
     "n": 6,
@@ -23859,7 +23988,11 @@
    {
     "n": 7,
     "state": "open (unchanged)",
-    "change": "Merge order: stays open; the device results now also cover the five rows P3-01..P3-05 (59 rows on the one IPA of the pass-3 run)."
+    "change": "Merge order: stays open; the device results now also cover the five rows P3-01..P3-05 (59 rows on the one IPA of the pass-3 run).",
+    "job11": {
+     "state": "RESOLVED (job 11, 2026-11-28)",
+     "change": "Merge order: resolved by the owner's instruction to merge ios-parity-sync-2 into main by a pull request merge commit with the stated waiver; 67 rows pending, merged unverified."
+    }
    },
    {
     "n": 8,
@@ -23940,6 +24073,387 @@
     "id": "header.counts",
     "change": "byStatus wont-fix 16 -> 13, no-longer-divergent 4 -> 7; byDisposition likewise; byImpactAndStatus behavior wont-fix 11 -> 8 and no-longer-divergent 3 -> 6; byOwnerAndStatus meshing wont-fix 3 -> 1 and no-longer-divergent 1 -> 3, export-formats wont-fix 3 -> 2 and no-longer-divergent 1 -> 2; decidedByStatus wont-fix 13 -> 11 and no-longer-divergent 1 -> 3; beforePass3 keeps the old values"
    }
+  ]
+ },
+ "job11": {
+  "header": {
+   "title": "Owner decisions of job 11 (2026-11-28)",
+   "date": "2026-11-28",
+   "dateNote": "2026-11-28 is UTC; the commits and the CI runs of job 11 were made on the evening of 2026-11-27 local time (commits dated 2026-11-27 21:45 to 23:02 -0500)",
+   "job": "job 11 (parity-sync-2, owner decisions)",
+   "windowsHead": "d1c430a",
+   "windowsNote": "Windows OSTVisualizerLicense, read-only git, HEAD d1c430a unchanged since parity pass 3 (no new Windows commit).",
+   "iosStart": "fc3c3b6 (docs tip of pass 3); code tip of pass 3 b36f2f6",
+   "iosHeads": {
+    "branch": "ios-parity-sync-2",
+    "codeTip": "7a8b600 (the last non-docs commit of the branch; docs commits carry [skip ci])",
+    "main": "06d8d69 until the merge of job 11 (lightweight tag main-before-m1 at 06d8d69 before the merge)",
+    "iosFeatureM1": "8019a8b (untouched)"
+   },
+   "iosCommits": [
+    "8939870 fix(layers): refresh and failure alerts take the Windows dialog titles and texts (owner decision 2)",
+    "6d27c03 feat(negative): Count as Negative on a pasted group applies to the whole group in one entry (owner decision 3)",
+    "037c2a2 feat(failure-text): Core module for the Windows alert wording of import, load, folder delete and export (owner decision 1, EXP-21)",
+    "4223178 feat(import): import alerts take the Windows wording; the technical reason goes to the log only (owner decision 1, EXP-21)",
+    "cdcc380 feat(browser): picker import alert, load failures and folder delete failures show one user sentence (owner decision 1, EXP-21)",
+    "fc4b725 feat(export): export failure alerts take the Windows wording (owner decision 1, EXP-21)",
+    "5884ab7 fix(page-delete): the reload failure alert keeps the iOS sentence and drops the developer reason (owner decision 1, EXP-21)",
+    "53d2a54 fix(import): store, schema and temporary folder failures show the damaged sentence like every local Windows failure (review R1, R4)",
+    "9856e4c fix(export): log the technical reason of every export failure that the alert no longer shows (review R2)",
+    "7a8b600 docs(code): load_failure_text comment follows the user-sentence rule; Windows line numbers of the layer create refresh warning (review R5, R7)",
+    "docs commits follow (docs commits carry [skip ci])"
+   ],
+   "ci": {
+    "run": "46106919801",
+    "result": "success on the first attempt (created 2026-11-28 04:18:30 UTC, finished 04:28:43 UTC, 10 min 13 s; host tests 12 of 12; BUILD SUCCEEDED; the 9 first-party warnings of the baseline, none new)",
+    "ipaCheck": "IPA 2,169,449 bytes, executable 5,688,192 bytes, checked locally: ALL CHECKS PASSED (bundle id com.fabian.ostvisualizer, MinimumOSVersion 16.0, thin arm64 minos 16.0.0, ldid ad-hoc signature with all 1372 page hashes, entitlements get-task-allowed only, the job-11 strings present)",
+    "note": "Result and ipaCheck are those of the FINAL GitHub Build IPA run 46106919801 on the code tip 7a8b600 of job 11. The first run of job 11 is 46104791177 on 5884ab7: it succeeded in 12 min 23 s (created 2026-11-28 03:51:00 UTC, finished 04:03:23 UTC) before the review fixes.",
+    "firstRun": {
+     "run": "46104791177",
+     "head": "5884ab7",
+     "result": "success",
+     "duration": "12 min 23 s",
+     "created": "2026-11-28T03:51:00Z",
+     "finished": "2026-11-28T04:03:23Z",
+     "note": "before the review fixes (53d2a54, 9856e4c, 7a8b600)"
+    },
+    "head": "7a8b600"
+   },
+   "tests": {
+    "msvcBefore": 2975,
+    "msvcAfter": 3009,
+    "msvcDelta": 34,
+    "manifoldBefore": 2987,
+    "manifoldAfter": 3021,
+    "manifoldNote": "DERIVED (the 12 Manifold-only tests are unchanged), not re-run in job 11 (disk rule: no Manifold or clang build)",
+    "perAreaBeforeAfter": {
+     "Browser": "67->91 (+24: the FailureText tests, Config/Tests/Browser/test_failure_text.cpp: 23 plus TheKindValuesAreTheNSErrorCodes of the review fixes)",
+     "Settings": "141->150 (+9: Und09_NegativeGroup in Config/Tests/Settings/test_negative_press.cpp)",
+     "Persistence": "957->957 (the layer tests were edited in place, the page-delete pin changed)",
+     "Import": "307->308 (+1: OspFlow.ATemporaryFolderThatCannotBeCreatedFailsTheImportWithTheSharedDiagnostic, the OSP temporary-folder staging test of the review fixes)"
+    },
+    "unchangedAreas": "Conditions 576, Export 110, Formatting 151, Geometry 266, Harness 10, Meshing 107, Parsers 149, Quantities 134",
+    "areasPassing": "12/12 on MSVC",
+    "checkObjc": "42/42 ok, 0 errors, 4 baseline warnings after every .mm change",
+    "changedPin": "Config/Tests/Persistence/test_page_menu_rules.cpp: PageDialogText.DeleteReloadFailed_SaysTheDeleteHappened_AndNeverShowsTheReason (the pin of the page-delete reload text; the test was renamed to ...AndNeverShowsTheReason)"
+   },
+   "counts": {
+    "byStatus": {
+     "fixed": 176,
+     "fixed-ui-unverified": 23,
+     "blocked-needs-decision": 0,
+     "wont-fix": 13,
+     "cannot-reproduce": 1,
+     "no-longer-divergent": 7
+    },
+    "byDisposition": {
+     "cannot-reproduce": 1,
+     "fix": 199,
+     "needs-decision": 0,
+     "no-longer-divergent": 7,
+     "wont-fix": 13
+    },
+    "statusChanges": [],
+    "note": "no status of the 220 items changed: still 176 fixed / 23 fixed-ui-unverified / 0 blocked-needs-decision / 13 wont-fix / 1 cannot-reproduce / 7 no-longer-divergent (before job 11: the same; 199 items ported). EXP-21 was never wont-fix: its status is fixed-ui-unverified (disposition fix) and the \"keep iOS\" decision of 2026-11-19 was a decision record inside it; the owner overturned that record, the new wording is ported and still unverified on a device (P4-01 to P4-08), so the status stays fixed-ui-unverified. UND-09 stays fixed-ui-unverified as well"
+   }
+  },
+  "decisions": [
+   {
+    "n": 1,
+    "id": "EXP-21",
+    "date": "2026-11-28",
+    "ownerQuestion": 1,
+    "title": "Adopt the current Windows wording for import, load, export, folder-delete and page-delete alerts",
+    "text": "EXP-21 (owner question 1), import, load, export, folder-delete and page-delete alert wording: ADOPT the current Windows wording (Windows `d1c430a`: `ost_visualizer/shared/texts.py`, `ost_visualizer/presentation/texts.py`, `import_handler.py`, `export_service.py`, `presentation/utils/messagebox.py`). The decision of 2026-11-19 (\"keep iOS\") is SUPERSEDED (kept as history). Rule (`presentation/utils/messagebox.py:130-170`): an alert shows ONE user sentence; the technical detail (parser reason, Core diagnostic, store text, exception) goes to the log only (`NSLog` on iOS; the export paths log the reason too since the review fix 9856e4c: `ExportService.mm` writes an NSLog line for nothing to export, for a file name that is not valid UTF-8 and for an OBJ, DXF or HTML write failure, with the path and errno). It is applied to every existing iOS alert of import (picker and open-in), project-list and bid load failures, folder delete failures, the page-delete reload failure and the three export formats (table of 16 texts (rows 1-15 plus the unexpected-case row 5a) in `PARITY_MAP.md`, section \"Owner decisions of job 11 (2026-11-28)\"). The wording of the M3 exports (OST / OSP / CSV / PDF) is not on iOS yet: the same rule is recorded for M3 in `NEW_FEATURES_PLAN.md` section 4.15. Judgement call (confirmed by the owner's decision text): the LOCAL import path is the Windows local path (`import_handler.py:218-246`): EVERY local OST / OSP failure shows \"Import Error\" / \"The OST file is damaged or uses an unsupported format, so it cannot be imported.\" (OSP: \"The OSP file ...\"); the per-case sentences (no bid, takeoffs invalid, invalid references) are Windows HEAD texts that reach a dialog only on the SQL import (`import_handler.py:271-278`) and are not used in the iOS alert; a store, schema or temporary-folder failure shows the same damaged-file sentence (Windows `import_ost` swallows every exception and returns False, `ost_importer.py:94-107`); the sentence \"An unexpected error stopped the import of the OST|OSP file. Please check that the file is valid and try again; if the problem continues, contact support.\" appears only for a genuinely unexpected condition: a C++ exception caught in `ImportService.mm` (`importOSTFile:` and `importOSPFile:` wrap their bodies in try/catch) or a nil `NSError` after a failed import. Known-cause sentences (not found, access denied, disk full, \"open in another program\", network location) cannot be wired today (the writers return bool, the store returns text only, no errno), so only the vocabulary exists, with host tests, for M3 (`Core/Domain/FailureText.{hpp,cpp}`: `FileFailureCause`, `file_failure_reason`, `cause_from_errno`, `write_failure_text`). \"Please ensure you have write permissions to the destination folder\" has no destination folder on iOS (temporary folder and share sheet); it is adopted as it is (the owner said adopt the Windows wording).",
+    "supersedes": "items.EXP-21.decisionUpdate (2026-11-19, keep-ios)",
+    "tests": [
+     "Exp21_ImportDiagnostics, Exp21_ImportClassify, Exp21_ImportText, Exp21_LoadReason, Exp21_FolderDelete, Exp21_FileFailure, Exp21_ExportText (24 tests in `Config/Tests/Browser/test_failure_text.cpp`)"
+    ],
+    "files": [
+     "Core/Domain/FailureText.hpp",
+     "Core/Domain/FailureText.cpp",
+     "Core/Import/ImportDiagnostics.hpp",
+     "Services/ImportService.mm",
+     "Controllers/DatabaseViewController.mm",
+     "SceneDelegate.mm",
+     "Controllers/ViewController/ViewController.mm",
+     "Controllers/ViewController/Components/ViewController+Conditions.mm",
+     "Controllers/ViewController/Components/ViewController+Export.mm",
+     "Core/Domain/PageDialogText.cpp",
+     "Config/Tests/Browser/test_failure_text.cpp"
+    ],
+    "commits": [
+     "037c2a2",
+     "4223178",
+     "cdcc380",
+     "fc4b725",
+     "5884ab7"
+    ],
+    "m3Rule": "NEW_FEATURES_PLAN.md section 4.15",
+    "statusAfter": "fixed-ui-unverified (unchanged)"
+   },
+   {
+    "n": 2,
+    "id": "LAYER-TITLES",
+    "date": "2026-11-28",
+    "ownerQuestion": 4,
+    "title": "Layer refresh and failure alerts take the Windows dialog titles and texts; the N-M1-17 hint is removed",
+    "text": "Layer refresh and failure alerts (owner question 4, layer part): take the Windows DIALOG titles and texts (`layers_dialog.py:489`, `:784`, `:677-694`, `:706-722`): the rename refresh-failed alert is titled \"Rename Layer\" and the move one \"Move Layer\" (was \"Refresh Error\" for both; the texts are unchanged: \"The layer was renamed|moved, but the layer list could not be refreshed. Reopen the database to see the change.\"); the generic failures \"Failed to create|rename|move|delete layer.\" LOSE the database-locked hint (the Windows dialog never has it, only the sidebar adds it), which removes the hint part of the iOS addition N-M1-17 (the alert itself, no silent failure, stays). Unchanged: the create refresh-failed alert (\"Refresh Error\": the Windows dialog flow itself uses it), the delete refresh-failed alert (\"Delete Layer\" / \"Layers were deleted, but the refresh failed.\"), \"Duplicate Layer\", \"Failed to validate layer usage.\", the three \"Layer Visibility\" alerts (same title in the Windows dialog), and the iOS-only refusals (50 characters, control characters, sequence limit, \"This bid is locked.\"). Core only (`Core/Domain/LayerSheet.cpp`), no Objective-C edit; tests `LayerSheet.RefreshFailureTextsSayWhatWasCommitted` and `LayerSheet.WriteFailureTextsAreTheWindowsDialogTexts` (edited in place, written red first). The folder-failure titles of the same question are not part of the owner's decision and are unchanged.",
+    "tests": [
+     "LayerSheet.RefreshFailureTextsSayWhatWasCommitted",
+     "LayerSheet.WriteFailureTextsAreTheWindowsDialogTexts"
+    ],
+    "files": [
+     "Core/Domain/LayerSheet.cpp",
+     "Core/Domain/LayerSheet.hpp",
+     "Core/Domain/LayerEdit.hpp",
+     "Config/Tests/Persistence/test_layer_sheet_rules.cpp"
+    ],
+    "commits": [
+     "8939870"
+    ],
+    "statusAfter": "no item of the 220 involved (m1Items M1-LAYERS LY-11 and LY-UI-4 updated)"
+   },
+   {
+    "n": 3,
+    "id": "UND-09",
+    "date": "2026-11-28",
+    "ownerQuestion": 5,
+    "title": "Count as Negative Quantity on a pasted group: the Windows rule (the whole group, one undo entry); single takeoff unchanged",
+    "text": "\"Count as Negative Quantity\" on a pasted GROUP (owner question 5): the Windows rule replaces the pressed-takeoff-only default for a group; a single takeoff is unchanged. The Windows \"group\" is the CURRENT plan-view multi-selection (after Paste the pasted takeoffs, children included, plus annotations stay selected; annotation and unknown uids are dropped; no descendant expansion). Rule (`plan_view_action_handler.py:2134-2181` on_set_negative; `input_handler.py:3247-3251`; `view_context_menu.py:162-196`; `takeoff.py:136`): the item is offered only if the selection holds at least one root takeoff and NO child takeoff (hole or attachment); it is checked only when EVERY selected takeoff is negative; the new value is \"not all negative\" for EVERY selected takeoff (mixed or all positive -> all True, all negative -> all False), NOT taken from the pressed item; ONE undo entry records (uid, old) and (uid, new) for ALL members, also those already at the target; undo restores each takeoff's own old flag. Ported in Core: `Core/Domain/NegativeChange.hpp` `negative_toggle_for_press(takeoffs, group_uids, pressed_uid)` returning {offered, checked, changes}; the GROUP path (two or more uids that resolve to takeoffs and the pressed takeoff is a member) is the Windows rule, the SINGLE path (empty group, group of one, pressed takeoff not a member) is exactly the old behaviour (no hole gate: iOS still offers the item on a single pressed hole or attachment, Windows hides it: recorded divergence kept). iOS has no multi-selection and no paste before M2, so the Objective-C long-press handler passes an EMPTY group (identical behaviour through the new Core function); the M2 paste wiring passes the pasted uids as the group (`NEW_FEATURES_PLAN.md` N-M2-04, question resolved). UND-09 single-takeoff row stays (single takeoff only; the group is the Windows rule). Tests: suite `Und09_NegativeGroup` (9 tests) in `Config/Tests/Settings/test_negative_press.cpp`; the six `Und09_NegativePress` tests stay valid. Owner flags (defaults = exact Windows): a pasted group that contains a hole or attachment has no item; the check mark shows only when ALL are negative and a press sets all negative.",
+    "tests": [
+     "Und09_NegativeGroup.AnAllPositiveGroupBecomesAllNegative",
+     "Und09_NegativeGroup.AnAllPositiveGroupOfThreeIsOneEntryOfThree",
+     "Und09_NegativeGroup.AMixedGroupSetsEveryMemberNegativeAndTheNegativeOnesStayInTheEntry",
+     "Und09_NegativeGroup.AnAllNegativeGroupBecomesAllPositive",
+     "Und09_NegativeGroup.AHoleOrAnAttachmentInTheGroupHidesTheItem",
+     "Und09_NegativeGroup.APressedTakeoffOutsideTheGroupActsAlone",
+     "Und09_NegativeGroup.AnnotationAndUnknownUidsOfTheGroupAreSkipped",
+     "Und09_NegativeGroup.TheSinglePathIsTheOldBehaviour",
+     "Und09_NegativeGroup.OneUndoRestoresEachFlagOfTheGroupAndOneRedoAppliesThemAgain"
+    ],
+    "files": [
+     "Core/Domain/NegativeChange.hpp",
+     "Controllers/ViewController/ViewController.mm",
+     "Config/Tests/Settings/test_negative_press.cpp"
+    ],
+    "commits": [
+     "6d27c03"
+    ],
+    "m2Pointer": "NEW_FEATURES_PLAN.md N-M2-04 (question resolved; the M2 paste wiring passes the pasted uids as the group)",
+    "statusAfter": "fixed-ui-unverified (unchanged)"
+   }
+  ],
+  "textsChanged": [
+   {
+    "n": 1,
+    "iosFile": "DatabaseViewController.mm, SceneDelegate.mm",
+    "old": "Import Failed (title)",
+    "new": "Import Error",
+    "windowsSource": "presentation/texts.py:922"
+   },
+   {
+    "n": 2,
+    "iosFile": "ImportService.mm",
+    "old": "Invalid OST file format[: <parser reason>]",
+    "new": "The OST file is damaged or uses an unsupported format, so it cannot be imported. (OSP: The OSP file ...)",
+    "windowsSource": "presentation/texts.py:945-948; import_handler.py:218-236"
+   },
+   {
+    "n": 3,
+    "iosFile": "ImportService.mm",
+    "old": "<takeoff graph invalid: issues> / The imported project contains invalid references.\\n<issues> / limit text",
+    "new": "the same damaged sentence (the details only in NSLog)",
+    "windowsSource": "import_handler.py:218-246"
+   },
+   {
+    "n": 4,
+    "iosFile": "ImportService.mm",
+    "old": "OSP raw reasons (unsafe CAB member path, Invalid OSP file format, ...)",
+    "new": "the OSP damaged sentence",
+    "windowsSource": "presentation/texts.py:945-948"
+   },
+   {
+    "n": 5,
+    "iosFile": "ImportService.mm",
+    "old": "Failed to store project data + the temporary-folder text",
+    "new": "the damaged sentence (the OST or OSP one, like every local failure: Windows swallows every exception in import_ost; review fix 53d2a54 corrected the first version of this row)",
+    "windowsSource": "ost_importer.py:94-107; import_handler.py:218-246"
+   },
+   {
+    "n": "5a",
+    "iosFile": "ImportService.mm",
+    "old": "(new case, no old text: a C++ exception was not caught and a nil NSError had no text)",
+    "new": "An unexpected error stopped the import of the OST|OSP file. Please check that the file is valid and try again; if the problem continues, contact support. (shown only for a genuinely unexpected condition: a C++ exception caught in ImportService.mm, whose importOSTFile: and importOSPFile: now wrap their bodies in try/catch, or a nil NSError after a failed import)",
+    "windowsSource": "presentation/texts.py:949-952"
+   },
+   {
+    "n": 6,
+    "iosFile": "ImportService.mm",
+    "old": "Could not read file / the Cocoa text",
+    "new": "the damaged sentence",
+    "windowsSource": "import_handler.py:218-246"
+   },
+   {
+    "n": 7,
+    "iosFile": "SceneDelegate.mm (open-in)",
+    "old": "the raw text",
+    "new": "<file name>: The file is damaged or uses an unsupported format, so it cannot be imported. / <file name>: An unexpected error stopped the import. Please try again; if the problem continues, contact support. / <file name>: File does not exist. (the file NAME, not the sandbox path)",
+    "windowsSource": "shared/texts.py:863-885; main_window.py:1198"
+   },
+   {
+    "n": 8,
+    "iosFile": "DatabaseViewController.mm",
+    "old": "Failed to load Projects:\\n<Core diagnostic>",
+    "new": "Failed to load Projects:\\nThe file could not be read. It may be damaged or may not be an OST database. (frame \"Error Loading File\" kept)",
+    "windowsSource": "shared/texts.py:1238-1240"
+   },
+   {
+    "n": 9,
+    "iosFile": "DatabaseViewController.mm, ViewController.mm, ViewController+Conditions.mm",
+    "old": "Failed to load <bid>:\\n<Core diagnostic>",
+    "new": "Failed to load <bid>:\\nAn unexpected error stopped opening the bid. Please try again; if the problem continues, contact support.",
+    "windowsSource": "shared/texts.py:316-318"
+   },
+   {
+    "n": 10,
+    "iosFile": "DatabaseViewController.mm",
+    "old": "any store reason under \"Cannot Delete Project\"",
+    "new": "only the exact \"Some selected projects still have bids inside.\\nOnly empty projects can be deleted.\" keeps that title; every other reason: Delete Error / Failed to delete projects. The database may be locked by another application.",
+    "windowsSource": "presentation/texts.py:1004-1013"
+   },
+   {
+    "n": 11,
+    "iosFile": "ViewController+Export.mm",
+    "old": "Nothing to Export / No visible meshes to export.",
+    "new": "Export Error / No file was written. Check that the selected pages have takeoffs this format can export, then try again or choose a different destination.",
+    "windowsSource": "shared/texts.py:274-277"
+   },
+   {
+    "n": 12,
+    "iosFile": "ViewController+Export.mm",
+    "old": "Error creating <fmt> export: The export failed.",
+    "new": "Export Error / An unexpected error stopped the export. Please try again or choose a different destination; if the problem continues, contact support. (the format-less sentence of export_service.py:182-189 for OBJ, DXF and HTML; the \"of the <fmt> file\" variant is only the handler fallback for OST, OSP, PDF and CSV: a correction to the pass-2 rows A5-15 and A6-08)",
+    "windowsSource": "shared/texts.py:278-281"
+   },
+   {
+    "n": 13,
+    "iosFile": "ViewController+Export.mm",
+    "old": "Error creating <fmt> export: The file could not be written.",
+    "new": "Export Error / The file could not be written. Please ensure you have write permissions to the destination folder and try again.",
+    "windowsSource": "shared/texts.py:282-285"
+   },
+   {
+    "n": 14,
+    "iosFile": "PageDialogText.cpp",
+    "old": "...could not be read again: <reason>\\n\\nThe bid will close. Open it again to continue.",
+    "new": "The page was deleted, but the bid could not be read again.\\n\\nThe bid will close. Open it again to continue. (the iOS sentence is kept, Windows `presentation/texts.py:1296-1299` differs; only the developer reason is dropped)",
+    "windowsSource": "iOS sentence kept"
+   },
+   {
+    "n": 15,
+    "iosFile": "Core/Domain/LayerSheet.cpp",
+    "old": "rename refresh-failed title Refresh Error; move refresh-failed title Refresh Error; generic layer failures with the database-locked hint",
+    "new": "titles Rename Layer and Move Layer; the generic failures lose the hint (decision 2)",
+    "windowsSource": "layers_dialog.py:489, :784"
+   }
+  ],
+  "ownerQuestionsClosed": {
+   "total": 13,
+   "resolvedBeforeJob11": [
+    2,
+    3,
+    8,
+    10
+   ],
+   "resolvedInJob11": [
+    1,
+    4,
+    5,
+    7
+   ],
+   "resolvedAfterJob11": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    8,
+    10
+   ],
+   "resolvedCount": 8,
+   "openAfterJob11": [
+    6,
+    9,
+    11,
+    12,
+    13
+   ],
+   "openCount": 5,
+   "details": [
+    {
+     "n": 1,
+     "state": "RESOLVED 2026-11-28 (job 11): adopt the current Windows wording"
+    },
+    {
+     "n": 2,
+     "state": "RESOLVED 2026-11-27 (pass 3)"
+    },
+    {
+     "n": 3,
+     "state": "RESOLVED 2026-11-27 (pass 3)"
+    },
+    {
+     "n": 4,
+     "state": "RESOLVED 2026-11-28 (job 11): the Windows dialog titles for the layer refresh alerts; the folder-failure titles were not part of the decision"
+    },
+    {
+     "n": 5,
+     "state": "RESOLVED 2026-11-28 (job 11): the Windows rule for a group"
+    },
+    {
+     "n": 6,
+     "state": "open (default: generic text)"
+    },
+    {
+     "n": 7,
+     "state": "RESOLVED 2026-11-28 (job 11): the owner's instruction to merge ios-parity-sync-2 into main by a pull request merge commit with the stated waiver of the device results"
+    },
+    {
+     "n": 8,
+     "state": "RESOLVED 2026-11-27 (pass 3)"
+    },
+    {
+     "n": 9,
+     "state": "open (default: UTF-16 units)"
+    },
+    {
+     "n": 10,
+     "state": "RESOLVED 2026-11-27 (pass 3)"
+    },
+    {
+     "n": 11,
+     "state": "open (default: not added)"
+    },
+    {
+     "n": 12,
+     "state": "open (default: the Windows text)"
+    },
+    {
+     "n": 13,
+     "state": "open (default: the Windows rule is ported)"
+    }
+   ],
+   "note": "Numbering of parity2.ownerQuestions, PORTING_BLOCKERS.md ('Decisions for the owner after parity pass 2') and PARITY_MAP.md. Question 7 (merge order) is RESOLVED by the owner's instruction of 2026-11-28 (merge ios-parity-sync-2 into main by a pull request merge commit with the stated waiver of the device results). Question 4 had two parts (folder-failure titles and layer-refresh titles): the owner's decision concerns the layer titles, the folder-failure titles are unchanged."
+  },
+  "notes": [
+   "no status of the 220 items changed: still 176 fixed / 23 fixed-ui-unverified / 0 blocked-needs-decision / 13 wont-fix / 1 cannot-reproduce / 7 no-longer-divergent (before job 11: the same; 199 items ported). EXP-21 was never wont-fix: its status is fixed-ui-unverified (disposition fix) and the \"keep iOS\" decision of 2026-11-19 was a decision record inside it; the owner overturned that record, the new wording is ported and still unverified on a device (P4-01 to P4-08), so the status stays fixed-ui-unverified. UND-09 stays fixed-ui-unverified as well",
+   "owner questions of \"Decisions for the owner after parity pass 2\": 13 in all; RESOLVED so far 8 (2, 3, 8, 10 in pass 3; 1, 4, 5, 7 on 2026-11-28, job 11; question 7, the merge order, by the owner's instruction to merge by a pull request merge commit with the stated waiver); 5 stay open with their defaults: 6 (scale overflow text), 9 (name length counting), 11 (owner note n), 12 (title of the \"no layers of its own\" alert), 13 (the stray-quote withdrawal)",
+   "Device rows P4-01 to P4-08 are new in DEVICE_CHECKS.md (fixed-ui-unverified; P4-08 'Not run: no data'). Device results: the owner accepts \"Not run\" for the merge (rows M1-01 to M1-20, the 23 carried rows, P2-01 to P2-11, P3-01 to P3-05 and the new P4 rows are recorded as \"pending, merged unverified\", never as Pass; the owner sends the results later and fixes go on a NEW branch from `main`). New rows P4-01 to P4-08 in `DEVICE_CHECKS.md` (P4-08 \"Not run: no data\"); rows pending after job 11: 20 + 23 + 11 + 5 + 8 = 67 (DEV-01 to DEV-11 passed earlier and stay Pass). The layer refresh titles and the generic layer failure texts need a database fault, so they are host-test only (no device row). Job 11 merges `ios-parity-sync-2` into `main` with a merge commit (no squash, no force push, branch kept) after the independent review and a green CI on the final code tip; the lightweight tag `main-before-m1` at `06d8d69` is created before the merge; the merge commit and the run id of `main` are in the final report and in the git log of `main` (not written here before they exist). M2 is not started",
+   "The layer refresh titles and the generic layer failure texts need a database fault: host-test only, no device row.",
+   "Docs agent checks (job 11): the test names cited here exist in Config/Tests (Und09_NegativeGroup 9, Exp21_* and the other FailureText tests 24, LayerSheet.*, PageDialogText.DeleteReloadFailed_...); eleven Windows citations were spot-checked at d1c430a (shared/texts.py:274-285, presentation/texts.py:945-952 and :1004-1013, shared/texts.py:316-318 and :1238-1240 and :863-866, layers_dialog.py:489/:784 via LAYERS_DIALOG_TITLE_RENAME_LAYER / _MOVE_LAYER, view_context_menu.py:192-194, input_handler.py:3247-3251, plan_view_action_handler.py:2134, takeoff.py:136, messagebox.py:130, import_handler.py:218-222 and :243-246, main_window.py:1198): all matched.",
+   "Correction to the pass-2 rows A5-15 and A6-08: for OBJ, DXF and HTML Windows uses the FORMAT-LESS unexpected-export sentence (export_service.py:182-189); the 'of the <fmt> file' variant is only the handler fallback for OST, OSP, PDF and CSV."
   ]
  }
 }
